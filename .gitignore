@@ -1,0 +1,44 @@
+# === Backend (Spring Boot / Gradle) ===
+backend/build/
+backend/.gradle/
+backend/bin/
+backend/out/
+backend/*.jar
+backend/*.war
+
+# === Frontend (Next.js / Node) ===
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/public/sw.js
+frontend/public/sw.js.map
+frontend/public/workbox-*.js
+frontend/public/workbox-*.js.map
+frontend/public/worker-*.js
+frontend/public/worker-*.js.map
+
+# === IDE ===
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Environment ===
+.env
+.env*.local
+!.env.example
+
+# === Logs ===
+*.log
+logs/
+
+# === Uploads (로컬 미디어 저장소) ===
+uploads/

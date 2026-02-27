@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: yulmu-diary
+
+  profiles:
+    active: local
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    basedir: ./.tomcat  # 추가: 톰캣 임시 디렉토리를 프로젝트 내부 폴더로 격리
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+  media:
+    upload-dir: ./uploads
+  jwt:
+    secret-key: yulmudiary-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+    access-token-expiry: 1800000    # 30분 (ms)
+    refresh-token-expiry: 604800000 # 7일 (ms)
+  oauth2:
+    redirect-uri: http://localhost:3000/auth/callback
