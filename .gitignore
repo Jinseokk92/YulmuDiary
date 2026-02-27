@@ -26,10 +26,16 @@ frontend/public/worker-*.js.map
 .project
 .classpath
 .settings/
+.claude/
+frontend/.claude/
 
 # === OS ===
 .DS_Store
 Thumbs.db
+
+# === Project Files ===
+CLAUDE.md
+TODOLIST.md
 
 # === Environment ===
 .env
@@ -39,6 +45,10 @@ Thumbs.db
 # === Logs ===
 *.log
 logs/
+
+# === Build Artifacts ===
+frontend/tsconfig.tsbuildinfo
+backend/.tomcat/
 
 # === Uploads (로컬 미디어 저장소) ===
 uploads/
