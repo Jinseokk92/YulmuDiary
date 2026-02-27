@@ -1,13 +1,24 @@
-FROM eclipse-temurin:17-jdk-alpine AS build
+# Stage 1: Build
+FROM gradle:8.12-jdk17 AS builder
 WORKDIR /app
-COPY gradle gradle
-COPY gradlew build.gradle settings.gradle ./
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
-COPY src src
-RUN ./gradlew bootJar --no-daemon
 
+# Only copy dependency-related files first for better caching
+COPY build.gradle settings.gradle ./
+RUN gradle dependencies --no-daemon || true
+
+# Copy source code and build
+COPY src ./src
+RUN gradle bootJar --no-daemon -x test
+
+# Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/build/libs/*.jar app.jar
+
+# Copy the built jar from the builder stage
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+# Application configurations
+ENV SPRING_PROFILES_ACTIVE=local
 EXPOSE 8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -42,3 +42,6 @@ logs/
 
 # === Uploads (로컬 미디어 저장소) ===
 uploads/
+
+# === Docker ===
+postgres_data/
