@@ -27,7 +27,7 @@ public class ReactionService {
     @Transactional
     public ReactionResponse toggle(Long diaryPostId, Long userId, ReactionRequest request) {
         Optional<Reaction> existing = reactionRepository
-                .findByDiaryPostIdAndUserIdAndEmoji(diaryPostId, userId, request.getEmoji());
+                .findByDiaryPostIdAndUserIdAndEmoji(diaryPostId, userId, request.emoji());
 
         if (existing.isPresent()) {
             reactionRepository.delete(existing.get());
@@ -42,7 +42,7 @@ public class ReactionService {
         Reaction reaction = Reaction.builder()
                 .diaryPost(post)
                 .user(user)
-                .emoji(request.getEmoji())
+                .emoji(request.emoji())
                 .build();
 
         reactionRepository.save(reaction);

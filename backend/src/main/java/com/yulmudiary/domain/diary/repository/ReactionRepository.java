@@ -9,5 +9,4 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
 
     Optional<Reaction> findByDiaryPostIdAndUserIdAndEmoji(Long diaryPostId, Long userId, String emoji);
 
-    void deleteByDiaryPostIdAndUserIdAndEmoji(Long diaryPostId, Long userId, String emoji);
 }

@@ -34,7 +34,7 @@ public class CommentService {
         Comment comment = Comment.builder()
                 .diaryPost(post)
                 .author(author)
-                .content(request.getContent())
+                .content(request.content())
                 .build();
 
         commentRepository.save(comment);
