@@ -103,9 +103,9 @@ export default function Home() {
             <p className="text-sm font-semibold text-gray-800">일정</p>
             <p className="text-xs text-gray-400 mt-0.5">예정일 & 이벤트</p>
           </div>
-          <span className="text-[10px] text-gray-300 font-medium bg-gray-100 rounded-full px-2 py-0.5">
+          {/* <span className="text-[10px] text-gray-300 font-medium bg-gray-100 rounded-full px-2 py-0.5">
             준비 중
-          </span>
+          </span> */}
         </Link>
       </section>
     </div>

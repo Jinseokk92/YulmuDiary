@@ -33,7 +33,8 @@ app:
   media:
     upload-dir: ./uploads
   jwt:
-    secret-key: yulmudiary-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+    secret-key: ${JWT_SECRET_KEY}
+#    yulmudiary-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
     access-token-expiry: 1800000    # 30분 (ms)
     refresh-token-expiry: 604800000 # 7일 (ms)
   oauth2:

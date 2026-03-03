@@ -163,7 +163,6 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
         const tempId = -Date.now();
         const optimisticComment: CommentResponse = {
           id: tempId,
-          postId,
           authorId: currentUser.id,
           nickname: currentUser.name,
           content: trimmed,
