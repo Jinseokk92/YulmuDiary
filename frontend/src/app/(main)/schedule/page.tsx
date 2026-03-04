@@ -127,13 +127,11 @@ function ScheduleSheet({
 
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_APP_KEY;
     if (!kakaoKey) {
-      console.error("[장소 검색] NEXT_PUBLIC_KAKAO_APP_KEY가 설정되지 않았습니다.");
       alert("카카오 API 키가 설정되지 않았습니다. .env.local을 확인해 주세요.");
       return;
     }
 
     const headers = { Authorization: "KakaoAK " + kakaoKey };
-    console.log("[장소 검색] 요청 headers:", headers);
 
     setIsSearching(true);
     setPlaceResults([]);
@@ -143,15 +141,11 @@ function ScheduleSheet({
         `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(placeQuery.trim())}&size=5`,
         { headers }
       );
-      if (!res.ok) {
-        console.error("[장소 검색] HTTP 오류:", res.status, res.statusText);
-      }
       const json = await res.json();
-      console.log("[장소 검색] 응답:", json);
       const docs: KakaoPlace[] = json.documents ?? [];
       setPlaceResults(docs);
-    } catch (e) {
-      console.error("[장소 검색] 요청 실패:", e);
+    } catch {
+      // 검색 실패 시 결과 비움
     } finally {
       setIsSearching(false);
       setHasSearched(true);
@@ -161,7 +155,6 @@ function ScheduleSheet({
   const selectPlace = (place: KakaoPlace) => {
     const lat = parseFloat(place.y);
     const lng = parseFloat(place.x);
-    console.log("Map Center:", { lat, lng });
     setPlaceName(place.place_name);
     setAddress(place.road_address_name || place.address_name);
     setSelectedCoords({ lat, lng });

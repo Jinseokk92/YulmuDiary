@@ -95,8 +95,8 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           setNextCursor(next);
           setHasNext(more);
           setIsLoaded(true);
-        } catch (error) {
-          console.error("Failed to fetch comments:", error);
+        } catch {
+          // 댓글 로드 실패 시 무시
         } finally {
           setIsLoading(false);
           isFetchingRef.current = false;
@@ -181,8 +181,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           setComments((prev) =>
             prev.map((c) => (c.id === tempId ? created : c))
           );
-        } catch (error) {
-          console.error("Failed to post comment:", error);
+        } catch {
           setComments(prevComments);
           alert("댓글 저장에 실패했습니다.");
         } finally {
@@ -201,8 +200,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
         try {
           await api.delete(`/api/diary-posts/${postId}/comments/${commentId}`);
-        } catch (error) {
-          console.error("Failed to delete comment:", error);
+        } catch {
           setComments(prevComments);
           alert("댓글 삭제에 실패했습니다.");
         }

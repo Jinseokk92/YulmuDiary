@@ -70,8 +70,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
       setDisplayContent(editContent.trim());
       setDisplayTag(editTag.trim() || null);
       setIsEditing(false);
-    } catch (error) {
-      console.error("Failed to update post:", error);
+    } catch {
       alert("수정에 실패했습니다.");
     } finally {
       setIsSaving(false);
