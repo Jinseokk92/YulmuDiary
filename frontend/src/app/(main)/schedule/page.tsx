@@ -1,8 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Script from "next/script";
+import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import type { ScheduleRequest, ScheduleResponse } from "@/types";
+
+// SSR 방지: window.kakao 접근이 필요한 컴포넌트는 클라이언트에서만 렌더링
+const KakaoMap = dynamic(
+  () => import("react-kakao-maps-sdk").then((m) => m.Map),
+  { ssr: false }
+);
+const KakaoMarker = dynamic(
+  () => import("react-kakao-maps-sdk").then((m) => m.MapMarker),
+  { ssr: false }
+);
 
 // ────────────────────────────────────────────────
 // 헬퍼
@@ -29,6 +41,19 @@ function formatEventDate(dateStr: string) {
 // 타입
 // ────────────────────────────────────────────────
 
+interface KakaoPlace {
+  place_name: string;
+  address_name: string;
+  road_address_name: string;
+  x: string; // 경도(longitude)
+  y: string; // 위도(latitude)
+}
+
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 interface ScheduleSheetState {
   isOpen: boolean;
   selectedDate: string | null; // "YYYY-MM-DD"
@@ -45,6 +70,7 @@ interface ScheduleSheetProps {
   onClose: () => void;
   onCreated: (schedule: ScheduleResponse) => void;
   onDeleted: (id: number) => void;
+  kakaoMapReady: boolean;
 }
 
 function ScheduleSheet({
@@ -54,6 +80,7 @@ function ScheduleSheet({
   onClose,
   onCreated,
   onDeleted,
+  kakaoMapReady,
 }: ScheduleSheetProps) {
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
@@ -61,6 +88,14 @@ function ScheduleSheet({
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeResults, setPlaceResults] = useState<KakaoPlace[]>([]);
+  const [placeName, setPlaceName] = useState("");
+  const [address, setAddress] = useState("");
+  const [addressDetail, setAddressDetail] = useState("");
+  const [selectedCoords, setSelectedCoords] = useState<LatLng | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 시트 열릴 때 폼 초기화
@@ -70,6 +105,13 @@ function ScheduleSheet({
       setMemo("");
       setIsAllDay(true);
       setShowForm(false);
+      setPlaceQuery("");
+      setPlaceResults([]);
+      setPlaceName("");
+      setAddress("");
+      setAddressDetail("");
+      setSelectedCoords(null);
+      setHasSearched(false);
     }
   }, [isOpen, selectedDate]);
 
@@ -80,6 +122,64 @@ function ScheduleSheet({
     }
   }, [showForm]);
 
+  const searchPlaces = async () => {
+    if (!placeQuery.trim()) return;
+
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_APP_KEY;
+    if (!kakaoKey) {
+      console.error("[장소 검색] NEXT_PUBLIC_KAKAO_APP_KEY가 설정되지 않았습니다.");
+      alert("카카오 API 키가 설정되지 않았습니다. .env.local을 확인해 주세요.");
+      return;
+    }
+
+    const headers = { Authorization: "KakaoAK " + kakaoKey };
+    console.log("[장소 검색] 요청 headers:", headers);
+
+    setIsSearching(true);
+    setPlaceResults([]);
+    setHasSearched(false);
+    try {
+      const res = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(placeQuery.trim())}&size=5`,
+        { headers }
+      );
+      if (!res.ok) {
+        console.error("[장소 검색] HTTP 오류:", res.status, res.statusText);
+      }
+      const json = await res.json();
+      console.log("[장소 검색] 응답:", json);
+      const docs: KakaoPlace[] = json.documents ?? [];
+      setPlaceResults(docs);
+    } catch (e) {
+      console.error("[장소 검색] 요청 실패:", e);
+    } finally {
+      setIsSearching(false);
+      setHasSearched(true);
+    }
+  };
+
+  const selectPlace = (place: KakaoPlace) => {
+    const lat = parseFloat(place.y);
+    const lng = parseFloat(place.x);
+    console.log("Map Center:", { lat, lng });
+    setPlaceName(place.place_name);
+    setAddress(place.road_address_name || place.address_name);
+    setSelectedCoords({ lat, lng });
+    setAddressDetail("");
+    setPlaceQuery("");
+    setPlaceResults([]);
+  };
+
+  const clearPlace = () => {
+    setPlaceName("");
+    setAddress("");
+    setAddressDetail("");
+    setSelectedCoords(null);
+    setHasSearched(false);
+    setPlaceResults([]);
+    setPlaceQuery("");
+  };
+
   const handleCreate = async () => {
     if (!title.trim() || !selectedDate) return;
     setSaving(true);
@@ -89,11 +189,18 @@ function ScheduleSheet({
         memo: memo.trim() || undefined,
         eventDate: selectedDate,
         isAllDay,
+        placeName: placeName || undefined,
+        address: address || undefined,
+        addressDetail: addressDetail.trim() || undefined,
       };
       const created = await api.post<ScheduleResponse>("/api/schedules", body);
       onCreated(created);
       setTitle("");
       setMemo("");
+      setPlaceName("");
+      setAddress("");
+      setAddressDetail("");
+      setSelectedCoords(null);
       setShowForm(false);
     } catch {
       alert("일정 등록에 실패했습니다.");
@@ -123,21 +230,21 @@ function ScheduleSheet({
         }`}
         onClick={onClose}
       />
-      {/* 시트 */}
+      {/* 시트 — flex-col 스티키 레이아웃 */}
       <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ${
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg bg-white rounded-t-3xl shadow-2xl flex flex-col transform transition-transform duration-300 ${
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
         onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: "80vh" }}
+        style={{ maxHeight: "90vh" }}
       >
-        {/* 핸들 */}
-        <div className="flex justify-center pt-3 pb-1">
+        {/* 핸들 — 고정 */}
+        <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-gray-200" />
         </div>
 
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        {/* 헤더 — 고정 */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">
             {selectedDate ? formatEventDate(selectedDate) : "일정"}
           </h2>
@@ -151,8 +258,8 @@ function ScheduleSheet({
           </button>
         </div>
 
-        {/* 콘텐츠 */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(80vh - 110px)" }}>
+        {/* 콘텐츠 — 독립 스크롤 */}
+        <div className="flex-1 overflow-y-auto">
           {/* 기존 일정 목록 */}
           {schedulesOnDate.length > 0 && (
             <ul className="px-5 pt-3 space-y-2">
@@ -164,6 +271,11 @@ function ScheduleSheet({
                   <div className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                    {s.placeName && (
+                      <p className="text-xs text-primary-500 mt-0.5 truncate">
+                        📍 {s.placeName}{s.addressDetail ? ` ${s.addressDetail}` : ""}
+                      </p>
+                    )}
                     {s.memo && (
                       <p className="text-xs text-gray-500 mt-0.5 truncate">{s.memo}</p>
                     )}
@@ -216,6 +328,121 @@ function ScheduleSheet({
                 maxLength={200}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
               />
+
+              {/* 장소 검색 */}
+              {placeName ? (
+                /* 선택된 장소 영역: 칩 + 지도 + 상세주소 */
+                <div className="space-y-2">
+                  {/* 장소 칩 */}
+                  <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-xl">
+                    <span className="text-sm">📍</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-primary-700 truncate">{placeName}</p>
+                      {address && <p className="text-xs text-gray-500 truncate">{address}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearPlace}
+                      className="p-1 text-gray-400 hover:text-gray-600 shrink-0"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* 지도 미리보기 */}
+                  {kakaoMapReady &&
+                    selectedCoords &&
+                    typeof window !== "undefined" &&
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (window as any).kakao?.maps && (
+                    <div
+                      className="rounded-xl border border-gray-200 overflow-hidden"
+                      style={{ width: "100%", height: "200px", minHeight: "200px", position: "relative" }}
+                    >
+                      <KakaoMap
+                        center={{ lat: Number(selectedCoords.lat), lng: Number(selectedCoords.lng) }}
+                        style={{ width: "100%", height: "200px" }}
+                        level={3}
+                      >
+                        <KakaoMarker position={{ lat: Number(selectedCoords.lat), lng: Number(selectedCoords.lng) }} />
+                      </KakaoMap>
+                    </div>
+                  )}
+
+                  {/* 상세 주소 입력 */}
+                  <input
+                    type="text"
+                    value={addressDetail}
+                    onChange={(e) => setAddressDetail(e.target.value)}
+                    placeholder="상세 주소 (동/호수, 층수 등)"
+                    maxLength={100}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
+                  />
+                </div>
+              ) : (
+                /* 장소 검색 입력 + 결과 인라인 렌더링 */
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={placeQuery}
+                      onChange={(e) => { setPlaceQuery(e.target.value); setHasSearched(false); }}
+                      placeholder="진료 장소 검색 (선택)"
+                      className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); searchPlaces(); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={searchPlaces}
+                      disabled={isSearching || !placeQuery.trim()}
+                      className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 disabled:opacity-40 shrink-0"
+                    >
+                      {isSearching ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 로딩 상태 */}
+                  {isSearching && (
+                    <p className="text-xs text-gray-400 text-center py-2">검색 중...</p>
+                  )}
+
+                  {/* 검색 결과 인라인 목록 (overflow 클리핑 없음) */}
+                  {!isSearching && hasSearched && (
+                    placeResults.length > 0 ? (
+                      <ul className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                        {placeResults.map((place, i) => (
+                          <li key={i}>
+                            <button
+                              type="button"
+                              onClick={() => selectPlace(place)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-primary-50 transition-colors"
+                            >
+                              <p className="text-sm font-medium text-gray-800">{place.place_name}</p>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                {place.road_address_name || place.address_name}
+                              </p>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-gray-400 text-center py-2">검색 결과가 없습니다.</p>
+                    )
+                  )}
+                </div>
+              )}
+
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -229,8 +456,8 @@ function ScheduleSheet({
           )}
         </div>
 
-        {/* 하단 버튼 */}
-        <div className="px-5 py-3 border-t border-gray-100">
+        {/* 하단 버튼 — 고정 */}
+        <div className="flex-shrink-0 px-5 py-3 border-t border-gray-100">
           {showForm ? (
             <div className="flex gap-2">
               <button
@@ -277,6 +504,7 @@ export default function SchedulePage() {
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheet, setSheet] = useState<ScheduleSheetState>({ isOpen: false, selectedDate: null });
+  const [kakaoMapReady, setKakaoMapReady] = useState(false);
 
   // ── API 조회 ──
   const fetchSchedules = useCallback(async (y: number, m: number) => {
@@ -337,6 +565,15 @@ export default function SchedulePage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-24">
+      {/* 카카오 맵 SDK 로드 */}
+      <Script
+        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&libraries=services&autoload=false`}
+        strategy="afterInteractive"
+        onLoad={() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window as any).kakao.maps.load(() => setKakaoMapReady(true));
+        }}
+      />
       {/* 월 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -451,6 +688,11 @@ export default function SchedulePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                    {s.placeName && (
+                      <p className="text-xs text-primary-500 truncate">
+                        📍 {s.placeName}{s.addressDetail ? ` ${s.addressDetail}` : ""}
+                      </p>
+                    )}
                     {s.memo && <p className="text-xs text-gray-500 truncate">{s.memo}</p>}
                   </div>
                   <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -474,6 +716,7 @@ export default function SchedulePage() {
         onClose={() => setSheet((s) => ({ ...s, isOpen: false }))}
         onCreated={handleCreated}
         onDeleted={handleDeleted}
+        kakaoMapReady={kakaoMapReady}
       />
     </div>
   );

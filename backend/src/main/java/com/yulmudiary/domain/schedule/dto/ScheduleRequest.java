@@ -20,4 +20,10 @@ public class ScheduleRequest {
     private LocalDate eventDate;
 
     private Boolean isAllDay = true;
+
+    private String placeName;
+
+    private String address;
+
+    private String addressDetail;
 }

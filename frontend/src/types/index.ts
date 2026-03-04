@@ -139,6 +139,9 @@ export interface ScheduleResponse {
   memo: string | null;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay: boolean;
+  placeName: string | null;
+  address: string | null;
+  addressDetail: string | null;
   createdAt: string;
 }
 
@@ -147,4 +150,7 @@ export interface ScheduleRequest {
   memo?: string;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay?: boolean;
+  placeName?: string;
+  address?: string;
+  addressDetail?: string;
 }

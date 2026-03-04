@@ -2,6 +2,7 @@
 
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function Header() {
@@ -34,9 +35,11 @@ export default function Header() {
             </span>
             <button
               onClick={handleLogout}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              title="로그아웃"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-50
+                         transition-all duration-150 hover:scale-110 active:scale-95"
             >
-              로그아웃
+              <LogOut size={20} strokeWidth={1.8} />
             </button>
           </div>
         ) : (

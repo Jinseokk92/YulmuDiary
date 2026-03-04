@@ -53,6 +53,6 @@ export const config = {
      * - favicon.ico
      * - public 폴더 파일 (png, svg, ico 등)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|json)).*)",
   ],
 };

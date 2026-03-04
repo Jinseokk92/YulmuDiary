@@ -36,19 +36,34 @@ public class Schedule extends BaseTimeEntity {
     @Column(nullable = false)
     private Boolean isAllDay;
 
+    @Column(length = 100)
+    private String placeName;
+
+    @Column(length = 200)
+    private String address;
+
+    @Column(length = 100)
+    private String addressDetail;
+
     @Builder
-    public Schedule(User author, String title, String memo, LocalDate eventDate, Boolean isAllDay) {
+    public Schedule(User author, String title, String memo, LocalDate eventDate, Boolean isAllDay, String placeName, String address, String addressDetail) {
         this.author = author;
         this.title = title;
         this.memo = memo;
         this.eventDate = eventDate;
         this.isAllDay = isAllDay != null ? isAllDay : true;
+        this.placeName = placeName;
+        this.address = address;
+        this.addressDetail = addressDetail;
     }
 
-    public void update(String title, String memo, LocalDate eventDate, Boolean isAllDay) {
+    public void update(String title, String memo, LocalDate eventDate, Boolean isAllDay, String placeName, String address, String addressDetail) {
         this.title = title;
         this.memo = memo;
         this.eventDate = eventDate;
         this.isAllDay = isAllDay != null ? isAllDay : this.isAllDay;
+        this.placeName = placeName;
+        this.address = address;
+        this.addressDetail = addressDetail;
     }
 }

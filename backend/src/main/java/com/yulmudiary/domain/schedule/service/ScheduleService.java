@@ -50,6 +50,9 @@ public class ScheduleService {
                 .memo(request.getMemo())
                 .eventDate(request.getEventDate())
                 .isAllDay(request.getIsAllDay())
+                .placeName(request.getPlaceName())
+                .address(request.getAddress())
+                .addressDetail(request.getAddressDetail())
                 .build();
 
         scheduleRepository.save(schedule);
@@ -66,7 +69,7 @@ public class ScheduleService {
 
         validateAuthor(schedule, userId);
 
-        schedule.update(request.getTitle(), request.getMemo(), request.getEventDate(), request.getIsAllDay());
+        schedule.update(request.getTitle(), request.getMemo(), request.getEventDate(), request.getIsAllDay(), request.getPlaceName(), request.getAddress(), request.getAddressDetail());
         return ScheduleResponse.from(schedule);
     }
 
