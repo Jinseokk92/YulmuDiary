@@ -44,3 +44,5 @@ app:
   cors:
     allowed-origins:
       - http://localhost:3000
+  jwt:
+    secret-key: yulmudiary-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256

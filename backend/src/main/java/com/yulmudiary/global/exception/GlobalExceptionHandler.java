@@ -16,6 +16,7 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -74,6 +75,15 @@ public class GlobalExceptionHandler {
         log.warn("데이터 무결성 위반: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("ALREADY_MEMBER", "이미 가족 그룹에 참여한 상태입니다."));
+    }
+
+    // Spring Boot 3.x: NoHandlerFoundException 대체 — 존재하지 않는 경로 요청 시 발생
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException e,
+                                                                   HttpServletRequest request) {
+        log.warn("존재하지 않는 경로 요청: {} {}", request.getMethod(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("NOT_FOUND", "요청한 경로를 찾을 수 없습니다: " + request.getRequestURI()));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)

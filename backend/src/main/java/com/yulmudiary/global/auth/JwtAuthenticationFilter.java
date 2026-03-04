@@ -31,19 +31,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
 
-        if (token != null && jwtProvider.validateToken(token)) {
-            Long userId = jwtProvider.getUserId(token);
-            String email = jwtProvider.getEmail(token);
+        if (token != null) {
+            try {
+                if (jwtProvider.validateToken(token)) {
+                    Long userId = jwtProvider.getUserId(token);
+                    String email = jwtProvider.getEmail(token);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userId,
-                            email,
-                            Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userId,
+                                    email,
+                                    Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
+                            );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("인증 완료: userId={}", userId);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.debug("인증 완료: userId={}", userId);
+                }
+            } catch (Exception e) {
+                // 만료·서명 오류 등 → SecurityContext 비워두고 즉시 401 반환
+                // filterChain을 호출하지 않아 요청이 불완전하게 처리되는 문제 방지
+                log.warn("JWT 처리 오류 [{}] {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+                SecurityContextHolder.clearContext();
+                response.setContentType("application/json;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write(
+                        "{\"success\":false,\"error\":{\"code\":\"INVALID_TOKEN\",\"message\":\"유효하지 않은 토큰입니다.\"}}"
+                );
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);

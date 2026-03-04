@@ -12,9 +12,11 @@ import com.yulmudiary.domain.user.repository.UserRepository;
 import com.yulmudiary.global.exception.AlreadyMemberException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -26,8 +28,34 @@ public class FamilyService {
 
     @Transactional
     public FamilyJoinResponse join(Long userId, FamilyJoinRequest request) {
-        FamilyGroup group = familyGroupRepository.findByInviteCode(request.inviteCode())
-                .orElseThrow(() -> new EntityNotFoundException("유효하지 않은 초대 코드입니다."));
+        // 1. 입력값 null 체크
+        if (request.inviteCode() == null) {
+            throw new IllegalArgumentException("초대 코드가 누락되었습니다.");
+        }
+
+        // 2. 공백 제거 + 대문자 정규화
+        String normalizedInput = request.inviteCode().trim().toUpperCase();
+        if (normalizedInput.isEmpty()) {
+            throw new IllegalArgumentException("초대 코드가 비어 있습니다.");
+        }
+
+        // 3. 정규화된 값으로 DB 조회
+        FamilyGroup group = familyGroupRepository.findByInviteCode(normalizedInput)
+                .orElseThrow(() -> {
+                    log.warn("초대 코드 조회 실패. 입력된 코드(정규화): [{}]", normalizedInput);
+                    return new EntityNotFoundException("유효하지 않은 초대 코드입니다.");
+                });
+
+        // 4. DB 저장 값도 정규화하여 비교 (DB에 대소문자 혼재 가능성 방어)
+        String dbCode = group.getInviteCode() != null
+                ? group.getInviteCode().trim().toUpperCase()
+                : null;
+        log.info("입력된 코드: [{}], DB 코드: [{}]", normalizedInput, dbCode);
+
+        if (dbCode == null || !normalizedInput.equals(dbCode)) {
+            log.warn("초대 코드 불일치. 입력: [{}], DB: [{}]", normalizedInput, dbCode);
+            throw new EntityNotFoundException("유효하지 않은 초대 코드입니다.");
+        }
 
         // 특정 그룹이 아닌 '모든 가족 그룹' 소속 여부 확인 (유저당 하나의 가족 그룹 정책)
         if (membershipRepository.findByUserId(userId).isPresent()) {
