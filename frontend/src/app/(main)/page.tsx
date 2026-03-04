@@ -2,32 +2,36 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { calcDday, calcAgeDisplay } from "@/lib/utils";
+import { calcDday, calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
 
-// ─── 율무 생일 ─────────────────────────────────────────────────────────────
-// 날짜를 변경하려면 이 상수만 수정하세요 (YYYY-MM-DD 형식)
-const YULMU_BIRTH_DATE = "2025-09-24";
+// ─── 날짜 상수 ─────────────────────────────────────────────────────────────
+// 출산 예정일만 수정하면 LMP(마지막 생리일)와 모든 계산이 자동으로 갱신됩니다.
+const YULMU_DUE_DATE = "2026-06-27"; // 출산 예정일 (YYYY-MM-DD)
 
 export default function Home() {
-  // SSR과 클라이언트 시간 차이로 인한 Hydration 에러 방지:
-  // 서버 렌더링 시엔 null, 마운트 후 클라이언트에서만 계산
-  const [dday, setDday] = useState<string | null>(null);
-  const [ageDisplay, setAgeDisplay] = useState<string | null>(null);
+  // SSR ↔ 클라이언트 Hydration 불일치 방지: 마운트 후 클라이언트에서만 계산
+  const [dday, setDday]                     = useState<string | null>(null);
+  const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
 
   useEffect(() => {
-    setDday(calcDday(YULMU_BIRTH_DATE));
-    setAgeDisplay(calcAgeDisplay(YULMU_BIRTH_DATE));
+    // D-day: 출산 예정일 기준
+    setDday(calcDday(YULMU_DUE_DATE));
+
+    // 임신 주수: 출산 예정일에서 LMP를 역산(−280일)하여 경과 기간 계산
+    const lmp = calcLmpFromDueDate(YULMU_DUE_DATE);
+    const { weeks, days } = calcPregnancyWeek(lmp);
+    setPregnancyDisplay(days === 0 ? `${weeks}주` : `${weeks}주 ${days}일`);
   }, []);
 
   return (
     <div className="px-4 py-6 space-y-8">
       {/* 상단: D-day 카드 */}
       <section className="bg-white rounded-2xl p-6 shadow-sm text-center">
-        <p className="text-sm text-gray-400 mb-1">우리 아이와 함께한 시간</p>
+        <p className="text-sm text-gray-400 mb-1">율무와 만날 때까지</p>
         <h2 className="text-2xl font-bold text-gray-900">
-          율무와 만난 지{" "}
+          임신{" "}
           <span className="text-primary-500">
-            {ageDisplay ?? "···"}
+            {pregnancyDisplay ?? "···"}
           </span>
           차
         </h2>
@@ -103,9 +107,6 @@ export default function Home() {
             <p className="text-sm font-semibold text-gray-800">일정</p>
             <p className="text-xs text-gray-400 mt-0.5">예정일 & 이벤트</p>
           </div>
-          {/* <span className="text-[10px] text-gray-300 font-medium bg-gray-100 rounded-full px-2 py-0.5">
-            준비 중
-          </span> */}
         </Link>
       </section>
     </div>

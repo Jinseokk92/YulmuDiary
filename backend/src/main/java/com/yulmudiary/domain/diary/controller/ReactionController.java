@@ -3,6 +3,8 @@ package com.yulmudiary.domain.diary.controller;
 import com.yulmudiary.domain.diary.dto.ReactionRequest;
 import com.yulmudiary.domain.diary.dto.ReactionResponse;
 import com.yulmudiary.domain.diary.service.ReactionService;
+import com.yulmudiary.global.auth.AuthTarget;
+import com.yulmudiary.global.auth.CheckFamilyAuth;
 import com.yulmudiary.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +22,7 @@ public class ReactionController {
     private final ReactionService reactionService;
 
     @Operation(summary = "리액션 토글 (추가/삭제)")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @PostMapping
     public ApiResponse<ReactionResponse> toggle(
             @PathVariable Long postId,

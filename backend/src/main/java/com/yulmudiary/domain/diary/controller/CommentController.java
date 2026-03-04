@@ -3,6 +3,8 @@ package com.yulmudiary.domain.diary.controller;
 import com.yulmudiary.domain.diary.dto.CommentRequest;
 import com.yulmudiary.domain.diary.dto.CommentResponse;
 import com.yulmudiary.domain.diary.service.CommentService;
+import com.yulmudiary.global.auth.AuthTarget;
+import com.yulmudiary.global.auth.CheckFamilyAuth;
 import com.yulmudiary.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,12 +26,14 @@ public class CommentController {
     private final CommentService commentService;
 
     @Operation(summary = "댓글 목록 조회")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @GetMapping
     public ApiResponse<List<CommentResponse>> getByPostId(@PathVariable Long postId) {
         return ApiResponse.success(commentService.getByPostId(postId));
     }
 
     @Operation(summary = "댓글 작성")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentResponse> create(
@@ -41,6 +45,7 @@ public class CommentController {
     }
 
     @Operation(summary = "댓글 삭제")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @DeleteMapping("/{commentId}")
     public ApiResponse<Void> delete(
             @PathVariable Long postId,

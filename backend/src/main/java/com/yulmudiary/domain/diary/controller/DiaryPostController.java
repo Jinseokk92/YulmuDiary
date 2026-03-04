@@ -4,6 +4,8 @@ import com.yulmudiary.domain.diary.dto.DiaryPostPageResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostRequest;
 import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
 import com.yulmudiary.domain.diary.service.DiaryPostService;
+import com.yulmudiary.global.auth.AuthTarget;
+import com.yulmudiary.global.auth.CheckFamilyAuth;
 import com.yulmudiary.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,6 +25,7 @@ public class DiaryPostController {
     private final DiaryPostService diaryPostService;
 
     @Operation(summary = "일기 생성")
+    @CheckFamilyAuth(AuthTarget.BABY_ID)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<DiaryPostResponse> create(
@@ -33,12 +36,14 @@ public class DiaryPostController {
     }
 
     @Operation(summary = "일기 단건 조회")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @GetMapping("/{id}")
     public ApiResponse<DiaryPostResponse> getById(@PathVariable Long id) {
         return ApiResponse.success(diaryPostService.getById(id));
     }
 
     @Operation(summary = "일기 목록 조회 (Cursor 페이징)")
+    @CheckFamilyAuth(AuthTarget.BABY_ID)
     @GetMapping
     public ApiResponse<DiaryPostPageResponse> getByBaby(
             @Parameter(description = "아기 ID", required = true)
@@ -51,6 +56,7 @@ public class DiaryPostController {
     }
 
     @Operation(summary = "일기 수정")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @PutMapping("/{id}")
     public ApiResponse<DiaryPostResponse> update(
             @PathVariable Long id,
@@ -61,6 +67,7 @@ public class DiaryPostController {
     }
 
     @Operation(summary = "일기 삭제")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(
             @PathVariable Long id,

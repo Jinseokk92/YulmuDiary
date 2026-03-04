@@ -18,6 +18,41 @@ export interface UserResponse {
   profileImageUrl: string | null;
 }
 
+// /api/auth/me 응답 전용 타입
+export interface AuthMeResponse {
+  id: number;
+  email: string;
+  name: string;
+  profileImageUrl: string | null;
+  role: string;
+  familyGroupId: number | null;
+}
+
+// --- Baby ---
+
+export interface BabyResponse {
+  id: number;
+  name: string;
+  dueDate: string;        // YYYY-MM-DD
+  dDayCount: number;      // 양수=D-N(남은 일수), 0=D-Day, 음수=D+N(지난 일수)
+  pregnancyWeeks: number; // 임신 주차
+  pregnancyDays: number;  // 주차 내 나머지 일수
+  gender: "MALE" | "FEMALE";
+  profileImageUrl: string | null;
+}
+
+// --- Family ---
+
+export interface FamilyJoinRequest {
+  inviteCode: string;
+}
+
+export interface FamilyJoinResponse {
+  familyGroupId: number;
+  familyGroupName: string;
+  role: string;
+}
+
 // --- Media ---
 
 export interface MediaDto {

@@ -2,7 +2,11 @@
 
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Cookies from "js-cookie";
 import { useAuthStore } from "@/stores/authStore";
+import type { ApiResponse, AuthMeResponse } from "@/types";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -12,12 +16,31 @@ function CallbackHandler() {
   useEffect(() => {
     const token = searchParams.get("token");
 
-    if (token) {
-      setToken(token);
-      router.replace("/diary");
-    } else {
+    if (!token) {
       router.replace("/login");
+      return;
     }
+
+    setToken(token);
+
+    // 가족 그룹 가입 여부 확인
+    fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json() as Promise<ApiResponse<AuthMeResponse>>)
+      .then((body) => {
+        const familyGroupId = body.data?.familyGroupId;
+        if (familyGroupId) {
+          Cookies.set("family_group_id", String(familyGroupId), { expires: 365 });
+          router.replace("/diary");
+        } else {
+          router.replace("/join");
+        }
+      })
+      .catch(() => {
+        // /api/auth/me 실패해도 일단 /join으로 보냄
+        router.replace("/join");
+      });
   }, [searchParams, setToken, router]);
 
   return null;
