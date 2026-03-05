@@ -1,8 +1,10 @@
 package com.yulmudiary.domain.schedule.controller;
 
+import com.yulmudiary.domain.family.entity.FamilyRole;
 import com.yulmudiary.domain.schedule.dto.ScheduleRequest;
 import com.yulmudiary.domain.schedule.dto.ScheduleResponse;
 import com.yulmudiary.domain.schedule.service.ScheduleService;
+import com.yulmudiary.global.auth.annotation.RequireRole;
 import com.yulmudiary.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +27,7 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
-    @Operation(summary = "월별 일정 조회", description = "year, month 파라미터로 해당 월의 일정 목록을 조회합니다.")
+    @Operation(summary = "월별 일정 조회", description = "가족 그룹 전체 구성원의 해당 월 일정을 조회합니다.")
     @GetMapping
     public ApiResponse<List<ScheduleResponse>> getByMonth(
             Authentication authentication,
@@ -37,9 +39,10 @@ public class ScheduleController {
         return ApiResponse.success(scheduleService.getByMonth(userId, year, month));
     }
 
-    @Operation(summary = "일정 등록")
+    @Operation(summary = "일정 등록", description = "PARENT 권한만 등록 가능합니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RequireRole(FamilyRole.PARENT)
     public ApiResponse<ScheduleResponse> create(
             Authentication authentication,
             @Valid @RequestBody ScheduleRequest request) {
@@ -47,8 +50,9 @@ public class ScheduleController {
         return ApiResponse.success(scheduleService.create(userId, request));
     }
 
-    @Operation(summary = "일정 수정")
+    @Operation(summary = "일정 수정", description = "PARENT 권한만 수정 가능합니다.")
     @PutMapping("/{id}")
+    @RequireRole(FamilyRole.PARENT)
     public ApiResponse<ScheduleResponse> update(
             @PathVariable Long id,
             Authentication authentication,
@@ -57,8 +61,9 @@ public class ScheduleController {
         return ApiResponse.success(scheduleService.update(id, userId, request));
     }
 
-    @Operation(summary = "일정 삭제")
+    @Operation(summary = "일정 삭제", description = "PARENT 권한만 삭제 가능합니다.")
     @DeleteMapping("/{id}")
+    @RequireRole(FamilyRole.PARENT)
     public ApiResponse<Void> delete(
             @PathVariable Long id,
             Authentication authentication) {

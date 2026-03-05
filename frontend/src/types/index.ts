@@ -16,6 +16,10 @@ export interface UserResponse {
   id: number;
   name: string;
   profileImageUrl: string | null;
+  email?: string;
+  /** /api/auth/me 응답에만 포함. 가족 그룹 내 역할. */
+  role?: "PARENT" | "RELATIVE";
+  familyGroupId?: number | null;
 }
 
 // --- Media ---
@@ -94,6 +98,15 @@ export interface DiaryPostPageResponse {
   hasNext: boolean;
 }
 
+// --- Family ---
+
+export interface FamilyMembershipResponse {
+  membershipId: number;
+  familyGroupId: number;
+  familyGroupName: string;
+  role: "PARENT" | "RELATIVE";
+}
+
 // --- Schedule ---
 
 export interface ScheduleResponse {
@@ -104,6 +117,8 @@ export interface ScheduleResponse {
   memo: string | null;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay: boolean;
+  placeName: string | null;
+  placeAddress: string | null;
   createdAt: string;
 }
 
@@ -112,4 +127,6 @@ export interface ScheduleRequest {
   memo?: string;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay?: boolean;
+  placeName?: string;
+  placeAddress?: string;
 }

@@ -1,5 +1,7 @@
 package com.yulmudiary.global.auth;
 
+import com.yulmudiary.domain.family.entity.FamilyMembership;
+import com.yulmudiary.domain.family.entity.FamilyRole;
 import com.yulmudiary.domain.family.repository.FamilyMembershipRepository;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
@@ -9,6 +11,8 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,11 +27,11 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다. id=" + userId));
 
-        Long familyGroupId = familyMembershipRepository.findByUserId(userId)
-                .map(m -> m.getFamilyGroup().getId())
-                .orElse(null);
+        Optional<FamilyMembership> membership = familyMembershipRepository.findByUserIdWithFamilyGroup(userId);
+        Long familyGroupId = membership.map(m -> m.getFamilyGroup().getId()).orElse(null);
+        FamilyRole familyRole = membership.map(FamilyMembership::getRole).orElse(null);
 
-        return AuthMeResponse.of(user, familyGroupId);
+        return AuthMeResponse.of(user, familyGroupId, familyRole);
     }
 
     public TokenRefreshResponse refreshAccessToken(String refreshToken) {

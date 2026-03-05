@@ -1,6 +1,6 @@
 -- 가족 그룹
-INSERT INTO family_group (name, invite_code, created_at, updated_at)
-VALUES ('율무네 가족', 'YM2024', NOW(), NOW());
+INSERT INTO family_group (name, invite_code, parent_invite_code, created_at, updated_at)
+VALUES ('율무네 가족', 'YM2026', 'YMP001', NOW(), NOW());
 
 -- 사용자
 INSERT INTO users (email, name, provider, provider_id, role, created_at, updated_at)

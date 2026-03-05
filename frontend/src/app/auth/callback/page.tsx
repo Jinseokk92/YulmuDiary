@@ -11,10 +11,15 @@ function CallbackHandler() {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    const onboarding = searchParams.get("onboarding");
 
     if (token) {
       setToken(token);
-      router.replace("/diary");
+      if (onboarding === "true") {
+        router.replace("/onboarding");
+      } else {
+        router.replace("/diary");
+      }
     } else {
       router.replace("/login");
     }

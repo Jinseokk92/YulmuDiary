@@ -191,6 +191,11 @@ frontend/
 - `PUT /api/schedules/{id}` — 수정 (작성자 검증)
 - `DELETE /api/schedules/{id}` — 삭제 (작성자 검증)
 
+## 주의사항 (Claude 필독)
+- `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.
+- 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
+- `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
+
 ## 미해결 / TODO
 - 인증 구현 (현재 X-USER-ID 헤더 임시 방식)
 - Baby 선택 UI (현재 babyId=1 하드코딩)

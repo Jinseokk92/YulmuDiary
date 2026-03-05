@@ -1,0 +1,57 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5        # Neon 무료 플랜 최대 동시 커넥션 수
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update            # 첫 배포 시 테이블 자동 생성, 이후 스키마 변경분 반영
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  sql:
+    init:
+      mode: never                 # 운영 환경에서 data.sql 시드 데이터 실행 안 함
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: email, profile
+
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            # client-secret: ${KAKAO_CLIENT_SECRET}  # 카카오는 client_secret 미사용
+            scope: profile_nickname, profile_image, account_email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_post
+            client-name: Kakao
+
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+app:
+  cors:
+    allowed-origins:
+      - ${FRONTEND_URL}
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+  oauth2:
+    redirect-uri: ${FRONTEND_URL}/auth/callback
