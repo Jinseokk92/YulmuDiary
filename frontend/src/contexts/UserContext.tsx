@@ -37,7 +37,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     api
       .get<UserResponse>("/api/auth/me")
       .then((me) => {
-        setUser({ id: me.id, name: me.name, profileImageUrl: me.profileImageUrl });
+        console.log("👤 [UserContext] /api/auth/me →", { id: me.id, familyGroupId: me.familyGroupId, role: me.role });
+        // familyGroupId, role 포함 전체 객체 저장 (onboarding 가드 등에서 user.familyGroupId 사용)
+        setUser(me);
         setFamilyGroup(me.familyGroupId ?? null);
       })
       .catch(() => {

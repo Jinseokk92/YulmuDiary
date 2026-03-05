@@ -8,22 +8,32 @@ function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setToken = useAuthStore((s) => s.setToken);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
 
   useEffect(() => {
     const token = searchParams.get("token");
     const onboarding = searchParams.get("onboarding");
 
-    if (token) {
-      setToken(token);
-      if (onboarding === "true") {
-        router.replace("/onboarding");
-      } else {
-        router.replace("/diary");
-      }
-    } else {
+    if (!token) {
       router.replace("/login");
+      return;
     }
-  }, [searchParams, setToken, router]);
+
+    // 1. 토큰 저장 (access_token 쿠키 설정)
+    setToken(token);
+
+    // 2. /api/auth/me 호출 → family_group_id 쿠키 복원
+    //    middleware가 쿠키 기반으로 동작하므로 리다이렉트 전에 반드시 필요
+    fetchMe().then(() => {
+      console.log("🔑 [Callback] fetchMe complete, onboarding param:", onboarding);
+      // /auth/success에서 2.3초 축하 화면 후 최종 경로로 이동
+      const dest =
+        onboarding === "true"
+          ? "/auth/success?onboarding=true"
+          : "/auth/success";
+      router.replace(dest);
+    });
+  }, [searchParams, setToken, fetchMe, router]);
 
   return null;
 }

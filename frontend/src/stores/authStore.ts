@@ -17,6 +17,8 @@ interface AuthState {
   setFamilyGroup: (id: number | null) => void;
   logout: () => void;
   initialize: () => void;
+  /** /api/auth/me를 직접 호출해 user + familyGroupId를 최신화 */
+  fetchMe: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -59,6 +61,28 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token, isAuthenticated: true, isLoading: false, familyGroupId });
     } else {
       set({ isLoading: false });
+    }
+  },
+
+  fetchMe: async () => {
+    const token = Cookies.get(TOKEN_KEY);
+    if (!token) return;
+    const base = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
+    try {
+      const res = await fetch(`${base}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      const me: UserResponse = body.data;
+      if (!me) return;
+      const fgId = me.familyGroupId ?? null;
+      if (fgId) Cookies.set(FAMILY_GROUP_KEY, String(fgId), { expires: 365 });
+      else Cookies.remove(FAMILY_GROUP_KEY);
+      set({ user: me, familyGroupId: fgId });
+    } catch {
+      /* 무시 */
     }
   },
 }));

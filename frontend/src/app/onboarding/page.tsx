@@ -10,20 +10,24 @@ import type { FamilyMembershipResponse } from "@/types";
 export default function OnboardingPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const familyGroupId = useAuthStore((s) => s.familyGroupId);
   const setUser = useAuthStore((s) => s.setUser);
   const setFamilyGroup = useAuthStore((s) => s.setFamilyGroup);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
 
-  // 이미 가족 그룹이 있으면 바로 이동
+  // 이미 가족 그룹이 있으면 즉시 이동 (user.familyGroupId 또는 store.familyGroupId 중 하나라도 있으면)
   useEffect(() => {
-    if (user?.familyGroupId != null) {
+    const hasGroup = (user?.familyGroupId != null) || (familyGroupId != null);
+    console.log("🔍 [Onboarding] guard check →", { userFamilyGroupId: user?.familyGroupId, storeFamilyGroupId: familyGroupId, hasGroup });
+    if (hasGroup) {
       router.replace("/diary");
     }
-  }, [user?.familyGroupId, router]);
+  }, [user?.familyGroupId, familyGroupId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,10 +69,18 @@ export default function OnboardingPage() {
       await router.replace("/diary");
 
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+
+      // 이미 가입된 경우 → 성공으로 처리 (최신 정보 갱신 후 리다이렉트)
+      if (msg.includes("이미 가족 그룹에 속해 있습니다")) {
+        console.log("ℹ️ [Onboarding] Already a member, fetching latest status...");
+        await fetchMe();
+        router.replace("/diary");
+        return;
+      }
+
       console.error("❌ [Onboarding] Join Failed:", err);
-      const msg =
-        err instanceof Error ? err.message : "초대 코드 인증에 실패했습니다.";
-      setError(msg);
+      setError(msg || "초대 코드 인증에 실패했습니다.");
       setIsSubmitting(false);
     }
   };
