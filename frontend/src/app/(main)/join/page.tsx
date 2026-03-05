@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 import type { FamilyJoinResponse } from "@/types";
 
 export default function JoinPage() {
   const router = useRouter();
+  const setFamilyGroup = useAuthStore((s) => s.setFamilyGroup);
   const [inviteCode, setInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +25,10 @@ export default function JoinPage() {
       const result = await api.post<FamilyJoinResponse>("/api/family-group/join", {
         inviteCode: inviteCode.trim(),
       });
+      // 쿠키 + Zustand store 동시 업데이트 (미들웨어와 클라이언트 상태 일치)
       Cookies.set("family_group_id", String(result.familyGroupId), { expires: 365 });
-      router.replace("/diary");
+      setFamilyGroup(result.familyGroupId);
+      router.push("/");
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
       if (status === 409) {

@@ -502,9 +502,13 @@ export default function SchedulePage() {
   // SDK가 이미 캐시된 상태로 페이지 진입 시 onLoad가 재실행되지 않는 문제 보완
   // (Next.js 클라이언트 사이드 내비게이션 후 재방문 케이스)
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).kakao?.maps) {
-      setKakaoMapReady(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((window as any).kakao?.maps) {
+        setKakaoMapReady(true);
+      }
+    } catch {
+      // 카카오맵 SDK 로드 실패 시 지도 기능만 비활성화, 페이지 전환은 정상 동작
     }
   }, []);
 
