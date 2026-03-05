@@ -1,7 +1,7 @@
 import type { ApiResponse } from "@/types";
 import { getAccessToken } from "@/stores/authStore";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/$/, "");
 
 // --- 핵심 request 함수 ---
 
@@ -20,7 +20,10 @@ async function request<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
+
+  console.log(`📡 [API Request] ${options?.method || "GET"} ${url}`);
 
   const isFormData = options?.body instanceof FormData;
 
@@ -94,7 +97,10 @@ async function request<T>(
 // --- 서버 사이드 전용 request ---
 
 async function serverRequest<T>(endpoint: string): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
+
+  console.log(`📡 [API Server Request] GET ${url}`);
 
   // Next.js Server Component에서 쿠키 읽기 (동적 import로 서버에서만 실행)
   const headers: Record<string, string> = {
