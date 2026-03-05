@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { api } from "@/lib/api";
-import type { AuthMeResponse, UserResponse } from "@/types";
+import type { UserResponse } from "@/types";
 
 interface UserContextValue {
   /** 현재 로그인한 사용자 */
@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return;
 
     api
-      .get<AuthMeResponse>("/api/auth/me")
+      .get<UserResponse>("/api/auth/me")
       .then((me) => {
         setUser({ id: me.id, name: me.name, profileImageUrl: me.profileImageUrl });
         setFamilyGroup(me.familyGroupId);
