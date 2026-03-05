@@ -22,7 +22,7 @@ export default function JoinPage() {
     setError(null);
 
     try {
-      const result = await api.post<FamilyJoinResponse>("/api/family-group/join", {
+      const result = await api.post<FamilyJoinResponse>("/api/family-groups/join", {
         inviteCode: inviteCode.trim(),
       });
       // 쿠키 + Zustand store 동시 업데이트 (미들웨어와 클라이언트 상태 일치)

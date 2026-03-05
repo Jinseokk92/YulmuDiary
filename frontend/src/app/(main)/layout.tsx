@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { api } from "@/lib/api";
 import Header from "@/components/layout/Header";
@@ -14,6 +14,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setUser = useAuthStore((s) => s.setUser);
   const [checking, setChecking] = useState(true);
@@ -28,7 +29,7 @@ export default function MainLayout({
       .get<UserResponse>("/api/auth/me")
       .then((me) => {
         setUser(me);
-        if (me.familyGroupId == null) {
+        if (me.familyGroupId == null && pathname !== "/join") {
           router.replace("/onboarding");
         } else {
           setChecking(false);
@@ -37,7 +38,7 @@ export default function MainLayout({
       .catch(() => {
         router.replace("/login");
       });
-  }, [isAuthenticated, router, setUser]);
+  }, [isAuthenticated, router, setUser, pathname]);
 
   if (checking) {
     return (

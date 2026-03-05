@@ -7,7 +7,7 @@ const FAMILY_GROUP_KEY = "family_group_id";
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
 // 로그인은 필요하지만 가족 그룹 없이도 접근 가능한 경로
-const JOIN_PATHS = ["/join"];
+const JOIN_PATHS = ["/join", "/onboarding"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -31,14 +31,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // 3. 토큰 있음 + /join + 이미 가족 그룹 멤버 → /diary 리다이렉트
+  // 3. 토큰 있음 + ( /join or /onboarding ) + 이미 가족 그룹 멤버 → /diary 리다이렉트
   if (token && isJoinPath && familyGroupId) {
     return NextResponse.redirect(new URL("/diary", request.url));
   }
 
-  // 4. 토큰 있음 + 보호된 경로 + 가족 그룹 없음 → /join 리다이렉트
+  // 4. 토큰 있음 + 보호된 경로 + 가족 그룹 없음 → /onboarding 리다이렉트
   if (token && !isPublicPath && !isJoinPath && !familyGroupId) {
-    return NextResponse.redirect(new URL("/join", request.url));
+    return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   return NextResponse.next();
