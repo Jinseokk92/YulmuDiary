@@ -16,41 +16,10 @@ export interface UserResponse {
   id: number;
   name: string;
   profileImageUrl: string | null;
-}
-
-// /api/auth/me 응답 전용 타입
-export interface AuthMeResponse {
-  id: number;
-  email: string;
-  name: string;
-  profileImageUrl: string | null;
-  role: string;
-  familyGroupId: number | null;
-}
-
-// --- Baby ---
-
-export interface BabyResponse {
-  id: number;
-  name: string;
-  dueDate: string;        // YYYY-MM-DD
-  dDayCount: number;      // 양수=D-N(남은 일수), 0=D-Day, 음수=D+N(지난 일수)
-  pregnancyWeeks: number; // 임신 주차
-  pregnancyDays: number;  // 주차 내 나머지 일수
-  gender: "MALE" | "FEMALE";
-  profileImageUrl: string | null;
-}
-
-// --- Family ---
-
-export interface FamilyJoinRequest {
-  inviteCode: string;
-}
-
-export interface FamilyJoinResponse {
-  familyGroupId: number;
-  familyGroupName: string;
-  role: string;
+  email?: string;
+  /** /api/auth/me 응답에만 포함. 가족 그룹 내 역할. */
+  role?: "PARENT" | "RELATIVE";
+  familyGroupId?: number | null;
 }
 
 // --- Media ---
@@ -129,6 +98,15 @@ export interface DiaryPostPageResponse {
   hasNext: boolean;
 }
 
+// --- Family ---
+
+export interface FamilyMembershipResponse {
+  membershipId: number;
+  familyGroupId: number;
+  familyGroupName: string;
+  role: "PARENT" | "RELATIVE";
+}
+
 // --- Schedule ---
 
 export interface ScheduleResponse {
@@ -140,8 +118,7 @@ export interface ScheduleResponse {
   eventDate: string; // "YYYY-MM-DD"
   isAllDay: boolean;
   placeName: string | null;
-  address: string | null;
-  addressDetail: string | null;
+  placeAddress: string | null;
   createdAt: string;
 }
 
@@ -151,6 +128,5 @@ export interface ScheduleRequest {
   eventDate: string; // "YYYY-MM-DD"
   isAllDay?: boolean;
   placeName?: string;
-  address?: string;
-  addressDetail?: string;
+  placeAddress?: string;
 }

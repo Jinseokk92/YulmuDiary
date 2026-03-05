@@ -12,10 +12,19 @@ import java.util.List;
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     /**
-     * 특정 월에 해당하는 일정 목록 조회 (날짜 오름차순)
+     * 가족 그룹 전체 구성원의 해당 월 일정 조회
+     * - JOIN FETCH로 작성자 정보를 한 번에 로드 (N+1 방지)
+     * - 정렬: 등록일 최신순 (createdAt DESC)
      */
-    List<Schedule> findByAuthorIdAndEventDateBetweenOrderByEventDateAsc(
-            Long authorId, LocalDate start, LocalDate end);
+    @Query("SELECT s FROM Schedule s JOIN FETCH s.author " +
+           "WHERE s.author.id IN (" +
+           "    SELECT fm.user.id FROM FamilyMembership fm WHERE fm.familyGroup.id = :familyGroupId" +
+           ") AND s.eventDate BETWEEN :start AND :end " +
+           "ORDER BY s.createdAt DESC")
+    List<Schedule> findByFamilyGroupIdAndEventDateBetween(
+            @Param("familyGroupId") Long familyGroupId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end);
 
     /**
      * 작성자 본인의 일정만 삭제 (권한 검증 포함)

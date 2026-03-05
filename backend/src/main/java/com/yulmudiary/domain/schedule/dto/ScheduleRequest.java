@@ -23,7 +23,5 @@ public class ScheduleRequest {
 
     private String placeName;
 
-    private String address;
-
-    private String addressDetail;
+    private String placeAddress;
 }

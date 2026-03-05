@@ -238,6 +238,11 @@ frontend/
 - 달력 그리드: `grid grid-cols-7`, dot 최대 3개 표시
 - BottomNav 4탭: 홈 | 일기장 | 일정 | 새 글
 
+## 주의사항 (Claude 필독)
+- `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.
+- 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
+- `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
+
 ## 미해결 / TODO
 - `Cookie.setSecure(false)` → 운영 환경에서 `true`로 변경 필요 (`OAuth2AuthenticationSuccessHandler.java:48`)
 - babyId=1 하드코딩 유지 (율무 한 명이므로 Baby 선택 UI 불필요)
