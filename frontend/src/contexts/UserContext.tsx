@@ -38,7 +38,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .get<UserResponse>("/api/auth/me")
       .then((me) => {
         setUser({ id: me.id, name: me.name, profileImageUrl: me.profileImageUrl });
-        setFamilyGroup(me.familyGroupId);
+        setFamilyGroup(me.familyGroupId ?? null);
       })
       .catch(() => {
         // 토큰 만료 등으로 실패 시 로그아웃
