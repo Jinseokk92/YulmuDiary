@@ -64,15 +64,23 @@ public class FamilyService {
     }
 
     /**
-     * 초대 코드로 가족 그룹 가입.
-     * - inviteCode 일치 → RELATIVE 역할
-     * - parentInviteCode 일치 → PARENT 역할
-     * - 이미 어느 그룹에든 소속되어 있으면 400
+     * 초대 코드로 가족 그룹 가입 (멱등).
+     * - 이미 소속된 경우 → 기존 멤버십 반환 (400 아님)
+     * - inviteCode 일치 → RELATIVE 역할로 신규 가입
+     * - parentInviteCode 일치 → PARENT 역할로 신규 가입
      */
     @Transactional
     public FamilyMembershipResponse join(Long userId, String rawCode) {
         String code = rawCode.trim().toUpperCase();
         log.info("가족 그룹 가입 시도: userId={}, code={}", userId, code);
+
+        // 이미 소속된 그룹이 있는지 먼저 확인 → 있으면 기존 멤버십 반환 (멱등)
+        var existing = familyMembershipRepository.findByUserIdWithFamilyGroup(userId);
+        if (existing.isPresent()) {
+            log.info("이미 가족 그룹 소속 → 기존 멤버십 반환: userId={}, groupId={}",
+                    userId, existing.get().getFamilyGroup().getId());
+            return FamilyMembershipResponse.from(existing.get());
+        }
 
         // 코드 판별: RELATIVE 코드 우선 확인, 없으면 PARENT 코드 확인
         FamilyGroup group;
@@ -91,11 +99,6 @@ public class FamilyService {
                 log.warn("유효하지 않은 초대 코드: code={}", code);
                 throw new IllegalArgumentException("유효하지 않은 초대 코드입니다.");
             }
-        }
-
-        // 이미 소속된 그룹이 있는지 확인
-        if (familyMembershipRepository.findByUserId(userId).isPresent()) {
-            throw new IllegalArgumentException("이미 가족 그룹에 속해 있습니다.");
         }
 
         User user = userRepository.findById(userId)

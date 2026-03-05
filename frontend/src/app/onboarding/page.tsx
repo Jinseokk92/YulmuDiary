@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import type { FamilyMembershipResponse } from "@/types";
@@ -11,8 +10,6 @@ export default function OnboardingPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const familyGroupId = useAuthStore((s) => s.familyGroupId);
-  const setUser = useAuthStore((s) => s.setUser);
-  const setFamilyGroup = useAuthStore((s) => s.setFamilyGroup);
   const fetchMe = useAuthStore((s) => s.fetchMe);
 
   const [code, setCode] = useState("");
@@ -20,14 +17,15 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
 
-  // 이미 가족 그룹이 있으면 즉시 이동 (user.familyGroupId 또는 store.familyGroupId 중 하나라도 있으면)
+  // 이미 가족 그룹이 있으면 즉시 이동 (성공 화면 노출 중에는 스킵)
   useEffect(() => {
+    if (isJoined) return;
     const hasGroup = (user?.familyGroupId != null) || (familyGroupId != null);
     console.log("🔍 [Onboarding] guard check →", { userFamilyGroupId: user?.familyGroupId, storeFamilyGroupId: familyGroupId, hasGroup });
     if (hasGroup) {
       router.replace("/diary");
     }
-  }, [user?.familyGroupId, familyGroupId, router]);
+  }, [user?.familyGroupId, familyGroupId, router, isJoined]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,39 +44,21 @@ export default function OnboardingPage() {
 
       console.log("✅ [Onboarding] Join Success:", result);
 
-      // 2. 동기화 (쿠키 + 스토어)
-      Cookies.set("family_group_id", String(result.familyGroupId), { expires: 365 });
+      // 2. authStore 최신화 (쿠키 + 스토어 동기화)
+      await fetchMe();
 
-      if (user) {
-        setUser({
-          ...user,
-          familyGroupId: result.familyGroupId,
-          role: result.role,
-        });
-        setFamilyGroup(result.familyGroupId);
-      }
-
+      // 3. 성공 UI 표시
       setIsJoined(true);
 
-      // 3. 시니어의 UX 디테일: 성공 메시지를 2초간 노출하여 유저가 상황을 인지하게 함
+      // 4. 2초간 성공 메시지 노출 후 /diary로 이동
       console.log("🚀 [Onboarding] Waiting 2s for user to see the success message...");
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // 4. 페이지 전환 보장
       console.log("🚀 [Onboarding] Redirecting to /diary...");
-      await router.replace("/diary");
+      router.replace("/diary");
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
-
-      // 이미 가입된 경우 → 성공으로 처리 (최신 정보 갱신 후 리다이렉트)
-      if (msg.includes("이미 가족 그룹에 속해 있습니다")) {
-        console.log("ℹ️ [Onboarding] Already a member, fetching latest status...");
-        await fetchMe();
-        router.replace("/diary");
-        return;
-      }
-
       console.error("❌ [Onboarding] Join Failed:", err);
       setError(msg || "초대 코드 인증에 실패했습니다.");
       setIsSubmitting(false);
