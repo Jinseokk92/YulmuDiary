@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
-import type { FamilyJoinResponse } from "@/types";
+import type { FamilyMembershipResponse } from "@/types";
 
 export default function JoinPage() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function JoinPage() {
     setError(null);
 
     try {
-      const result = await api.post<FamilyJoinResponse>("/api/family-groups/join", {
+      const result = await api.post<FamilyMembershipResponse>("/api/family-groups/join", {
         inviteCode: inviteCode.trim(),
       });
       // 쿠키 + Zustand store 동시 업데이트 (미들웨어와 클라이언트 상태 일치)
