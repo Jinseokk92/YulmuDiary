@@ -1,7 +1,8 @@
 package com.yulmudiary.domain.family.service;
 
-import com.yulmudiary.domain.family.dto.FamilyJoinRequest;
-import com.yulmudiary.domain.family.dto.FamilyJoinResponse;
+import com.yulmudiary.domain.family.dto.FamilyCreateRequest;
+import com.yulmudiary.domain.family.dto.FamilyGroupResponse;
+import com.yulmudiary.domain.family.dto.FamilyMembershipResponse;
 import com.yulmudiary.domain.family.entity.FamilyGroup;
 import com.yulmudiary.domain.family.entity.FamilyMembership;
 import com.yulmudiary.domain.family.entity.FamilyRole;
@@ -9,8 +10,7 @@ import com.yulmudiary.domain.family.repository.FamilyGroupRepository;
 import com.yulmudiary.domain.family.repository.FamilyMembershipRepository;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
-import com.yulmudiary.global.exception.AlreadyMemberException;
-import jakarta.persistence.EntityNotFoundException;
+import com.yulmudiary.global.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,55 +23,153 @@ import org.springframework.transaction.annotation.Transactional;
 public class FamilyService {
 
     private final FamilyGroupRepository familyGroupRepository;
-    private final FamilyMembershipRepository membershipRepository;
+    private final FamilyMembershipRepository familyMembershipRepository;
     private final UserRepository userRepository;
 
+    /**
+     * 가족 그룹 생성.
+     * - RELATIVE 초대 코드와 PARENT 초대 코드를 각각 6자리로 자동 생성.
+     * - UUID 충돌 시 최대 5회 재시도.
+     */
     @Transactional
-    public FamilyJoinResponse join(Long userId, FamilyJoinRequest request) {
-        // 1. 입력값 null 체크
-        if (request.inviteCode() == null) {
-            throw new IllegalArgumentException("초대 코드가 누락되었습니다.");
+    public FamilyGroupResponse create(Long userId, FamilyCreateRequest request) {
+        User creator = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다. id=" + userId));
+
+        // 이미 그룹에 소속되어 있으면 생성 불가
+        if (familyMembershipRepository.findByUserId(userId).isPresent()) {
+            throw new IllegalArgumentException("이미 가족 그룹에 속해 있습니다.");
         }
 
-        // 2. 공백 제거 + 대문자 정규화
-        String normalizedInput = request.inviteCode().trim().toUpperCase();
-        if (normalizedInput.isEmpty()) {
-            throw new IllegalArgumentException("초대 코드가 비어 있습니다.");
+        String inviteCode = generateUniqueRelativeCode();
+        String parentInviteCode = generateUniqueParentCode();
+
+        FamilyGroup group = FamilyGroup.builder()
+                .name(request.name())
+                .inviteCode(inviteCode)
+                .parentInviteCode(parentInviteCode)
+                .build();
+        familyGroupRepository.save(group);
+
+        // 생성자는 자동으로 PARENT로 가입
+        FamilyMembership membership = FamilyMembership.builder()
+                .user(creator)
+                .familyGroup(group)
+                .role(FamilyRole.PARENT)
+                .build();
+        familyMembershipRepository.save(membership);
+
+        log.info("가족 그룹 생성: groupId={}, name={}, creatorId={}", group.getId(), group.getName(), userId);
+        return FamilyGroupResponse.from(group);
+    }
+
+    /**
+     * 초대 코드로 가족 그룹 가입.
+     * - inviteCode 일치 → RELATIVE 역할
+     * - parentInviteCode 일치 → PARENT 역할
+     * - 이미 어느 그룹에든 소속되어 있으면 400
+     */
+    @Transactional
+    public FamilyMembershipResponse join(Long userId, String rawCode) {
+        String code = rawCode.trim().toUpperCase();
+        log.info("가족 그룹 가입 시도: userId={}, code={}", userId, code);
+
+        // 코드 판별: RELATIVE 코드 우선 확인, 없으면 PARENT 코드 확인
+        FamilyGroup group;
+        FamilyRole role;
+
+        var byRelative = familyGroupRepository.findByInviteCode(code);
+        if (byRelative.isPresent()) {
+            group = byRelative.get();
+            role = FamilyRole.RELATIVE;
+        } else {
+            var byParent = familyGroupRepository.findByParentInviteCode(code);
+            if (byParent.isPresent()) {
+                group = byParent.get();
+                role = FamilyRole.PARENT;
+            } else {
+                log.warn("유효하지 않은 초대 코드: code={}", code);
+                throw new IllegalArgumentException("유효하지 않은 초대 코드입니다.");
+            }
         }
 
-        // 3. 정규화된 값으로 DB 조회
-        FamilyGroup group = familyGroupRepository.findByInviteCode(normalizedInput)
-                .orElseThrow(() -> {
-                    log.warn("초대 코드 조회 실패. 입력된 코드(정규화): [{}]", normalizedInput);
-                    return new EntityNotFoundException("유효하지 않은 초대 코드입니다.");
-                });
-
-        // 4. DB 저장 값도 정규화하여 비교 (DB에 대소문자 혼재 가능성 방어)
-        String dbCode = group.getInviteCode() != null
-                ? group.getInviteCode().trim().toUpperCase()
-                : null;
-        log.info("입력된 코드: [{}], DB 코드: [{}]", normalizedInput, dbCode);
-
-        if (dbCode == null || !normalizedInput.equals(dbCode)) {
-            log.warn("초대 코드 불일치. 입력: [{}], DB: [{}]", normalizedInput, dbCode);
-            throw new EntityNotFoundException("유효하지 않은 초대 코드입니다.");
-        }
-
-        // 특정 그룹이 아닌 '모든 가족 그룹' 소속 여부 확인 (유저당 하나의 가족 그룹 정책)
-        if (membershipRepository.findByUserId(userId).isPresent()) {
-            throw new AlreadyMemberException("이미 가족 그룹에 참여한 상태입니다.");
+        // 이미 소속된 그룹이 있는지 확인
+        if (familyMembershipRepository.findByUserId(userId).isPresent()) {
+            throw new IllegalArgumentException("이미 가족 그룹에 속해 있습니다.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다. id=" + userId));
 
         FamilyMembership membership = FamilyMembership.builder()
                 .user(user)
                 .familyGroup(group)
-                .role(FamilyRole.RELATIVE)
+                .role(role)
                 .build();
-        membershipRepository.save(membership);
+        familyMembershipRepository.save(membership);
 
-        return new FamilyJoinResponse(group.getId(), group.getName(), FamilyRole.RELATIVE.name());
+        log.info("가족 그룹 가입 완료: userId={}, groupId={}, role={}", userId, group.getId(), role);
+        return FamilyMembershipResponse.from(membership);
+    }
+
+    /**
+     * 해당 유저의 가족 그룹 가입 여부 반환.
+     */
+    public boolean isMember(Long userId) {
+        return familyMembershipRepository.findByUserId(userId).isPresent();
+    }
+
+    /**
+     * 내 가족 그룹 정보 조회 (초대 코드 포함).
+     * PARENT 권한이 있어야 초대 코드를 확인할 수 있으므로, 서비스 계층에서는 단순 조회만 수행.
+     * 권한 체크는 컨트롤러의 @RequireRole(PARENT)가 담당.
+     */
+    public FamilyGroupResponse getMyGroup(Long userId) {
+        FamilyMembership membership = familyMembershipRepository.findByUserIdWithFamilyGroup(userId)
+                .orElseThrow(() -> new NotFoundException("소속된 가족 그룹이 없습니다."));
+        return FamilyGroupResponse.from(membership.getFamilyGroup());
+    }
+
+    /**
+     * PARENT 초대 코드 재발급.
+     * 기존 코드를 무효화하고 새 6자리 코드를 발급한다.
+     */
+    @Transactional
+    public FamilyGroupResponse regenerateParentCode(Long userId) {
+        FamilyMembership membership = familyMembershipRepository.findByUserIdWithFamilyGroup(userId)
+                .orElseThrow(() -> new NotFoundException("소속된 가족 그룹이 없습니다."));
+
+        FamilyGroup group = membership.getFamilyGroup();
+        String newCode = generateUniqueParentCode();
+        group.regenerateParentInviteCode(newCode);
+
+        log.info("PARENT 초대 코드 재발급: groupId={}, newCode={}", group.getId(), newCode);
+        return FamilyGroupResponse.from(group);
+    }
+
+    // ── private 헬퍼 ──────────────────────────────────
+
+    /** RELATIVE 초대 코드 중복 없는 6자리 생성 (최대 5회 재시도) */
+    private String generateUniqueRelativeCode() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = FamilyGroup.generateCode();
+            if (!familyGroupRepository.existsByInviteCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("초대 코드 생성에 실패했습니다. 다시 시도해 주세요.");
+    }
+
+    /** PARENT 초대 코드 중복 없는 6자리 생성 (최대 5회 재시도) */
+    private String generateUniqueParentCode() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = FamilyGroup.generateCode();
+            // RELATIVE 코드와도 충돌하지 않아야 함
+            if (!familyGroupRepository.existsByParentInviteCode(code)
+                    && !familyGroupRepository.existsByInviteCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("초대 코드 생성에 실패했습니다. 다시 시도해 주세요.");
     }
 }

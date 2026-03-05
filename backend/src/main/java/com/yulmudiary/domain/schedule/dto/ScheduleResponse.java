@@ -19,8 +19,7 @@ public class ScheduleResponse {
     private LocalDate eventDate;
     private Boolean isAllDay;
     private String placeName;
-    private String address;
-    private String addressDetail;
+    private String placeAddress;
     private LocalDateTime createdAt;
 
     public static ScheduleResponse from(Schedule schedule) {
@@ -33,8 +32,7 @@ public class ScheduleResponse {
                 .eventDate(schedule.getEventDate())
                 .isAllDay(schedule.getIsAllDay())
                 .placeName(schedule.getPlaceName())
-                .address(schedule.getAddress())
-                .addressDetail(schedule.getAddressDetail())
+                .placeAddress(schedule.getPlaceAddress())
                 .createdAt(schedule.getCreatedAt())
                 .build();
     }

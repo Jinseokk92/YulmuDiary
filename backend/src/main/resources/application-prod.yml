@@ -33,7 +33,7 @@ spring:
 
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
-            client-secret: ${KAKAO_CLIENT_SECRET}
+            # client-secret: ${KAKAO_CLIENT_SECRET}  # 카카오는 client_secret 미사용
             scope: profile_nickname, profile_image, account_email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"

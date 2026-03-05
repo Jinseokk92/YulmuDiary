@@ -11,15 +11,9 @@ public interface FamilyMembershipRepository extends JpaRepository<FamilyMembersh
 
     Optional<FamilyMembership> findByUserId(Long userId);
 
-    boolean existsByUserIdAndFamilyGroupId(Long userId, Long familyGroupId);
-
-    @Query("SELECT CASE WHEN COUNT(fm) > 0 THEN true ELSE false END FROM FamilyMembership fm " +
-           "WHERE fm.user.id = :userId " +
-           "AND fm.familyGroup.id = (SELECT b.familyGroup.id FROM Baby b WHERE b.id = :babyId)")
-    boolean existsByUserIdAndBabyId(@Param("userId") Long userId, @Param("babyId") Long babyId);
-
-    @Query("SELECT CASE WHEN COUNT(fm) > 0 THEN true ELSE false END FROM FamilyMembership fm " +
-           "WHERE fm.user.id = :userId " +
-           "AND fm.familyGroup.id = (SELECT dp.baby.familyGroup.id FROM DiaryPost dp WHERE dp.id = :postId)")
-    boolean existsByUserIdAndPostId(@Param("userId") Long userId, @Param("postId") Long postId);
+    /**
+     * userId로 멤버십 조회 (familyGroup fetch join으로 N+1 방지)
+     */
+    @Query("SELECT fm FROM FamilyMembership fm JOIN FETCH fm.familyGroup WHERE fm.user.id = :userId")
+    Optional<FamilyMembership> findByUserIdWithFamilyGroup(@Param("userId") Long userId);
 }

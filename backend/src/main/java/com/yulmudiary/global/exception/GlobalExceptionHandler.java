@@ -1,22 +1,19 @@
 package com.yulmudiary.global.exception;
 
 import com.yulmudiary.global.auth.InvalidTokenException;
+import com.yulmudiary.global.exception.ForbiddenException;
+import com.yulmudiary.global.exception.NotFoundException;
 import com.yulmudiary.global.response.ApiResponse;
-import com.yulmudiary.global.exception.FamilyAuthorizationException;
-import com.yulmudiary.global.exception.AlreadyMemberException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -40,12 +37,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("MISSING_HEADER", "필수 헤더가 누락되었습니다: " + e.getHeaderName()));
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMessageNotReadable(HttpMessageNotReadableException e) {
-        return ResponseEntity.badRequest()
-                .body(ApiResponse.error("BAD_REQUEST", "요청 본문을 읽을 수 없습니다. 형식을 확인해 주세요."));
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -57,39 +48,22 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("VALIDATION_ERROR", message));
     }
 
-    @ExceptionHandler(FamilyAuthorizationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleFamilyAuthorization(FamilyAuthorizationException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("FORBIDDEN", e.getMessage()));
-    }
-
-    @ExceptionHandler(AlreadyMemberException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAlreadyMember(AlreadyMemberException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("ALREADY_MEMBER", e.getMessage()));
-    }
-
-    // DB 제약 조건 위반 (UniqueConstraint 등) → 409로 매핑
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
-        log.warn("데이터 무결성 위반: {}", e.getMostSpecificCause().getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("ALREADY_MEMBER", "이미 가족 그룹에 참여한 상태입니다."));
-    }
-
-    // Spring Boot 3.x: NoHandlerFoundException 대체 — 존재하지 않는 경로 요청 시 발생
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException e,
-                                                                   HttpServletRequest request) {
-        log.warn("존재하지 않는 경로 요청: {} {}", request.getMethod(), request.getRequestURI());
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(NotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("NOT_FOUND", "요청한 경로를 찾을 수 없습니다: " + request.getRequestURI()));
+                .body(ApiResponse.error("NOT_FOUND", e.getMessage()));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleEntityNotFound(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error("NOT_FOUND", e.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("FORBIDDEN", e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
