@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback, useRef, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
@@ -224,7 +225,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
 
         {/* ── 중단: 사진 ── */}
         {post.media && post.media.length > 0 && (
-          <ImageCarousel media={post.media} />
+          <ImageCarousel media={post.media} diaryId={post.id} />
         )}
 
         {/* ── 하단: 액션 + 텍스트 ── */}
@@ -374,14 +375,17 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
           )}
         </div>
 
-        {/* 댓글 Bottom Sheet */}
-        <CommentBottomSheet
-          ref={commentSectionRef}
-          isOpen={isCommentSheetOpen}
-          onClose={() => setIsCommentSheetOpen(false)}
-          postId={post.id}
-          initialCommentCount={post.commentCount ?? 0}
-        />
+        {/* 댓글 Bottom Sheet — AnimatePresence로 마운트/언마운트 시 애니메이션 */}
+        <AnimatePresence>
+          {isCommentSheetOpen && (
+            <CommentBottomSheet
+              ref={commentSectionRef}
+              onClose={() => setIsCommentSheetOpen(false)}
+              postId={post.id}
+              initialCommentCount={post.commentCount ?? 0}
+            />
+          )}
+        </AnimatePresence>
       </article>
 
       {/* 삭제 확인 모달 */}

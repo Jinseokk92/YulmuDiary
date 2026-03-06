@@ -8,6 +8,8 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
@@ -16,8 +18,8 @@ import CommentSection from "./CommentSection";
 
 const QUICK_EMOJIS = ["❤️", "😍", "👍", "😂", "😭", "🥰", "🙌", "✨"] as const;
 
+// isOpen 제거 — 부모에서 조건부 렌더링으로 마운트/언마운트 제어
 interface CommentBottomSheetProps {
-  isOpen: boolean;
   onClose: () => void;
   postId: number;
   initialCommentCount: number;
@@ -25,11 +27,10 @@ interface CommentBottomSheetProps {
 
 export interface CommentBottomSheetHandle {
   focusInput: () => void;
-  openComments: () => void;
 }
 
 const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomSheetProps>(
-  ({ isOpen, onClose, postId, initialCommentCount }, ref) => {
+  ({ onClose, postId, initialCommentCount }, ref) => {
     const { currentUser } = useUser();
 
     // ─── 댓글 데이터 상태 ───────────────────────────────────────────
@@ -65,7 +66,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     // ─── 무한 스크롤 sentinel ────────────────────────────────────────
     const { ref: loadMoreRef, inView } = useInView({
       threshold: 0.5,
-      skip: !isOpen || !hasNext || isLoading,
+      skip: !hasNext || isLoading,
     });
     const sentinelRef = useRef<HTMLDivElement>(null);
     const setsentinel = useCallback(
@@ -87,11 +88,6 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
     // ─── visualViewport 기반 키보드 높이 추적 ────────────────────────
     useEffect(() => {
-      if (!isOpen) {
-        setKeyboardHeight(0);
-        return;
-      }
-
       const vv = window.visualViewport;
       if (!vv) return;
 
@@ -109,9 +105,8 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       return () => {
         vv.removeEventListener("resize", handleViewportChange);
         vv.removeEventListener("scroll", handleViewportChange);
-        setKeyboardHeight(0);
       };
-    }, [isOpen, scrollToBottom]);
+    }, [scrollToBottom]);
 
     // ─── 댓글 fetch (커서 기반 페이징) ─────────────────────────────
     const fetchComments = useCallback(
@@ -169,34 +164,31 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     }, [inView, hasNext, isLoading, nextCursor, fetchComments]);
 
     // ─── 부모 스크롤 잠금 (Scroll Bleeding 방지) ────────────────────
+    // 컴포넌트 마운트 시 항상 잠금 (조건부 렌더링으로 관리)
     useEffect(() => {
-      if (!isOpen) return;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = "unset";
       };
-    }, [isOpen]);
+    }, []);
 
-    // ─── 시트 열림: 초기 fetch + 입력창 포커스 (애니메이션 후) ──────
+    // ─── 마운트 시: 초기 fetch + 입력창 포커스 (애니메이션 후) ──────
     useEffect(() => {
-      if (!isOpen) return;
       const timer = setTimeout(() => {
-        if (!isLoaded) fetchComments();
+        fetchComments();
         inputRef.current?.focus();
       }, 300);
       return () => clearTimeout(timer);
-    }, [isOpen, isLoaded, fetchComments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // ─── 핸들 노출 ──────────────────────────────────────────────────
     useImperativeHandle(
       ref,
       () => ({
         focusInput: () => inputRef.current?.focus(),
-        openComments: () => {
-          if (!isLoaded) fetchComments();
-        },
       }),
-      [isLoaded, fetchComments]
+      []
     );
 
     // ─── 댓글 작성 (낙관적 업데이트) ───────────────────────────────
@@ -257,34 +249,39 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     );
 
     // ─── 렌더 ───────────────────────────────────────────────────────
-    return (
+    const sheet = (
       <>
-        {/* 투명 오버레이 — 클릭 시 닫힘, 시트와 분리하여 z-index 독립 관리 */}
-        <div
-          className={`fixed inset-0 z-40 ${
-            isOpen ? "pointer-events-auto" : "pointer-events-none"
-          }`}
+        {/* 반투명 오버레이 — 클릭 시 닫힘 */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 bg-black/40"
+          style={{ zIndex: 100 }}
           onClick={onClose}
         />
 
         {/*
-          바텀 시트 — 오버레이와 분리된 fixed 요소
-          - left-1/2 -translate-x-1/2: 중앙 정렬
+          바텀 시트 — Portal로 document.body에 마운트하여 부모 transform/overflow 영향 차단
+          - max-w-lg mx-auto: 데스크톱에서 중앙 정렬, 모바일은 100% 너비
           - bottom: keyboardHeight → 키보드가 올라오면 시트도 함께 올라감
           - height: 75svh (svh = Small Viewport Height, 키보드 무관 최소 뷰포트 기준)
-          - transition: transform(슬라이드) + bottom(키보드 대응) 별도 지정
         */}
-        <div
-          className={`fixed z-50 w-full max-w-lg left-1/2 -translate-x-1/2
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          className="fixed left-0 right-0 mx-auto w-full max-w-lg
                       bg-white dark:bg-slate-900 rounded-t-3xl
                       border-t border-gray-100 dark:border-slate-800
                       shadow-[0_-4px_24px_rgba(0,0,0,0.08)]
-                      flex flex-col box-border
-                      ${isOpen ? "translate-y-0" : "translate-y-full"}`}
+                      flex flex-col box-border"
           style={{
             bottom: keyboardHeight,
             height: "75svh",
-            transition: "transform 300ms ease, bottom 150ms ease",
+            zIndex: 101,
           }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
@@ -376,9 +373,11 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
               </form>
             </div>
           )}
-        </div>
+        </motion.div>
       </>
     );
+
+    return createPortal(sheet, document.body);
   }
 );
 

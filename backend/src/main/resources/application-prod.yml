@@ -58,3 +58,4 @@ app:
   media:
     gcs:
       bucket-name: ${GCS_BUCKET_NAME}
+    base-url: https://storage.googleapis.com/${GCS_BUCKET_NAME}/originals/

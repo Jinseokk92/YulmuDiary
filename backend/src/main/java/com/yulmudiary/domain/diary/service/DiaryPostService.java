@@ -9,6 +9,7 @@ import com.yulmudiary.domain.diary.entity.DiaryPost;
 import com.yulmudiary.domain.diary.entity.Media;
 import com.yulmudiary.domain.diary.entity.MediaType;
 import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
+import com.yulmudiary.domain.media.service.MediaUrlResolver;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -27,6 +28,7 @@ public class DiaryPostService {
     private final DiaryPostRepository diaryPostRepository;
     private final UserRepository userRepository;
     private final BabyRepository babyRepository;
+    private final MediaUrlResolver mediaUrlResolver;
 
     @Transactional
     public DiaryPostResponse create(Long authorId, DiaryPostRequest request) {
@@ -45,13 +47,13 @@ public class DiaryPostService {
         addMedia(post, request.getMediaUrls(), request.getMediaThumbnailUrls());
 
         diaryPostRepository.save(post);
-        return DiaryPostResponse.from(post);
+        return DiaryPostResponse.from(post, mediaUrlResolver);
     }
 
     public DiaryPostResponse getById(Long id) {
         DiaryPost post = diaryPostRepository.findByIdWithMedia(id)
                 .orElseThrow(() -> new EntityNotFoundException("일기를 찾을 수 없습니다. id=" + id));
-        return DiaryPostResponse.from(post);
+        return DiaryPostResponse.from(post, mediaUrlResolver);
     }
 
     public DiaryPostPageResponse getByBaby(Long babyId, Long cursor, int size) {
@@ -66,7 +68,7 @@ public class DiaryPostService {
         List<DiaryPost> content = hasNext ? posts.subList(0, size) : posts;
 
         List<DiaryPostResponse> items = content.stream()
-                .map(DiaryPostResponse::from)
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
                 .toList();
 
         Long nextCursor = hasNext ? content.get(content.size() - 1).getId() : null;
@@ -89,7 +91,7 @@ public class DiaryPostService {
         post.clearMedia();
         addMedia(post, request.getMediaUrls(), request.getMediaThumbnailUrls());
 
-        return DiaryPostResponse.from(post);
+        return DiaryPostResponse.from(post, mediaUrlResolver);
     }
 
     @Transactional

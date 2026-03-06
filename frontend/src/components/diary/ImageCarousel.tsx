@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Images } from "lucide-react";
 import type { MediaDto } from "@/types";
@@ -8,6 +9,7 @@ import { getMediaUrl } from "@/lib/utils";
 
 interface ImageCarouselProps {
   media: MediaDto[];
+  diaryId: number;
 }
 
 const slideVariants = {
@@ -28,9 +30,10 @@ const springTransition = {
   damping: 30,
 } as const;
 
-export default function ImageCarousel({ media }: ImageCarouselProps) {
+export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
 
   const isMultiple = media.length > 1;
   const isFirst = activeIndex === 0;
@@ -61,7 +64,7 @@ export default function ImageCarousel({ media }: ImageCarouselProps) {
       <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
-            key={activeIndex}
+            key={`${diaryId}-${activeIndex}`}
             custom={direction}
             variants={slideVariants}
             initial="enter"
@@ -72,28 +75,31 @@ export default function ImageCarousel({ media }: ImageCarouselProps) {
             dragConstraints={{ left: 0, right: 0 }}
             dragDirectionLock
             dragElastic={{
-              // 경계에서 저항감: 넘어갈 수 없는 방향은 0.05로 잠금
-              left: isLast ? 0.05 : 0.2,
-              right: isFirst ? 0.05 : 0.2,
+              left: isLast ? 0.05 : 0.3,
+              right: isFirst ? 0.05 : 0.3,
             }}
             onDragEnd={(_, { offset, velocity }) => {
-              if (offset.x < -50 || velocity.x < -500) goNext();
-              else if (offset.x > 50 || velocity.x > 500) goPrev();
+              const swipePower = Math.abs(offset.x) * Math.abs(velocity.x);
+              if (swipePower > 8000 || offset.x < -60) goNext();
+              else if (swipePower > 8000 || offset.x > 60) goPrev();
             }}
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getMediaUrl(media[activeIndex].thumbnailUrl || media[activeIndex].url)}
-              alt=""
-              className="w-full h-full object-cover"
-              loading="lazy"
-              draggable={false}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-                (e.target as HTMLImageElement).parentElement!.style.backgroundColor = "#f3f4f6";
-              }}
-            />
+            {imgErrors[activeIndex] ? (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <Images className="w-8 h-8 text-gray-300" />
+              </div>
+            ) : (
+              <Image
+                src={getMediaUrl(media[activeIndex].thumbnailUrl || media[activeIndex].url)}
+                alt=""
+                fill
+                draggable={false}
+                className="object-cover pointer-events-none select-none"
+                sizes="(max-width: 512px) 100vw, 512px"
+                onError={() => setImgErrors((prev) => ({ ...prev, [activeIndex]: true }))}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -119,15 +125,14 @@ export default function ImageCarousel({ media }: ImageCarouselProps) {
           {media.map((_, i) => (
             <motion.span
               key={i}
+              onClick={() => navigate(i)}
               animate={{
-                // 활성: primary-500(#e4701e), 비활성: gray-300
                 backgroundColor: i === activeIndex ? "#e4701e" : "#d1d5db",
-                // 활성: w-2 h-2(8px), 비활성: w-1.5 h-1.5(6px)
                 width: i === activeIndex ? 8 : 6,
                 height: i === activeIndex ? 8 : 6,
               }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="rounded-full inline-block"
+              className="rounded-full inline-block cursor-pointer"
             />
           ))}
         </div>

@@ -32,6 +32,8 @@ app:
       - http://localhost:3000
   media:
     upload-dir: ./uploads
+    # 로컬: 백엔드 서빙 URL, prod: GCS public base URL (application-prod.yml에서 재정의)
+    base-url: http://localhost:8080/api/media/files/
   jwt:
     secret-key: ${JWT_SECRET_KEY}
 #    yulmudiary-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
