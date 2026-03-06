@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "@/components/ui/UserAvatar";
 import SideDrawer from "@/components/layout/SideDrawer";
 
-const GUIDE_KEY = "menu-guide-seen";
+const GUIDE_INTERVAL_MS = 3 * 60 * 1000; // 5분마다 반복 표시
 
 // ─── 말풍선 가이드 ─────────────────────────────────────────────────────────
 function MenuGuide() {
@@ -46,8 +46,7 @@ function MenuGuide() {
           backgroundColor: "#fef3c7",
           borderColor: "#fcd34d",
           color: "#92400e",
-          maxWidth: "13rem",
-          whiteSpace: "pre-line",
+          whiteSpace: "nowrap",
         }}
       >
         여기를 누르면 로그아웃과 설정을 할 수 있어요!
@@ -68,14 +67,17 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  // mounted 후 localStorage 확인 → 1초 뒤 말풍선 표시
+  // mounted 후 1초 뒤 첫 표시, 이후 5분마다 반복
   useEffect(() => {
     if (!mounted) return;
-    const seen = localStorage.getItem(GUIDE_KEY);
-    if (seen) return;
 
     const showTimer = setTimeout(() => setShowGuide(true), 1000);
-    return () => clearTimeout(showTimer);
+    const interval = setInterval(() => setShowGuide(true), GUIDE_INTERVAL_MS);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearInterval(interval);
+    };
   }, [mounted]);
 
   // 5초 후 자동으로 사라짐
@@ -88,8 +90,6 @@ export default function Header() {
   const isDark = mounted && resolvedTheme === "dark";
 
   const handleMenuClick = () => {
-    // 클릭 시 "이미 봤음" 기록 → 이후 접속에서 말풍선 미노출
-    localStorage.setItem(GUIDE_KEY, "true");
     setShowGuide(false);
     setDrawerOpen(true);
   };
