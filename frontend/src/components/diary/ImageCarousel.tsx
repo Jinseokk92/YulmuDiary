@@ -79,9 +79,9 @@ export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
               right: isFirst ? 0.05 : 0.3,
             }}
             onDragEnd={(_, { offset, velocity }) => {
-              const swipePower = Math.abs(offset.x) * Math.abs(velocity.x);
-              if (swipePower > 8000 || offset.x < -60) goNext();
-              else if (swipePower > 8000 || offset.x > 60) goPrev();
+              const swipePower = offset.x * Math.abs(velocity.x);
+              if      (swipePower < -8000 || offset.x < -60) goNext();
+              else if (swipePower >  8000 || offset.x >  60) goPrev();
             }}
             className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
           >

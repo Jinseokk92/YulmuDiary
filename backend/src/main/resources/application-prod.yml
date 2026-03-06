@@ -17,6 +17,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        jdbc:
+          time_zone: Asia/Seoul   # Hibernate가 JDBC Timestamp를 읽고 쓸 때 사용할 타임존
+
+  jackson:
+    time-zone: Asia/Seoul         # java.util.Date 계열 직렬화 타임존 (LocalDateTime은 JVM TZ 적용)
 
   sql:
     init:

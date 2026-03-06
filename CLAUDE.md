@@ -3,7 +3,7 @@
 ## 프로젝트 개요
 - 육아 일기 공유 서비스 (모노레포 구조)
 - `backend/` — Spring Boot 3.4.1, Java 17, PostgreSQL, JPA, Lombok
-- `frontend/` — Next.js 15, React 19, Tailwind CSS 3, TypeScript
+- `frontend/` — Next.js 15, React 19, Tailwind CSS 3, TypeScript, Zustand
 
 ## 개발 환경
 - OS: Windows 11
@@ -23,126 +23,185 @@
 - 프론트엔드: Vercel (git push → 자동 배포)
 - DB: Neon PostgreSQL (운영), Docker PostgreSQL 16 (로컬)
   - Neon 무료 플랜: `maximum-pool-size: 5`
+- 미디어 저장소: Google Cloud Storage (GCS) — 버킷: `yulmudiary-media`
 - 운영 프로파일: `application-prod.yml` (`SPRING_PROFILES_ACTIVE=prod`)
   - `ddl-auto: update`, `sql.init.mode: never` (data.sql 미실행)
+
+## 환경 변수
+
+### 백엔드 (Cloud Run 시크릿 / 로컬 .env)
+| 변수명 | 설명 |
+|---|---|
+| `DB_URL` | Neon PostgreSQL JDBC URL |
+| `DB_USERNAME` | DB 사용자명 |
+| `DB_PASSWORD` | DB 비밀번호 |
+| `GOOGLE_CLIENT_ID` | Google OAuth2 클라이언트 ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 클라이언트 시크릿 |
+| `KAKAO_CLIENT_ID` | 카카오 REST API 키 |
+| `JWT_SECRET_KEY` | HS256 서명 시크릿 (256비트 이상) |
+| `GCS_BUCKET_NAME` | GCS 버킷 이름 (`yulmudiary-media`) |
+| `FRONTEND_URL` | 프론트엔드 URL (CORS, OAuth2 리다이렉트) |
+| `SPRING_PROFILES_ACTIVE` | `prod` (운영) / `local` (로컬) |
+
+### 프론트엔드 (Vercel 환경변수 / 로컬 .env.local)
+| 변수명 | 설명 |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | 백엔드 API URL (예: `https://yulmu-backend-xxx.run.app`) |
+| `NEXT_PUBLIC_KAKAO_JS_KEY` | 카카오 지도 SDK용 JavaScript 키 |
+| `NEXT_PUBLIC_KAKAO_APP_KEY` | 카카오 장소 검색 REST API 키 (`KakaoAK` 헤더) |
 
 ## 백엔드 구조
 ```
 backend/
 ├── Dockerfile
 ├── build.gradle
-├── src/main/java/com/yulmudiary/
-│   ├── YulmuDiaryApplication.java
-│   ├── domain/
-│   │   ├── baby/
-│   │   │   ├── entity/ (Baby, Gender)
-│   │   │   ├── dto/ (BabyResponse)
-│   │   │   ├── service/ (BabyService)
-│   │   │   ├── controller/ (BabyController)
-│   │   │   └── repository/ (BabyRepository)
-│   │   ├── diary/
-│   │   │   ├── entity/ (DiaryPost, Comment, Reaction, Media, MediaType)
-│   │   │   ├── repository/ (DiaryPostRepository, CommentRepository, ReactionRepository)
-│   │   │   ├── dto/ (DiaryPostRequest/Response/PageResponse, CommentRequest/Response, ReactionRequest/Response)
-│   │   │   ├── service/ (DiaryPostService, CommentService, ReactionService)
-│   │   │   └── controller/ (DiaryPostController, CommentController, ReactionController)
-│   │   ├── family/
-│   │   │   ├── entity/ (FamilyGroup, FamilyMembership, FamilyRole)
-│   │   │   ├── dto/ (FamilyJoinRequest, FamilyJoinResponse)
-│   │   │   ├── repository/ (FamilyGroupRepository, FamilyMembershipRepository)
-│   │   │   ├── service/ (FamilyService)
-│   │   │   └── controller/ (FamilyController)
-│   │   ├── health/
-│   │   │   └── HealthController.java
-│   │   ├── media/
-│   │   │   ├── controller/ (MediaController)
-│   │   │   ├── dto/ (MediaUploadResponse, ImagePaths)
-│   │   │   └── service/ (ImageStorageService, LocalImageStorageServiceImpl)
-│   │   ├── schedule/
-│   │   │   ├── entity/ (Schedule)
-│   │   │   ├── dto/ (ScheduleRequest, ScheduleResponse)
-│   │   │   ├── repository/ (ScheduleRepository)
-│   │   │   ├── service/ (ScheduleService)
-│   │   │   └── controller/ (ScheduleController)
-│   │   └── user/
-│   │       ├── entity/ (User, Role)
-│   │       ├── repository/ (UserRepository)
-│   │       ├── dto/ (UserResponse)
-│   │       └── controller/ (UserController)
-│   └── global/
-│       ├── auth/
-│       │   ├── JwtProvider.java               — JWT 생성/검증 (HS256, subject=userId)
-│       │   ├── JwtAuthenticationFilter.java   — Bearer 토큰 파싱 → SecurityContext 설정
-│       │   ├── CustomOAuth2UserService.java   — Google/Kakao 사용자 정보 로드 및 DB upsert
-│       │   ├── CustomOAuth2User.java
-│       │   ├── OAuth2Attributes.java          — provider별 속성 정규화
-│       │   ├── OAuth2AuthenticationSuccessHandler.java — 로그인 성공 시 JWT 발급 + 리다이렉트
-│       │   ├── AuthController.java            — /api/auth/me, /api/auth/refresh
-│       │   ├── AuthService.java
-│       │   ├── AuthTarget.java
-│       │   ├── CheckFamilyAuth.java           — 가족 그룹 접근 제어 어노테이션
-│       │   ├── FamilyAuthAspect.java          — AOP 기반 가족 그룹 검증
-│       │   ├── InvalidTokenException.java
-│       │   └── dto/ (AuthMeResponse, TokenRefreshResponse)
-│       ├── config/ (CorsConfig, JpaAuditingConfig, SecurityConfig, SwaggerConfig)
-│       ├── entity/ (BaseTimeEntity)
-│       ├── exception/ (GlobalExceptionHandler, AlreadyMemberException, FamilyAuthorizationException)
-│       └── response/ (ApiResponse)
-└── src/main/resources/
-    ├── application.yml          — 공통 설정 (JWT, multipart, Tomcat)
-    ├── application-local.yml    — 로컬 DB, ddl-auto: create-drop
-    ├── application-prod.yml     — Neon DB 환경변수, ddl-auto: update
-    └── data.sql                 — 시드 데이터 (로컬 전용, 운영 미실행)
+└── src/main/java/com/yulmudiary/
+    ├── YulmuDiaryApplication.java
+    ├── domain/
+    │   ├── baby/
+    │   │   ├── entity/ (Baby, Gender)
+    │   │   ├── dto/ (BabyResponse)
+    │   │   ├── service/ (BabyService)
+    │   │   ├── controller/ (BabyController)
+    │   │   └── repository/ (BabyRepository)
+    │   ├── diary/
+    │   │   ├── entity/ (DiaryPost, Comment, Reaction, Media, MediaType)
+    │   │   ├── repository/ (DiaryPostRepository, CommentRepository, ReactionRepository)
+    │   │   ├── dto/ (DiaryPostRequest/Response/PageResponse, CommentRequest/Response, ReactionRequest/Response)
+    │   │   ├── service/ (DiaryPostService, CommentService, ReactionService)
+    │   │   └── controller/ (DiaryPostController, CommentController, ReactionController)
+    │   ├── family/
+    │   │   ├── entity/ (FamilyGroup, FamilyMembership, FamilyRole)
+    │   │   ├── dto/ (FamilyCreateRequest, FamilyJoinRequest, FamilyJoinResponse, FamilyGroupResponse, FamilyMembershipResponse)
+    │   │   ├── repository/ (FamilyGroupRepository, FamilyMembershipRepository)
+    │   │   ├── service/ (FamilyService)
+    │   │   └── controller/ (FamilyController)
+    │   ├── health/
+    │   │   └── HealthController.java
+    │   ├── media/
+    │   │   ├── controller/ (MediaController)
+    │   │   ├── dto/ (MediaUploadResponse, ImagePaths)
+    │   │   └── service/
+    │   │       ├── ImageStorageService.java          — 업로드 인터페이스 (store)
+    │   │       ├── LocalImageStorageServiceImpl.java — @Profile("local"), 로컬 파일 저장
+    │   │       ├── GcsImageStorageServiceImpl.java   — @Profile("prod"), GCS 스트리밍 업로드
+    │   │       └── MediaUrlResolver.java             — 환경별 절대 URL 변환
+    │   ├── schedule/
+    │   │   ├── entity/ (Schedule)
+    │   │   ├── dto/ (ScheduleRequest, ScheduleResponse)
+    │   │   ├── repository/ (ScheduleRepository)
+    │   │   ├── service/ (ScheduleService)
+    │   │   └── controller/ (ScheduleController)
+    │   └── user/
+    │       ├── entity/ (User, Role)
+    │       ├── repository/ (UserRepository)
+    │       ├── dto/ (UserResponse)
+    │       └── controller/ (UserController)
+    └── global/
+        ├── auth/
+        │   ├── JwtProvider.java                      — JWT 생성/검증 (HS256, subject=userId)
+        │   ├── JwtAuthenticationFilter.java          — Bearer 토큰 파싱 → SecurityContext 설정
+        │   ├── CustomOAuth2UserService.java          — Google/Kakao 사용자 정보 로드 및 DB upsert
+        │   ├── CustomOAuth2User.java
+        │   ├── OAuth2Attributes.java                 — provider별 속성 정규화
+        │   ├── OAuth2AuthenticationSuccessHandler.java — JWT 발급 + 리다이렉트 + refresh cookie
+        │   ├── AuthController.java                   — /api/auth/me, /api/auth/refresh
+        │   ├── AuthService.java
+        │   ├── AuthTarget.java
+        │   ├── CheckFamilyAuth.java                  — 가족 그룹 접근 제어 어노테이션
+        │   ├── FamilyAuthAspect.java                 — AOP 기반 가족 그룹 검증
+        │   ├── InvalidTokenException.java
+        │   ├── annotation/RequireRole.java           — FamilyRole 기반 권한 어노테이션
+        │   ├── aspect/RequireRoleAspect.java         — @RequireRole AOP 처리
+        │   └── dto/ (AuthMeResponse, TokenRefreshResponse)
+        ├── config/ (CorsConfig, JpaAuditingConfig, SecurityConfig, SwaggerConfig)
+        ├── entity/ (BaseTimeEntity)
+        ├── exception/
+        │   ├── GlobalExceptionHandler.java           — 전역 예외 처리
+        │   ├── AlreadyMemberException.java
+        │   ├── FamilyAuthorizationException.java
+        │   ├── ForbiddenException.java
+        │   └── NotFoundException.java
+        └── response/ (ApiResponse)
+```
+
+### 설정 파일
+```
+backend/src/main/resources/
+├── application.yml          — 공통 (JWT, multipart, Tomcat, base-url 로컬 기본값)
+├── application-local.yml    — 로컬 DB, ddl-auto: create-drop, data.sql 실행
+├── application-prod.yml     — Neon DB 환경변수, ddl-auto: update, GCS base-url
+└── data.sql                 — 시드 데이터 (로컬 전용, 운영 미실행)
 ```
 
 ## 프론트엔드 구조
 ```
 frontend/
 ├── Dockerfile                — Next.js standalone 빌드 (Cloud Run 대응)
-├── package.json              — next 15, react 19, react-kakao-maps-sdk, zustand
-├── next.config.ts            — PWA 설정
-├── tailwind.config.ts        — primary 컬러 (#e4701e 계열), Pretendard 폰트
+├── package.json              — next 15, react 19, framer-motion, react-kakao-maps-sdk, zustand, js-cookie, next-themes, next-pwa
+├── next.config.ts            — PWA 설정, images.remotePatterns (GCS + localhost:8080)
+├── tailwind.config.ts        — darkMode: "class", primary 컬러 (#e4701e 계열), Pretendard 폰트
 ├── tsconfig.json             — @/* → ./src/* 경로 별칭
 └── src/
+    ├── middleware.ts         — Edge 미들웨어: 쿠키 기반 라우트 가드
     ├── types/index.ts        — API 타입 (ApiResponse, UserResponse, DiaryPostResponse 등)
+    ├── stores/
+    │   └── authStore.ts      — Zustand: token/user/familyGroupId 전역 상태 (Cookies 기반)
+    ├── contexts/
+    │   └── UserContext.tsx   — (레거시) useAuthStore로 대체됨, Providers에서 유지
     ├── lib/
     │   ├── api.ts            — fetch 래퍼 (Authorization 헤더 자동 주입, ApiError 통일)
-    │   └── utils.ts          — formatRelativeTime(), getMediaUrl()
-    ├── contexts/
-    │   └── UserContext.tsx   — 로그인 사용자 상태 관리 (JWT 기반)
+    │   ├── utils.ts          — formatRelativeTime(), getMediaUrl(), calcDday() 등
+    │   └── kakao.ts          — 카카오맵 SDK 초기화 유틸
+    ├── hooks/
+    │   └── useAuth.ts        — 인증 상태 훅
     ├── components/
+    │   ├── Providers.tsx     — ThemeProvider(next-themes) + UserProvider 래핑
+    │   ├── MainBackground.tsx — 다크(별 30개) / 라이트(구름 2개) 애니메이션 배경
+    │   ├── LoginBackground.tsx — 로그인 페이지 전용 배경
+    │   ├── FloatingYulmu.tsx — 캐릭터 플로팅 컴포넌트
     │   ├── layout/
-    │   │   ├── Header.tsx    — 로고 + 유저 선택 드롭다운
-    │   │   └── BottomNav.tsx — 4탭: 홈(/), 일기장(/diary), 일정(/schedule), 새 글(/new)
+    │   │   ├── Header.tsx    — 로고 + 유저 아바타/닉네임 + 햄버거 메뉴
+    │   │   │                   가이드 말풍선 (localStorage: "menu-guide-seen", 1초 후 표시, 5초 자동 숨김)
+    │   │   ├── BottomNav.tsx — 4탭: 홈(/), 일기장(/diary), 일정(/schedule), 새 글(/new)
+    │   │   └── SideDrawer.tsx — 우측 슬라이드 드로어: 다크모드 토글 + 로그아웃
     │   ├── ui/
     │   │   ├── Skeleton.tsx
     │   │   ├── EmptyState.tsx
-    │   │   └── ConfirmModal.tsx  — 삭제 확인 등 범용 모달
+    │   │   ├── ConfirmModal.tsx   — 삭제 확인 등 범용 모달
+    │   │   └── UserAvatar.tsx    — 프로필 이미지 / 이니셜 폴백
     │   └── diary/
     │       ├── DiaryFeed.tsx         — 무한스크롤 피드 (IntersectionObserver sentinel)
     │       ├── DiaryCard.tsx         — 일기 카드 (memo), 좋아요·삭제 인라인 처리
     │       ├── DiaryPostSkeleton.tsx
-    │       ├── ImageCarousel.tsx     — CSS scroll-snap 스와이프
+    │       ├── ImageCarousel.tsx     — Framer Motion 스와이프, next/image, per-index 에러 폴백
     │       ├── ImagePreview.tsx      — 작성 시 썸네일 프리뷰
+    │       ├── ReactionBar.tsx       — 이모지 리액션 표시 바
+    │       ├── StickerPicker.tsx     — 이모지 스티커 선택 UI
     │       ├── CommentBottomSheet.tsx — 댓글 바텀 시트 (상태·로직·레이아웃 전담)
     │       └── CommentSection.tsx    — 댓글 목록 순수 표시 컴포넌트
     └── app/
-        ├── layout.tsx            — 루트: UserProvider
+        ├── layout.tsx            — 루트: Providers (ThemeProvider + UserProvider)
         ├── error.tsx             — 전역 에러 바운더리
         ├── login/
         │   └── page.tsx          — 소셜 로그인 페이지 (Google, Kakao)
         ├── auth/
-        │   └── callback/page.tsx — OAuth2 콜백: URL 쿼리파라미터 token → localStorage 저장
+        │   ├── callback/page.tsx — OAuth2 콜백: URL 쿼리파라미터 token → 쿠키 저장 → /auth/success 이동
+        │   └── success/page.tsx  — 로그인 성공 축하 화면 (체크마크 + 스파클 애니메이션, 2.3초 후 이동)
+        ├── onboarding/
+        │   └── page.tsx          — 가족 그룹 합류 안내 (초대 코드 미보유 시 표시)
         ├── (main)/               — Route Group: Header + BottomNav 포함
-        │   ├── layout.tsx        — 공통 셸 (max-w-lg mx-auto)
+        │   ├── layout.tsx        — 인증/familyGroup 가드 + MainBackground
         │   ├── page.tsx          — "/" 홈 대시보드 (D-day, 퀵메뉴)
         │   ├── loading.tsx
         │   ├── diary/
         │   │   ├── page.tsx      — "/diary" 일기 피드
         │   │   ├── loading.tsx
         │   │   └── error.tsx
-        │   └── schedule/
-        │       └── page.tsx      — "/schedule" 일정 캘린더 + 카카오맵 장소 검색
+        │   ├── schedule/
+        │   │   └── page.tsx      — "/schedule" 일정 캘린더 + 카카오맵 장소 검색
+        │   └── join/
+        │       └── page.tsx      — "/join" 초대 코드 입력 페이지
         └── new/
             └── page.tsx          — "/new" 글 작성 (독립 레이아웃)
 ```
@@ -182,72 +241,114 @@ frontend/
 - `GET /api/users` — 사용자 목록 조회 (permitAll)
 
 ### Media
-- `POST /api/media/upload` — 파일 업로드 (MultipartFile, UUID 파일명)
-- `GET /api/media/files/{filename}` — 파일 서빙 (permitAll)
+- `POST /api/media/upload` — 파일 업로드 (MultipartFile 다건, UUID 파일명)
+  - 로컬: 파일 저장 → `http://localhost:8080/api/media/files/originals/{filename}` 반환
+  - 운영: GCS 스트리밍 업로드 → `https://storage.googleapis.com/{bucket}/originals/{filename}` 반환
+- `GET /api/media/files/{subdir}/{filename}` — 파일 서빙 (로컬 전용, prod에서는 404)
+- `GET /api/media/files/{filename}` — 하위호환 서빙 (originals 경로로 위임)
 
 ## 설계 원칙
 
 ### 백엔드
-- 모든 응답: `ApiResponse<T>` 래핑
-- 인증: JWT Bearer Token (`Authorization: Bearer {accessToken}`)
-  - Access Token: 30분, Refresh Token: 7일 (HttpOnly 쿠키)
-  - `JwtAuthenticationFilter`: `validateToken()` try-catch로 예외 처리 → 실패 시 즉시 401 반환
-- OAuth2 로그인 성공 흐름: 소셜 로그인 → `OAuth2AuthenticationSuccessHandler` → JWT 발급 → `{redirectUri}?token={accessToken}` 리다이렉트 + refresh_token 쿠키 설정
-- EntityNotFoundException → 404, IllegalArgumentException → 400
-- Cursor 페이징: ID 역순, size+1 조회로 hasNext 판별
-- N+1 방지: fetch join, `default_batch_fetch_size: 100`
-- DiaryPostResponse에 commentCount, reactions 포함 (프론트 피드용)
-- Swagger: `http://localhost:8080/swagger-ui/index.html`
-- multipart: max-file-size 10MB, max-request-size 50MB
-- 미디어 저장: `./uploads` 로컬 디렉토리
 
-### SecurityConfig 핵심 설정
-- `SessionCreationPolicy.STATELESS` + `NullRequestCache` — Cloud Run 환경에서 RequestCache 경로 유실 방지
-- `exceptionHandling`: 인증 실패 → 401 JSON, 권한 없음 → 403 JSON (OAuth2 리다이렉트 방지)
+#### 응답 / 예외
+- 모든 응답: `ApiResponse<T>` 래핑 (`{data, error}`)
+- `EntityNotFoundException` / `NotFoundException` → 404
+- `IllegalArgumentException` → 400
+- `ForbiddenException` → 403
+- `InvalidTokenException` → 401
+- `NoResourceFoundException` → 404 JSON (Spring Boot 3+ 명시적 처리)
+
+#### 인증
+- JWT Bearer Token (`Authorization: Bearer {accessToken}`)
+  - Access Token: 30분, Refresh Token: 7일 (HttpOnly 쿠키 `refresh_token`)
+  - `JwtAuthenticationFilter`: `validateToken()` try-catch → 실패 시 즉시 401 반환
+- OAuth2 로그인 흐름:
+  1. 소셜 로그인 → `OAuth2AuthenticationSuccessHandler`
+  2. JWT 발급 → `{redirectUri}?token={accessToken}` 리다이렉트 (비회원이면 `&onboarding=true` 추가)
+  3. `refresh_token` HttpOnly 쿠키 설정
+  4. 프론트 `/auth/callback` → 쿠키 저장 → `/auth/success` → (2.3초) → `/diary` 또는 `/onboarding`
+
+#### SecurityConfig 핵심 설정
+- `SessionCreationPolicy.STATELESS` + `NullRequestCache` — Cloud Run RequestCache 경로 유실 방지
+- 인증 실패 → 401 JSON, 권한 없음 → 403 JSON (OAuth2 리다이렉트 방지)
 - 공개 엔드포인트: `/api/health`, `/api/media/files/**`, `GET /api/users`, `/oauth2/**`, `/login/oauth2/**`, `/api/auth/refresh`, `/swagger-ui/**`, `/v3/api-docs/**`
 - 나머지 `/api/**`: `.authenticated()`
 
-### 가족 그룹 접근 제어 (AOP)
-- `@CheckFamilyAuth(target = AuthTarget.BABY/POST)` 어노테이션 + `FamilyAuthAspect`
-- 일기 작성·조회 시 요청자가 해당 family_group 소속인지 검증
+#### 미디어 서빙 아키텍처
+- **업로드**: `ImageStorageService.store()` → 항상 완전한 절대 URL 반환
+  - 로컬(`@Profile("local")`): `./uploads/originals/`에 저장, `http://localhost:8080/api/media/files/originals/{filename}` 반환
+  - 운영(`@Profile("prod")`): GCS InputStream 스트리밍 업로드, `https://storage.googleapis.com/{bucket}/originals/{filename}` 반환
+- **조회**: `MediaUrlResolver`가 DB의 URL 형태를 판별해 절대 경로로 변환
+  - 이미 `http://` / `https://` → 그대로 통과
+  - 상대 경로(`/api/media/files/...`) → `${app.media.base-url}` + 파일명
+- **DTO**: `DiaryPostResponse.from(post, mediaUrlResolver)` → `MediaUrlResolver` 필수 파라미터
+
+#### 가족 그룹 접근 제어 (AOP)
+- `@CheckFamilyAuth(target = AuthTarget.BABY/POST)` + `FamilyAuthAspect` — 요청자 family_group 소속 검증
+- `@RequireRole(FamilyRole.PARENT)` + `RequireRoleAspect` — 역할 기반 권한 제어
+
+#### 기타
+- Cursor 페이징: ID 역순, size+1 조회로 hasNext 판별
+- N+1 방지: fetch join, `default_batch_fetch_size: 100`
+- Swagger: `http://localhost:8080/swagger-ui/index.html`
+- multipart: max-file-size 10MB, max-request-size 50MB
+- babyId=1 하드코딩 유지 (율무 한 명, Baby 선택 UI 불필요)
 
 ### 프론트엔드
-- Next.js App Router (Route Group 활용)
-- api.ts: fetch 기반, `Authorization: Bearer {token}` 자동 주입 (localStorage)
-- 카카오맵 SDK (`react-kakao-maps-sdk`):
-  - 환경변수: `NEXT_PUBLIC_KAKAO_JS_KEY` (지도 SDK용 JavaScript 키)
-  - 환경변수: `NEXT_PUBLIC_KAKAO_APP_KEY` (장소 검색 REST API 키, `KakaoAK` 헤더)
-  - **주의**: `<Script strategy="afterInteractive" onLoad=...>`는 SPA 재방문 시 재실행 안 됨
-    → `useEffect`에서 `window.kakao?.maps` 존재 여부 확인으로 `kakaoMapReady` 초기화 보완
-  - 카카오 개발자 센터 Web 플랫폼에 Vercel 도메인 등록 필수
+
+#### 인증 상태 관리
+- **Zustand** (`stores/authStore.ts`): `token`, `user`, `familyGroupId`, `isAuthenticated`
+- 토큰 저장: `js-cookie` (`access_token` 쿠키, 1일), `family_group_id` 쿠키 (365일)
+- 로그아웃: 쿠키 전체 삭제 + 스토어 초기화
+- 미들웨어(`middleware.ts`): Edge에서 쿠키 기반 라우트 가드
+  - 토큰 없음 → `/login`
+  - 토큰 있고 가족 그룹 없음 → `/onboarding`
+  - 인증 처리 경로(`/auth/callback`, `/auth/success`) → 가드 없이 통과
+
+#### 다크모드
+- **`tailwind.config.ts`**: `darkMode: "class"` 설정
+- **`next-themes`**: `ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}`
+- **패턴**: `useTheme()` + `isDark = mounted && resolvedTheme === "dark"` 직접 분기
+  - Tailwind `dark:` prefix는 dev 서버 재시작 전까지 반영 안 되므로 사용하지 않음
+  - 모든 컴포넌트에서 `isDark`로 inline style / 직접 클래스 분기
+- **`MainBackground`**: `fixed inset-0 -z-10` 애니메이션 배경
+  - 다크: 별 30개 (opacity 0.08→0.5 반복) + 슬레이트 그라디언트
+  - 라이트: 구름 2개 (좌→우 이동) + 하늘색 그라디언트
+
+#### 이미지
+- `next/image` (`<Image fill ...>`) + `remotePatterns`: GCS(`storage.googleapis.com`) + 로컬(`localhost:8080`)
+- `ImageCarousel`: `diaryId` + `activeIndex` 키로 Framer Motion 슬라이드
+- 이미지 로드 실패: `imgErrors: Record<number, boolean>` → `Images` 아이콘 플레이스홀더
+- `getMediaUrl()`: 상대 경로면 `NEXT_PUBLIC_API_URL` 붙여 절대 경로 변환
+
+#### 카카오맵 SDK
+- `NEXT_PUBLIC_KAKAO_JS_KEY`: 지도 SDK용 JavaScript 키
+- `NEXT_PUBLIC_KAKAO_APP_KEY`: 장소 검색 REST API 키 (`KakaoAK` 헤더)
+- **주의**: `<Script strategy="afterInteractive" onLoad=...>`는 SPA 재방문 시 재실행 안 됨
+  → `useEffect`에서 `window.kakao?.maps` 존재 여부 확인으로 보완
+- 카카오 개발자 센터 Web 플랫폼에 Vercel 도메인 등록 필수
+
+#### UI 패턴
 - Optimistic UI: 리액션 토글, 댓글 작성/삭제 (실패 시 롤백)
 - 이미지 업로드: 개별 파일 병렬 업로드 (Promise.all), 최대 10장
 - 삭제: ConfirmModal 확인 후 API 호출 → 피드 state에서 즉시 제거
+- `api.ts`: fetch 기반, `Authorization: Bearer {token}` 자동 주입 (쿠키에서 토큰 읽기)
 
-### 댓글 바텀 시트 아키텍처
-- `CommentBottomSheet` — 댓글 관련 모든 책임 보유
-  - 무한 스크롤: `useInView` + sentinel div
-  - 부모 스크롤 잠금: `document.body.style.overflow = 'hidden'`
-  - 슬라이드 애니메이션: `translate-y-0 / translate-y-full` (duration-300)
-- `CommentSection` — 순수 표시 컴포넌트 (props만 받아 렌더)
+#### 댓글 바텀 시트
+- `CommentBottomSheet` — 무한스크롤(`useInView`), 부모 스크롤 잠금, 슬라이드 애니메이션
+- `CommentSection` — 순수 표시 컴포넌트
 
-### 일정 캘린더 아키텍처 (`/schedule`)
-- `ScheduleSheet` 내장 바텀 시트: 일정 목록 + 등록 폼 + 카카오맵 장소 검색
-  - 장소 선택 후 지도 미리보기 (`KakaoMap` + `KakaoMarker`)
-  - 지도 렌더링 조건: `kakaoMapReady && selectedCoords && window.kakao?.maps`
+#### 일정 캘린더 (`/schedule`)
+- `ScheduleSheet` 바텀 시트: 일정 목록 + 등록 폼 + 카카오맵 장소 검색
 - 달력 그리드: `grid grid-cols-7`, dot 최대 3개 표시
-- BottomNav 4탭: 홈 | 일기장 | 일정 | 새 글
 
 ## 주의사항 (Claude 필독)
 - `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.
 - 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
 - `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
 
-## 미해결 / TODO
-- `Cookie.setSecure(false)` → 운영 환경에서 `true`로 변경 필요 (`OAuth2AuthenticationSuccessHandler.java:48`)
-- babyId=1 하드코딩 유지 (율무 한 명이므로 Baby 선택 UI 불필요)
-- 운영 DB에 초대 코드 시드 데이터 직접 INSERT 필요 (`data.sql` 운영 미실행)
-
-## 보안 이슈
-- **Cookie Secure 미설정**: `OAuth2AuthenticationSuccessHandler`에서 `cookie.setSecure(false)` → HTTPS 운영 환경에서 `true`로 변경 필요
-- **FamilyGroup 접근 제어**: `@CheckFamilyAuth` AOP로 일부 구현됐으나, 모든 엔드포인트 적용 여부 확인 필요
+## 보안 이슈 / 미해결 TODO
+- **[HIGH] Cookie Secure 미설정**: `OAuth2AuthenticationSuccessHandler.java:57` — `cookie.setSecure(false)` → 운영 환경에서 반드시 `true`로 변경 필요
+- **[MED] FamilyGroup 접근 제어**: `@CheckFamilyAuth` AOP로 일부 구현됐으나, 모든 엔드포인트 적용 여부 확인 필요
+- **[INFO] 운영 DB 시드 데이터**: 초대 코드 등 초기 데이터는 `data.sql`이 운영에서 미실행되므로 직접 INSERT 필요
