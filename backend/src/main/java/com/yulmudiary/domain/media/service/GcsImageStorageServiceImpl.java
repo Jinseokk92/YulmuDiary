@@ -35,9 +35,16 @@ public class GcsImageStorageServiceImpl implements ImageStorageService {
     private Storage storage;
 
     public GcsImageStorageServiceImpl(
-            @Value("${app.media.gcs.bucket-name}") String bucketName) {
+            @Value("${app.media.gcs.bucket-name}") String bucketName,
+            @Value("${app.media.base-url}") String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException(
+                "app.media.base-url이 설정되지 않았습니다. " +
+                "application-prod.yml 또는 APP_MEDIA_BASE_URL 환경 변수를 확인하세요.");
+        }
         this.bucketName = bucketName;
-        this.gcsBaseUrl = "https://storage.googleapis.com/" + bucketName + "/";
+        // base-url이 '/'로 끝나지 않는 경우를 방어
+        this.gcsBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
     }
 
     @PostConstruct
@@ -67,7 +74,8 @@ public class GcsImageStorageServiceImpl implements ImageStorageService {
             throw new RuntimeException("GCS 업로드에 실패했습니다: " + originalFilename, e);
         }
 
-        String publicUrl = gcsBaseUrl + objectName;
+        // gcsBaseUrl은 .../originals/ 까지 포함 → storedFilename만 붙여 이중 경로 방지
+        String publicUrl = gcsBaseUrl + storedFilename;
         // GCS 환경에서는 별도 썸네일 없이 원본 URL을 공유한다.
         // 향후 Cloud CDN 이미지 변환 파라미터나 별도 리사이징 파이프라인으로 교체 가능.
         return new ImagePaths(publicUrl, publicUrl);
