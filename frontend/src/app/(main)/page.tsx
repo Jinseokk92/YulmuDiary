@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { calcDday, calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
+import FloatingYulmu from "@/components/FloatingYulmu";
 
 // ─── 날짜 상수 ─────────────────────────────────────────────────────────────
 // 출산 예정일만 수정하면 LMP(마지막 생리일)와 모든 계산이 자동으로 갱신됩니다.
@@ -24,7 +25,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="px-4 py-6 space-y-8">
+    <div className="px-4 py-6 space-y-4">
       {/* 상단: D-day 카드 */}
       <section className="bg-white rounded-2xl p-6 shadow-sm text-center">
         <p className="text-sm text-gray-400 mb-1">율무와 만날 때까지</p>
@@ -40,15 +41,21 @@ export default function Home() {
         </p>
       </section>
 
-      {/* 중앙: 아기 프로필 원형 이미지 */}
+      {/* 중앙: 율무 캐릭터 — 살구색 원형 배경 위에 둥둥 */}
       <section className="flex justify-center">
-        <div
-          className="w-40 h-40 rounded-full bg-gradient-to-br from-primary-100 to-primary-50
-                      border-4 border-white shadow-lg flex items-center justify-center"
-        >
-          <div className="text-center">
-            <span className="text-5xl">&#x1F476;</span>
-            <p className="text-xs text-primary-400 mt-1 font-medium">율무</p>
+        <div className="relative flex items-end justify-center">
+          {/* 살구색 원형 발판 배경 */}
+          <div
+            className="w-36 h-36 rounded-full bg-gradient-to-br from-primary-100 to-primary-50
+                        border-4 border-white shadow-lg"
+          />
+          {/* FloatingYulmu: 원형 배경 중앙 기준으로 절대 배치 */}
+          <div className="absolute bottom-2">
+            <FloatingYulmu
+              src="/icons/Yulmu_Logo.png"
+              width={120}
+              height={180}
+            />
           </div>
         </div>
       </section>

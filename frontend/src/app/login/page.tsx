@@ -1,5 +1,7 @@
 "use client";
 
+import FloatingYulmu from "@/components/FloatingYulmu";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function KakaoIcon() {
@@ -47,8 +49,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+      {/* 캐릭터 영역 */}
+      <FloatingYulmu />
+
       {/* 로고 영역 */}
-      <div className="mb-12 text-center">
+      <div className="mt-2 mb-8 text-center">
         <h1 className="text-4xl font-bold text-primary-600 mb-2">율무일기</h1>
         <p className="text-gray-500 text-sm">
           우리 아이의 소중한 순간을 가족과 함께
