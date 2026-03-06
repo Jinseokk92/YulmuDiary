@@ -16,7 +16,7 @@ const animate = {
 
 const transition = {
   duration: 3.5,
-  ease: "easeInOut",
+  ease: "easeInOut" as const,
   repeat: Infinity,
   repeatType: "reverse" as const,
 };
