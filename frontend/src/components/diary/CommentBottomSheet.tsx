@@ -14,6 +14,8 @@ import { useUser } from "@/contexts/UserContext";
 import type { CommentResponse } from "@/types";
 import CommentSection from "./CommentSection";
 
+const QUICK_EMOJIS = ["❤️", "😍", "👍", "😂", "😭", "🥰", "🙌", "✨"] as const;
+
 interface CommentBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,6 +44,15 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     const [isSubmitting, setIsSubmitting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // ─── 스크롤 영역 ref ─────────────────────────────────────────────
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+    // ─── 키보드 높이 (visualViewport 기반) ───────────────────────────
+    // iOS: window.innerHeight 고정, visualViewport.height가 줄어듦
+    // Android: window.innerHeight 자체가 줄어들어 kbh=0으로 계산되지만
+    //          시트가 자연스럽게 따라 올라가므로 문제 없음
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
     // 중복 fetch 방지 ref
     const isFetchingRef = useRef(false);
 
@@ -51,8 +62,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       commentsRef.current = comments;
     });
 
-    // ─── 무한 스크롤 sentinel (바텀 시트 스크롤 영역 하단) ──────────
-    // loadMoreRef: 라이브러리 RefCallback, sentinelRef: HTMLDivElement 타입 명시
+    // ─── 무한 스크롤 sentinel ────────────────────────────────────────
     const { ref: loadMoreRef, inView } = useInView({
       threshold: 0.5,
       skip: !isOpen || !hasNext || isLoading,
@@ -65,6 +75,43 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       },
       [loadMoreRef]
     );
+
+    // ─── 댓글 목록 최하단 스크롤 ────────────────────────────────────
+    const scrollToBottom = useCallback(() => {
+      requestAnimationFrame(() => {
+        if (scrollAreaRef.current) {
+          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+      });
+    }, []);
+
+    // ─── visualViewport 기반 키보드 높이 추적 ────────────────────────
+    useEffect(() => {
+      if (!isOpen) {
+        setKeyboardHeight(0);
+        return;
+      }
+
+      const vv = window.visualViewport;
+      if (!vv) return;
+
+      const handleViewportChange = () => {
+        // 키보드 높이 = 전체 창 높이 - 현재 보이는 영역 - 스크롤 오프셋
+        const kbh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        setKeyboardHeight(kbh);
+        // 키보드 올라오면 댓글 최하단으로 스크롤
+        if (kbh > 0) scrollToBottom();
+      };
+
+      vv.addEventListener("resize", handleViewportChange);
+      vv.addEventListener("scroll", handleViewportChange);
+
+      return () => {
+        vv.removeEventListener("resize", handleViewportChange);
+        vv.removeEventListener("scroll", handleViewportChange);
+        setKeyboardHeight(0);
+      };
+    }, [isOpen, scrollToBottom]);
 
     // ─── 댓글 fetch (커서 기반 페이징) ─────────────────────────────
     const fetchComments = useCallback(
@@ -172,6 +219,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
         setComments((prev) => [...prev, optimisticComment]);
         setInput("");
         setIsSubmitting(true);
+        scrollToBottom();
 
         try {
           const created = await api.post<CommentResponse>(
@@ -188,7 +236,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           setIsSubmitting(false);
         }
       },
-      [input, currentUser, isSubmitting, postId]
+      [input, currentUser, isSubmitting, postId, scrollToBottom]
     );
 
     // ─── 댓글 삭제 (낙관적 업데이트) ───────────────────────────────
@@ -210,28 +258,41 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
     // ─── 렌더 ───────────────────────────────────────────────────────
     return (
-      // 투명 오버레이 — 클릭 감지용, dim 없음 / flex로 바텀 시트를 하단 중앙 정렬
-      <div
-        className={`fixed inset-0 z-50 bg-transparent flex justify-center items-end ${
-          isOpen ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-        onClick={onClose}
-      >
-        {/* 바텀 시트 컨테이너 — 레이아웃과 동일한 max-w-lg로 너비 제한 */}
+      <>
+        {/* 투명 오버레이 — 클릭 시 닫힘, 시트와 분리하여 z-index 독립 관리 */}
         <div
-          className={`w-full max-w-lg h-[75vh] bg-white rounded-t-3xl
-                      border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]
+          className={`fixed inset-0 z-40 ${
+            isOpen ? "pointer-events-auto" : "pointer-events-none"
+          }`}
+          onClick={onClose}
+        />
+
+        {/*
+          바텀 시트 — 오버레이와 분리된 fixed 요소
+          - left-1/2 -translate-x-1/2: 중앙 정렬
+          - bottom: keyboardHeight → 키보드가 올라오면 시트도 함께 올라감
+          - height: 75svh (svh = Small Viewport Height, 키보드 무관 최소 뷰포트 기준)
+          - transition: transform(슬라이드) + bottom(키보드 대응) 별도 지정
+        */}
+        <div
+          className={`fixed z-50 w-full max-w-lg left-1/2 -translate-x-1/2
+                      bg-white rounded-t-3xl border-t border-gray-100
+                      shadow-[0_-4px_24px_rgba(0,0,0,0.08)]
                       flex flex-col box-border
-                      transform transition-transform duration-300
                       ${isOpen ? "translate-y-0" : "translate-y-full"}`}
+          style={{
+            bottom: keyboardHeight,
+            height: "75svh",
+            transition: "transform 300ms ease, bottom 150ms ease",
+          }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
-          {/* 핸들 바 */}
+          {/* ── 핸들 바 ── */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-10 h-1 rounded-full bg-gray-200" />
           </div>
 
-          {/* 헤더 — 고정 */}
+          {/* ── Header (고정) ── */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 shrink-0">
             <span className="text-sm font-semibold text-gray-800">댓글</span>
             <button
@@ -247,56 +308,74 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
                 stroke="currentColor"
                 className="w-5 h-5"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* 댓글 목록 — 독립 스크롤 */}
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+          {/* ── Scrollable Content (flex-1: 남은 공간 전부 차지) ── */}
+          <div
+            ref={scrollAreaRef}
+            className="flex-1 overflow-y-auto overscroll-contain"
+          >
             <CommentSection
               comments={comments}
               isLoading={isLoading}
               currentUser={currentUser}
               onDelete={handleDelete}
             />
-
-            {/* 무한 스크롤 sentinel (HTMLDivElement 타입 명시) */}
+            {/* 무한 스크롤 sentinel */}
             <div ref={setsentinel} className="h-4" />
           </div>
 
-          {/* 댓글 입력 폼 — 고정 하단 */}
+          {/* ── Fixed Footer: 이모지 퀵 바 + 입력폼 ── */}
           {currentUser && (
-            <form
-              onSubmit={handleSubmit}
-              className="shrink-0 flex items-center gap-2 px-4 py-3 border-t border-gray-100"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="댓글 달기..."
-                disabled={isSubmitting}
-                className="flex-1 text-sm bg-transparent border-none outline-none
-                           placeholder:text-gray-300 text-gray-700 py-1"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isSubmitting}
-                className="text-sm font-semibold text-primary-500 disabled:text-gray-300
-                           hover:text-primary-600 transition-colors shrink-0"
+            <div className="shrink-0 border-t border-gray-100">
+              {/* 이모지 퀵 바 */}
+              <div className="flex items-center gap-0.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-none">
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setInput((prev) => prev + emoji)}
+                    className="text-xl shrink-0 w-9 h-9 flex items-center justify-center
+                               rounded-full hover:bg-gray-100 active:scale-110
+                               transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              {/* 입력폼 */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex items-center gap-2 px-4 pb-4 pt-1"
               >
-                게시
-              </button>
-            </form>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onFocus={scrollToBottom}
+                  placeholder="댓글 달기..."
+                  disabled={isSubmitting}
+                  className="flex-1 text-sm bg-transparent border-none outline-none
+                             placeholder:text-gray-300 text-gray-700 py-1"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isSubmitting}
+                  className="text-sm font-semibold text-primary-500 disabled:text-gray-300
+                             hover:text-primary-600 transition-colors shrink-0"
+                >
+                  게시
+                </button>
+              </form>
+            </div>
           )}
         </div>
-      </div>
+      </>
     );
   }
 );
