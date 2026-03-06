@@ -35,6 +35,7 @@ Thumbs.db
 
 # === Project Files ===
 TODOLIST.md
+cors.json
 
 # === Environment ===
 .env
