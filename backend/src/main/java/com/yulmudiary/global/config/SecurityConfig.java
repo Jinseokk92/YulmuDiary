@@ -67,7 +67,6 @@ public class SecurityConfig {
                         // 공개 엔드포인트
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/api/media/files/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users").permitAll()
 
                         // OAuth2 / 인증 관련
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()

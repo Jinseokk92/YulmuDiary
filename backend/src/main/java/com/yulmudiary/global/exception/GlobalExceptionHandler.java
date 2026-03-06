@@ -14,6 +14,7 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -70,6 +71,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error("BAD_REQUEST", e.getMessage()));
+    }
+
+    // Spring Boot 3+에서 @ExceptionHandler(Exception.class)로 잡히지 않으므로 명시적 처리
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException e, HttpServletRequest request) {
+        log.warn("404 NoResourceFound at {}: {}", request.getRequestURI(), e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("NOT_FOUND", "요청한 경로를 찾을 수 없습니다: " + request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

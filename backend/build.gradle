@@ -43,6 +43,9 @@ dependencies {
     // Image Processing
     implementation 'net.coobird:thumbnailator:0.4.20'
 
+    // Google Cloud Storage
+    implementation 'com.google.cloud:google-cloud-storage:2.43.1'
+
     // Database
     runtimeOnly 'org.postgresql:postgresql'
 

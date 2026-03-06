@@ -55,3 +55,6 @@ app:
     secret-key: ${JWT_SECRET_KEY}
   oauth2:
     redirect-uri: ${FRONTEND_URL}/auth/callback
+  media:
+    gcs:
+      bucket-name: ${GCS_BUCKET_NAME}

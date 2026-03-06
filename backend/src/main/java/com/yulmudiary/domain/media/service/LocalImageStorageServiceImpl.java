@@ -4,6 +4,7 @@ import com.yulmudiary.domain.media.dto.ImagePaths;
 import jakarta.annotation.PostConstruct;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.UUID;
 
 @Service
+@Profile("local")
 public class LocalImageStorageServiceImpl implements ImageStorageService {
 
     private static final int ORIGINAL_MAX_WIDTH = 1200;
@@ -24,11 +26,15 @@ public class LocalImageStorageServiceImpl implements ImageStorageService {
     private final Path uploadDir;
     private final Path originalsDir;
     private final Path thumbnailsDir;
+    private final String baseUrl;
 
-    public LocalImageStorageServiceImpl(@Value("${app.media.upload-dir:./uploads}") String uploadDir) {
+    public LocalImageStorageServiceImpl(
+            @Value("${app.media.upload-dir:./uploads}") String uploadDir,
+            @Value("${app.media.base-url:http://localhost:8080/api/media/files/}") String baseUrl) {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.originalsDir = this.uploadDir.resolve("originals");
         this.thumbnailsDir = this.uploadDir.resolve("thumbnails");
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
     }
 
     @PostConstruct
@@ -54,10 +60,8 @@ public class LocalImageStorageServiceImpl implements ImageStorageService {
                 // 이미지가 아닌 파일은 원본 그대로 저장
                 Path targetPath = originalsDir.resolve(storedFilename);
                 file.transferTo(targetPath.toFile());
-                return new ImagePaths(
-                        "originals/" + storedFilename,
-                        "originals/" + storedFilename
-                );
+                String url = baseUrl + "originals/" + storedFilename;
+                return new ImagePaths(url, url);
             }
 
             int width = originalImage.getWidth();
@@ -87,15 +91,17 @@ public class LocalImageStorageServiceImpl implements ImageStorageService {
             }
 
             return new ImagePaths(
-                    "originals/" + storedFilename,
-                    "thumbnails/" + storedFilename
+                    baseUrl + "originals/" + storedFilename,
+                    baseUrl + "thumbnails/" + storedFilename
             );
         } catch (IOException e) {
             throw new RuntimeException("파일 저장에 실패했습니다: " + originalFilename, e);
         }
     }
 
-    @Override
+    /**
+     * 로컬 파일 서빙용. MediaController에서 직접 호출한다.
+     */
     public Path load(String filename) {
         return uploadDir.resolve(filename);
     }
