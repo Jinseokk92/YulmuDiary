@@ -36,6 +36,8 @@ Thumbs.db
 # === Project Files ===
 TODOLIST.md
 cors.json
+deploy.ps1
+deploy-backend.ps1
 
 # === Environment ===
 .env

@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useUser } from "@/contexts/UserContext";
+import { useFontSize } from "@/contexts/FontSizeContext";
 import { useRouter } from "next/navigation";
-import { Menu } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+import { Menu, ZoomIn } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "@/components/ui/UserAvatar";
 import SideDrawer from "@/components/layout/SideDrawer";
@@ -58,6 +61,7 @@ function MenuGuide() {
 export default function Header() {
   const { currentUser, loading } = useUser();
   const { resolvedTheme } = useTheme();
+  const { mode: fontSizeMode, toggle: toggleFontSize } = useFontSize();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -104,17 +108,40 @@ export default function Header() {
         }}
       >
         <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
-          <h1
-            className="text-xl font-bold select-none"
-            style={{ color: isDark ? "#fb923c" : "#d55914" }}
-          >
-            율무일기
-          </h1>
+          {/* 로고 이미지 — 클릭 시 홈으로 이동 */}
+          <Link href="/" className="flex items-center shrink-0">
+            <Image
+              src="/icons/icon-192x192.png"
+              alt="율무일기"
+              width={36}
+              height={36}
+              className="object-contain rounded-xl"
+              priority
+            />
+          </Link>
 
           {loading ? (
             <div className="h-8 w-20 rounded bg-gray-200 animate-pulse" />
           ) : currentUser ? (
-            /* 메뉴 버튼 + 말풍선을 relative 컨테이너로 감쌈 */
+            /* 돋보기 + 메뉴 버튼 + 말풍선을 묶는 영역 */
+            <div className="flex items-center gap-1">
+
+              {/* 돋보기 버튼 */}
+              <button
+                onClick={toggleFontSize}
+                className="p-2 rounded-lg transition-colors active:scale-95"
+                style={{
+                  color: fontSizeMode === "large"
+                    ? "#e4701e"
+                    : isDark ? "#94a3b8" : "#9ca3af",
+                }}
+                aria-label={fontSizeMode === "large" ? "글자 크기 줄이기" : "글자 크기 키우기"}
+                title={fontSizeMode === "large" ? "글자 크기 줄이기" : "글자 크기 키우기"}
+              >
+                <ZoomIn size={20} />
+              </button>
+
+            {/* 메뉴 버튼 + 말풍선을 relative 컨테이너로 감쌈 */}
             <div className="relative">
               <button
                 onClick={handleMenuClick}
@@ -133,7 +160,7 @@ export default function Header() {
                   size="sm"
                 />
                 <span
-                  className="text-sm font-medium"
+                  className="text-sm font-medium max-w-[6rem] truncate"
                   style={{ color: isDark ? "#e2e8f0" : "#374151" }}
                 >
                   {currentUser.name}
@@ -170,6 +197,7 @@ export default function Header() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
             </div>
           ) : (
             <button

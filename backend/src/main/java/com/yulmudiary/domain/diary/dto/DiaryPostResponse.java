@@ -17,6 +17,7 @@ public class DiaryPostResponse {
     private Long babyId;
     private Long authorId;
     private String authorNickname;
+    private String authorProfileImageUrl;
     private String content;
     private String milestoneTag;
     private List<MediaDto> media;
@@ -50,6 +51,7 @@ public class DiaryPostResponse {
                 .babyId(post.getBaby().getId())
                 .authorId(post.getAuthor().getId())
                 .authorNickname(post.getAuthor().getName())
+                .authorProfileImageUrl(post.getAuthor().getProfileImageUrl())
                 .content(post.getContent())
                 .milestoneTag(post.getMilestoneTag())
                 .media(post.getMediaList().stream()
