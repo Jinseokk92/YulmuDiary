@@ -1,56 +1,188 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { Menu } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "@/components/ui/UserAvatar";
+import SideDrawer from "@/components/layout/SideDrawer";
+
+const GUIDE_KEY = "menu-guide-seen";
+
+// ─── 말풍선 가이드 ─────────────────────────────────────────────────────────
+function MenuGuide() {
+  return (
+    <div className="relative">
+      {/* 꼬리: 말풍선 위쪽 오른편 → 메뉴 버튼 방향 */}
+      <div
+        className="absolute right-5 -top-2"
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: "8px solid transparent",
+          borderRight: "8px solid transparent",
+          borderBottom: "8px solid #fef3c7",
+        }}
+      />
+      {/* 꼬리 테두리 (외곽선) */}
+      <div
+        className="absolute right-[18px] -top-[11px]"
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: "9px solid transparent",
+          borderRight: "9px solid transparent",
+          borderBottom: "9px solid #fcd34d",
+          zIndex: -1,
+        }}
+      />
+
+      {/* 말풍선 본체 */}
+      <div
+        className="rounded-2xl px-4 py-3 shadow-lg border text-sm leading-snug"
+        style={{
+          backgroundColor: "#fef3c7",
+          borderColor: "#fcd34d",
+          color: "#92400e",
+          maxWidth: "13rem",
+          whiteSpace: "pre-line",
+        }}
+      >
+        여기를 누르면 로그아웃과 설정을 할 수 있어요!
+      </div>
+    </div>
+  );
+}
 
 export default function Header() {
-  const { currentUser, loading, logout } = useUser();
+  const { currentUser, loading } = useUser();
+  const { resolvedTheme } = useTheme();
   const router = useRouter();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // mounted 후 localStorage 확인 → 1초 뒤 말풍선 표시
+  useEffect(() => {
+    if (!mounted) return;
+    const seen = localStorage.getItem(GUIDE_KEY);
+    if (seen) return;
+
+    const showTimer = setTimeout(() => setShowGuide(true), 1000);
+    return () => clearTimeout(showTimer);
+  }, [mounted]);
+
+  // 5초 후 자동으로 사라짐
+  useEffect(() => {
+    if (!showGuide) return;
+    const hideTimer = setTimeout(() => setShowGuide(false), 5000);
+    return () => clearTimeout(hideTimer);
+  }, [showGuide]);
+
+  const isDark = mounted && resolvedTheme === "dark";
+
+  const handleMenuClick = () => {
+    // 클릭 시 "이미 봤음" 기록 → 이후 접속에서 말풍선 미노출
+    localStorage.setItem(GUIDE_KEY, "true");
+    setShowGuide(false);
+    setDrawerOpen(true);
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
-      <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
-        <h1 className="text-xl font-bold text-primary-600 select-none">
-          율무일기
-        </h1>
-
-        {loading ? (
-          <div className="h-8 w-20 rounded bg-gray-200 animate-pulse" />
-        ) : currentUser ? (
-          <div className="flex items-center gap-2">
-            <UserAvatar
-              nickname={currentUser.name}
-              profileImageUrl={currentUser.profileImageUrl}
-              size="sm"
-            />
-            <span className="text-sm text-gray-700 font-medium">
-              {currentUser.name}
-            </span>
-            <button
-              onClick={handleLogout}
-              title="로그아웃"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-50
-                         transition-all duration-150 hover:scale-110 active:scale-95"
-            >
-              <LogOut size={20} strokeWidth={1.8} />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => router.push("/login")}
-            className="text-sm text-primary-600 font-medium"
+    <>
+      <header
+        className="sticky top-0 z-30 border-b"
+        style={{
+          backgroundColor: isDark ? "#0f172a" : "#ffffff",
+          borderColor: isDark ? "#1e293b" : "#e5e7eb",
+        }}
+      >
+        <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
+          <h1
+            className="text-xl font-bold select-none"
+            style={{ color: isDark ? "#fb923c" : "#d55914" }}
           >
-            로그인
-          </button>
-        )}
-      </div>
-    </header>
+            율무일기
+          </h1>
+
+          {loading ? (
+            <div className="h-8 w-20 rounded bg-gray-200 animate-pulse" />
+          ) : currentUser ? (
+            /* 메뉴 버튼 + 말풍선을 relative 컨테이너로 감쌈 */
+            <div className="relative">
+              <button
+                onClick={handleMenuClick}
+                className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl active:scale-95 transition-all"
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = isDark ? "#1e293b" : "#f3f4f6")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
+                aria-label="메뉴 열기"
+              >
+                <UserAvatar
+                  nickname={currentUser.name}
+                  profileImageUrl={currentUser.profileImageUrl}
+                  size="sm"
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: isDark ? "#e2e8f0" : "#374151" }}
+                >
+                  {currentUser.name}
+                </span>
+                <Menu
+                  size={18}
+                  style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+                  className="ml-0.5"
+                />
+              </button>
+
+              {/* 말풍선 */}
+              <AnimatePresence>
+                {showGuide && (
+                  /* 외부 div: 입장/퇴장 페이드 */
+                  <motion.div
+                    className="absolute top-full right-0 mt-3 z-50"
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                  >
+                    {/* 내부 div: 둥둥 float 효과 */}
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 2.2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <MenuGuide />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <button
+              onClick={() => router.push("/login")}
+              className="text-sm font-medium text-primary-600"
+            >
+              로그인
+            </button>
+          )}
+        </div>
+      </header>
+
+      <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   );
 }

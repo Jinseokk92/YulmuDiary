@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { UserProvider } from "@/contexts/UserContext";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,9 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className="font-sans min-h-screen bg-gray-50">
-        <UserProvider>{children}</UserProvider>
+    <html lang="ko" suppressHydrationWarning>
+      <body className="font-sans min-h-screen text-gray-900 dark:text-slate-100 transition-colors duration-300">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

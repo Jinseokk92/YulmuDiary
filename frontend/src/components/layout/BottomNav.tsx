@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 
 const NAV_ITEMS = [
   { href: "/",         label: "홈",    icon: HomeIcon     },
@@ -12,9 +14,21 @@ const NAV_ITEMS = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
+    <nav
+      className="fixed bottom-0 inset-x-0 z-30 border-t pb-[env(safe-area-inset-bottom)]"
+      style={{
+        backgroundColor: isDark ? "#0f172a" : "#ffffff",
+        borderColor: isDark ? "#1e293b" : "#e5e7eb",
+      }}
+    >
       <div className="max-w-lg mx-auto grid grid-cols-4 h-14">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active =
@@ -23,8 +37,12 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 text-xs transition-colors
-                ${active ? "text-primary-600" : "text-gray-400 hover:text-gray-600"}`}
+              className="flex flex-col items-center justify-center gap-0.5 text-xs transition-colors"
+              style={{
+                color: active
+                  ? isDark ? "#fb923c" : "#d55914"
+                  : isDark ? "#64748b" : "#9ca3af",
+              }}
             >
               <Icon active={active} />
               <span>{label}</span>

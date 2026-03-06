@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useAuthStore } from "@/stores/authStore";
 import { api } from "@/lib/api";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
+import MainBackground from "@/components/MainBackground";
 import type { UserResponse } from "@/types";
 
 export default function MainLayout({
@@ -16,6 +18,12 @@ export default function MainLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, user, familyGroupId, setUser, setFamilyGroup } = useAuthStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 낙관적 UI: 스토어의 familyGroupId(쿠키 복원값)가 있으면 즉시 렌더링
   const [checking, setChecking] = useState(familyGroupId == null);
@@ -54,20 +62,32 @@ export default function MainLayout({
     }
   }, [isAuthenticated, familyGroupId, fetchLatestStatus, router]);
 
+  // 마운트 전에는 테마를 알 수 없으므로 기본값 사용
+  const isDark = mounted && resolvedTheme === "dark";
+
   // 가드: 그룹 정보가 아예 없고 체크 중일 때만 스피너 노출
   if (checking && familyGroupId == null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <>
+        <MainBackground />
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen pb-16">
-      <Header />
-      <main className="max-w-lg mx-auto">{children}</main>
-      <BottomNav />
-    </div>
+    <>
+      <MainBackground />
+      <div className="min-h-screen pb-16">
+        <Header />
+        <main className="max-w-lg mx-auto">{children}</main>
+        <BottomNav />
+      </div>
+    </>
   );
 }

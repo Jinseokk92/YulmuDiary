@@ -2,14 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 33, 33, 33;
-  --background-rgb: 255, 255, 255;
-}
-
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

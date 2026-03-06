@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useState, useCallback, useRef } from "react";
+import { memo, useState, useCallback, useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -17,8 +18,13 @@ interface DiaryCardProps {
 
 function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
   const { currentUser } = useUser();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const commentSectionRef = useRef<CommentBottomSheetHandle>(null);
   const isAuthor = currentUser?.id === post.authorId;
+
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   // ─── 삭제 상태 ─────────────────────────────────────────────────────
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -143,7 +149,11 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
 
   return (
     <>
-      <article className="bg-white border-b border-gray-100 pb-8 mb-8 last:border-0 last:mb-0">
+      <article className={`border-b pb-8 mb-8 last:border-0 last:mb-0 backdrop-blur-sm
+        ${isDark
+          ? "bg-slate-900/85 border-slate-800"
+          : "bg-white/90 border-gray-100"
+        }`}>
 
         {/* ── 상단: 프로필 + 수정/삭제 버튼 ── */}
         <div className="flex items-center justify-between px-4 py-3">
@@ -154,10 +164,10 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
               size="md"
             />
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-900 leading-none">
+              <span className={`text-sm font-semibold leading-none ${isDark ? "text-slate-100" : "text-gray-900"}`}>
                 {post.authorNickname}
               </span>
-              <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">
+              <span className={`text-[10px] mt-1 uppercase tracking-wider ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                 Family Member
               </span>
             </div>
@@ -169,7 +179,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
               {/* 수정 — 연필 아이콘 */}
               <button
                 onClick={handleEditStart}
-                className="p-2 text-gray-300 hover:text-primary-500 transition-colors"
+                className="p-2 text-gray-300 dark:text-slate-600 hover:text-primary-500 transition-colors"
                 aria-label="수정"
               >
                 <svg
@@ -190,7 +200,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
               {/* 삭제 — 휴지통 아이콘 */}
               <button
                 onClick={() => setConfirmOpen(true)}
-                className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
                 aria-label="삭제"
               >
                 <svg
@@ -227,7 +237,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                 onClick={handleToggleLike}
                 disabled={isLiking}
                 className={`transition-all active:scale-90 ${
-                  isLiked ? "text-red-500" : "text-gray-700 hover:text-red-500"
+                  isLiked ? "text-red-500" : isDark ? "text-slate-300 hover:text-red-500" : "text-gray-700 hover:text-red-500"
                 }`}
               >
                 {isLiked ? (
@@ -258,7 +268,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
               </button>
               <button
                 onClick={handleBubbleClick}
-                className="text-gray-700 hover:text-primary-500 transition-colors"
+                className={`hover:text-primary-500 transition-colors ${isDark ? "text-slate-300" : "text-gray-700"}`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -281,7 +291,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
           {/* 좋아요 수 (수정 모드 중 숨김) */}
           {!isEditing && likeCount > 0 && (
             <div className="mb-2">
-              <span className="text-sm font-bold text-gray-900">
+              <span className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>
                 좋아요 {likeCount}개
               </span>
             </div>
@@ -295,23 +305,33 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                 onChange={(e) => setEditContent(e.target.value)}
                 rows={5}
                 autoFocus
-                className="w-full text-sm text-gray-800 border border-gray-200 rounded-xl p-3
-                           resize-none outline-none focus:border-primary-400 transition-colors"
+                className={`w-full text-sm rounded-xl p-3 resize-none outline-none transition-colors
+                           focus:border-primary-400
+                           ${isDark
+                             ? "text-slate-200 bg-slate-800 border border-slate-700"
+                             : "text-gray-800 bg-white border border-gray-200"
+                           }`}
                 placeholder="일기 내용을 입력하세요"
               />
               <input
                 value={editTag}
                 onChange={(e) => setEditTag(e.target.value)}
                 placeholder="해시태그 (예: #첫걸음 #백일)"
-                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
-                           outline-none focus:border-primary-400 transition-colors text-gray-700
-                           placeholder:text-gray-300"
+                className={`w-full text-sm rounded-xl px-3 py-2 outline-none transition-colors
+                           focus:border-primary-400
+                           ${isDark
+                             ? "border border-slate-700 text-slate-200 bg-slate-800 placeholder:text-slate-600"
+                             : "border border-gray-200 text-gray-700 bg-white placeholder:text-gray-300"
+                           }`}
               />
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   onClick={handleEditCancel}
-                  className="px-4 py-1.5 text-sm text-gray-500 border border-gray-200 rounded-lg
-                             hover:bg-gray-50 transition-colors"
+                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors
+                             ${isDark
+                               ? "text-slate-400 border border-slate-700 hover:bg-slate-800"
+                               : "text-gray-500 border border-gray-200 hover:bg-gray-50"
+                             }`}
                 >
                   취소
                 </button>
@@ -329,9 +349,9 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
             /* ── 읽기 모드 ── */
             <div className="space-y-1.5">
               {title && (
-                <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                <h3 className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>{title}</h3>
               )}
-              <p className="text-sm text-gray-800 leading-relaxed line-clamp-2">
+              <p className={`text-sm leading-relaxed line-clamp-2 ${isDark ? "text-slate-200" : "text-gray-800"}`}>
                 <span className="font-bold mr-2">{post.authorNickname}</span>
                 {body}
               </p>
@@ -347,7 +367,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                   ))}
                 </div>
               )}
-              <p className="text-[10px] text-gray-400 uppercase pt-1">
+              <p className={`text-[10px] uppercase pt-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                 {formatRelativeTime(post.createdAt)}
               </p>
             </div>

@@ -80,7 +80,7 @@ export default function DiaryFeed({
 
       {error && (
         <div className="py-6 text-center">
-          <p className="text-sm text-red-500 mb-2">{error}</p>
+          <p className="text-sm text-red-400 mb-2">{error}</p>
           <button
             onClick={loadMore}
             className="text-sm text-primary-600 font-medium hover:underline"
@@ -95,7 +95,7 @@ export default function DiaryFeed({
       )}
 
       {!hasNext && posts.length > 0 && (
-        <p className="py-8 text-center text-xs text-gray-300">
+        <p className="py-8 text-center text-xs text-gray-300 dark:text-slate-600">
           모든 일기를 불러왔어요
         </p>
       )}

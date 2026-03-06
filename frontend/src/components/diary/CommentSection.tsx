@@ -22,18 +22,18 @@ export default function CommentSection({
         <div key={c.id} className="flex items-start gap-2 group">
           <div className="flex-1 min-w-0">
             <p className="text-sm leading-snug">
-              <span className="font-semibold text-gray-900 mr-2">{c.nickname}</span>
-              <span className="text-gray-700 break-words">{c.content}</span>
+              <span className="font-semibold text-gray-900 dark:text-slate-100 mr-2">{c.nickname}</span>
+              <span className="text-gray-700 dark:text-slate-300 break-words">{c.content}</span>
             </p>
-            <span className="text-[10px] text-gray-300">
+            <span className="text-[10px] text-gray-300 dark:text-slate-600">
               {formatRelativeTime(c.createdAt)}
             </span>
           </div>
           {currentUser?.id === c.authorId && (
             <button
               onClick={() => onDelete(c.id)}
-              className="shrink-0 opacity-0 group-hover:opacity-100 p-2 text-gray-300
-                         hover:text-red-400 transition-all"
+              className="shrink-0 opacity-0 group-hover:opacity-100 p-2
+                         text-gray-300 dark:text-slate-600 hover:text-red-400 transition-all"
               aria-label="댓글 삭제"
             >
               <svg
