@@ -20,6 +20,8 @@ export interface UserResponse {
   /** /api/auth/me 응답에만 포함. 가족 그룹 내 역할. */
   role?: "PARENT" | "RELATIVE";
   familyGroupId?: number | null;
+  /** 한 줄 소개 — PUT /api/users/me 구현 후 백엔드 연결 */
+  bio?: string | null;
 }
 
 // --- Media ---
@@ -66,6 +68,48 @@ export interface CommentResponse {
 
 export interface CommentRequest {
   content: string;
+}
+
+// --- UserStats ---
+
+export interface UserStatsResponse {
+  postCount: number;
+  photoCount: number;
+  reactionCount: number;
+}
+
+// --- MyReaction ---
+
+export interface MyReactionResponse {
+  id: number;
+  emoji: string;
+  createdAt: string;
+  postId: number;
+  postContent: string | null;
+  postThumbnailUrl: string | null;
+}
+
+export interface MyReactionPageResponse {
+  items: MyReactionResponse[];
+  nextCursor: number | null;
+  hasNext: boolean;
+}
+
+// --- MyComment ---
+
+export interface MyCommentResponse {
+  id: number;
+  content: string;
+  createdAt: string;
+  postId: number;
+  postContent: string | null;
+  postThumbnailUrl: string | null;
+}
+
+export interface MyCommentPageResponse {
+  items: MyCommentResponse[];
+  nextCursor: number | null;
+  hasNext: boolean;
 }
 
 // --- DiaryPost ---

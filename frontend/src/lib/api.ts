@@ -169,6 +169,13 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  putForm: <T>(endpoint: string, formData: FormData, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: "PUT",
+      body: formData,
+    }),
+
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: "DELETE" }),
 

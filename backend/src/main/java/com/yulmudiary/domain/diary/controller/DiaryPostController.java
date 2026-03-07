@@ -69,6 +69,18 @@ public class DiaryPostController {
         return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size));
     }
 
+    @Operation(summary = "내 게시글 목록 조회 (Cursor 페이징)")
+    @GetMapping("/my")
+    public ApiResponse<DiaryPostPageResponse> getMyPosts(
+            Authentication authentication,
+            @Parameter(description = "커서 (이전 페이지 마지막 ID)")
+            @RequestParam(required = false) Long cursor,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getByAuthor(userId, cursor, size));
+    }
+
     @Operation(summary = "일기 수정")
     @CheckFamilyAuth(AuthTarget.POST_ID)
     @PutMapping("/{id}")

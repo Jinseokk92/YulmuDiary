@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useRef, useEffect } from "react";
+import { memo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
@@ -15,9 +15,43 @@ import UserAvatar from "@/components/ui/UserAvatar";
 interface DiaryCardProps {
   post: DiaryPostResponse;
   onDelete: (postId: number) => void;
+  disableNativeDrag?: boolean;
 }
 
-function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
+interface ActionIconButtonProps {
+  onClick: () => void;
+  disabled?: boolean;
+  className: string;
+  ariaLabel: string;
+  disableNativeDrag: boolean;
+  onPreventDrag: (e: React.DragEvent) => void;
+  children: ReactNode;
+}
+
+function ActionIconButton({
+  onClick,
+  disabled,
+  className,
+  ariaLabel,
+  disableNativeDrag,
+  onPreventDrag,
+  children,
+}: ActionIconButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      draggable={disableNativeDrag ? false : undefined}
+      onDragStart={disableNativeDrag ? onPreventDrag : undefined}
+      className={`${className} ${disableNativeDrag ? "select-none touch-manipulation" : ""}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCardProps) {
   const { currentUser } = useUser();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -36,6 +70,11 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
   const handleBubbleClick = useCallback(() => {
     setIsCommentSheetOpen(true);
   }, []);
+
+  const handlePreventDrag = useCallback((e: React.DragEvent) => {
+    if (!disableNativeDrag) return;
+    e.preventDefault();
+  }, [disableNativeDrag]);
 
   // ─── 수정 상태 ─────────────────────────────────────────────────────
   // 수정 성공 후 props를 기다리지 않고 즉시 반영하기 위한 로컬 표시 상태
@@ -233,10 +272,16 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
 
           {/* 좋아요·댓글 아이콘 (수정 모드 중 숨김) */}
           {!isEditing && (
-            <div className="flex items-center gap-4 mb-3">
-              <button
+            <div
+              className={`flex items-center gap-4 mb-3 ${disableNativeDrag ? "select-none touch-manipulation" : ""}`}
+              onDragStart={disableNativeDrag ? handlePreventDrag : undefined}
+            >
+              <ActionIconButton
                 onClick={handleToggleLike}
                 disabled={isLiking}
+                ariaLabel={isLiked ? "좋아요 취소" : "좋아요"}
+                disableNativeDrag={disableNativeDrag}
+                onPreventDrag={handlePreventDrag}
                 className={`transition-all active:scale-90 ${
                   isLiked ? "text-red-500" : isDark ? "text-slate-300 hover:text-red-500" : "text-gray-700 hover:text-red-500"
                 }`}
@@ -246,7 +291,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="currentColor"
-                    className="w-7 h-7"
+                    className={`w-7 h-7 ${disableNativeDrag ? "pointer-events-none select-none" : ""}`}
                   >
                     <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
                   </svg>
@@ -257,7 +302,7 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
                     stroke="currentColor"
-                    className="w-7 h-7"
+                    className={`w-7 h-7 ${disableNativeDrag ? "pointer-events-none select-none" : ""}`}
                   >
                     <path
                       strokeLinecap="round"
@@ -266,9 +311,12 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                     />
                   </svg>
                 )}
-              </button>
-              <button
+              </ActionIconButton>
+              <ActionIconButton
                 onClick={handleBubbleClick}
+                ariaLabel="댓글 열기"
+                disableNativeDrag={disableNativeDrag}
+                onPreventDrag={handlePreventDrag}
                 className={`hover:text-primary-500 transition-colors ${isDark ? "text-slate-300" : "text-gray-700"}`}
               >
                 <svg
@@ -277,15 +325,15 @@ function DiaryCardInner({ post, onDelete }: DiaryCardProps) {
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
-                  className="w-7 h-7"
+                  className={`w-7 h-7 ${disableNativeDrag ? "pointer-events-none select-none" : ""}`}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785c-.442.492.113 1.07.593.843a9.733 9.733 0 002.228-1.468h.002c.304-.297.703-.446 1.088-.436 1.144.03 2.308.038 3.475.038z"
-                  />
-                </svg>
-              </button>
+                    />
+                  </svg>
+              </ActionIconButton>
             </div>
           )}
 

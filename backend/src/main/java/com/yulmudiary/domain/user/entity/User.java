@@ -37,6 +37,9 @@ public class User extends BaseTimeEntity {
 
     private String profileImageUrl;
 
+    @Column(length = 100)
+    private String bio;
+
     @Builder
     public User(String email, String name, String provider, String providerId,
                 Role role, String profileImageUrl) {
@@ -48,8 +51,20 @@ public class User extends BaseTimeEntity {
         this.profileImageUrl = profileImageUrl;
     }
 
+    /** OAuth 로그인 시 소셜 프로필 동기화 (기존 흐름 유지) */
     public void updateProfile(String name, String profileImageUrl) {
         this.name = name;
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    /** 사용자가 직접 닉네임·한 줄 소개 수정 */
+    public void updateNameAndBio(String name, String bio) {
+        this.name = name;
+        this.bio = bio;
+    }
+
+    /** 사용자가 직접 프로필 사진 변경 */
+    public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
 }

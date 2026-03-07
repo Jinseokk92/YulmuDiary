@@ -84,6 +84,32 @@ public class DiaryPostService {
                 .build();
     }
 
+    // ── 내 게시글 (작성자 기반 커서 페이징) ─────────────────────────
+
+    public DiaryPostPageResponse getByAuthor(Long authorId, Long cursor, int size) {
+        List<DiaryPost> posts;
+        if (cursor == null) {
+            posts = diaryPostRepository.findByAuthorIdLatest(authorId, PageRequest.of(0, size + 1));
+        } else {
+            posts = diaryPostRepository.findByAuthorIdAndCursor(authorId, cursor, PageRequest.of(0, size + 1));
+        }
+
+        boolean hasNext = posts.size() > size;
+        List<DiaryPost> content = hasNext ? posts.subList(0, size) : posts;
+
+        List<DiaryPostResponse> items = content.stream()
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
+                .toList();
+
+        Long nextCursor = hasNext ? content.get(content.size() - 1).getId() : null;
+
+        return DiaryPostPageResponse.builder()
+                .items(items)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .build();
+    }
+
     // ── 페이지 번호 기반 ─────────────────────────────────────────────
 
     public DiaryPostPaginatedResponse getByBabyPaged(Long babyId, int page, int size) {

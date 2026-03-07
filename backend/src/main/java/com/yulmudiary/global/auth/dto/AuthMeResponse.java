@@ -16,6 +16,7 @@ public class AuthMeResponse {
     /** 가족 그룹 내 역할 (PARENT / RELATIVE). 미가입 시 null. */
     private String role;
     private Long familyGroupId;
+    private String bio;
 
     public static AuthMeResponse of(User user, Long familyGroupId, FamilyRole familyRole) {
         return AuthMeResponse.builder()
@@ -25,6 +26,7 @@ public class AuthMeResponse {
                 .profileImageUrl(user.getProfileImageUrl())
                 .role(familyRole != null ? familyRole.name() : null)
                 .familyGroupId(familyGroupId)
+                .bio(user.getBio())
                 .build();
     }
 }

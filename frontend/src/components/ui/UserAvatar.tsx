@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type AvatarSize = "sm" | "md" | "lg";
 
@@ -25,6 +25,11 @@ export default function UserAvatar({
 }: UserAvatarProps) {
   const [imgError, setImgError] = useState(false);
   const { container, text, img } = SIZE_MAP[size];
+
+  // URL이 바뀌면 에러 상태 초기화 (변경된 사진이 표시되지 않는 버그 방지)
+  useEffect(() => {
+    setImgError(false);
+  }, [profileImageUrl]);
 
   const showImage = !!profileImageUrl && !imgError;
 
