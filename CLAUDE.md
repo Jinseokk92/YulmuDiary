@@ -1,11 +1,13 @@
 # 율무일기 프로젝트
 
 ## 프로젝트 개요
+
 - 육아 일기 공유 서비스 (모노레포 구조)
 - `backend/` — Spring Boot 3.4.1, Java 17, PostgreSQL, JPA, Lombok
 - `frontend/` — Next.js 15, React 19, Tailwind CSS 3, TypeScript, Zustand
 
 ## 개발 환경
+
 - OS: Windows 11
 - IDE: IntelliJ (백엔드), VS Code (프론트엔드)
 - DB: Docker로 PostgreSQL 16 실행 (로컬)
@@ -17,6 +19,7 @@
 - 언어: 한국어로 응답
 
 ## 배포 환경
+
 - 백엔드: Google Cloud Run (`yulmu-backend`, `asia-northeast3`)
   - 이미지: Artifact Registry (`asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo/backend-api`)
   - 수동 배포: `cd backend` → `docker build` → `docker push` → `gcloud run deploy`
@@ -30,27 +33,30 @@
 ## 환경 변수
 
 ### 백엔드 (Cloud Run 시크릿 / 로컬 .env)
-| 변수명 | 설명 |
-|---|---|
-| `DB_URL` | Neon PostgreSQL JDBC URL |
-| `DB_USERNAME` | DB 사용자명 |
-| `DB_PASSWORD` | DB 비밀번호 |
-| `GOOGLE_CLIENT_ID` | Google OAuth2 클라이언트 ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth2 클라이언트 시크릿 |
-| `KAKAO_CLIENT_ID` | 카카오 REST API 키 |
-| `JWT_SECRET_KEY` | HS256 서명 시크릿 (256비트 이상) |
-| `GCS_BUCKET_NAME` | GCS 버킷 이름 (`yulmudiary-media`) |
-| `FRONTEND_URL` | 프론트엔드 URL (CORS, OAuth2 리다이렉트) |
-| `SPRING_PROFILES_ACTIVE` | `prod` (운영) / `local` (로컬) |
+
+| 변수명                   | 설명                                     |
+| ------------------------ | ---------------------------------------- |
+| `DB_URL`                 | Neon PostgreSQL JDBC URL                 |
+| `DB_USERNAME`            | DB 사용자명                              |
+| `DB_PASSWORD`            | DB 비밀번호                              |
+| `GOOGLE_CLIENT_ID`       | Google OAuth2 클라이언트 ID              |
+| `GOOGLE_CLIENT_SECRET`   | Google OAuth2 클라이언트 시크릿          |
+| `KAKAO_CLIENT_ID`        | 카카오 REST API 키                       |
+| `JWT_SECRET_KEY`         | HS256 서명 시크릿 (256비트 이상)         |
+| `GCS_BUCKET_NAME`        | GCS 버킷 이름 (`yulmudiary-media`)       |
+| `FRONTEND_URL`           | 프론트엔드 URL (CORS, OAuth2 리다이렉트) |
+| `SPRING_PROFILES_ACTIVE` | `prod` (운영) / `local` (로컬)           |
 
 ### 프론트엔드 (Vercel 환경변수 / 로컬 .env.local)
-| 변수명 | 설명 |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | 백엔드 API URL (예: `https://yulmu-backend-xxx.run.app`) |
-| `NEXT_PUBLIC_KAKAO_JS_KEY` | 카카오 지도 SDK용 JavaScript 키 |
-| `NEXT_PUBLIC_KAKAO_APP_KEY` | 카카오 장소 검색 REST API 키 (`KakaoAK` 헤더) |
+
+| 변수명                      | 설명                                                     |
+| --------------------------- | -------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`       | 백엔드 API URL (예: `https://yulmu-backend-xxx.run.app`) |
+| `NEXT_PUBLIC_KAKAO_JS_KEY`  | 카카오 지도 SDK용 JavaScript 키                          |
+| `NEXT_PUBLIC_KAKAO_APP_KEY` | 카카오 장소 검색 REST API 키 (`KakaoAK` 헤더)            |
 
 ## 백엔드 구조
+
 ```
 backend/
 ├── Dockerfile
@@ -126,6 +132,7 @@ backend/
 ```
 
 ### 설정 파일
+
 ```
 backend/src/main/resources/
 ├── application.yml          — 공통 (JWT, multipart, Tomcat, base-url 로컬 기본값)
@@ -135,6 +142,7 @@ backend/src/main/resources/
 ```
 
 ## 프론트엔드 구조
+
 ```
 frontend/
 ├── Dockerfile                — Next.js standalone 빌드 (Cloud Run 대응)
@@ -209,14 +217,17 @@ frontend/
 ## API 구현 상태
 
 ### Auth
+
 - `GET /api/auth/me` — 내 정보 조회 (JWT 필요, familyGroupId 포함)
 - `POST /api/auth/refresh` — Access Token 재발급 (refresh_token 쿠키)
 
 ### FamilyGroup
+
 - `POST /api/family-group/join` — 초대 코드로 가족 그룹 합류 (JWT 필요)
   - 입력값 null 체크 → trim().toUpperCase() 정규화 → DB 조회 → 2차 비교 + 로그
 
 ### DiaryPost CRUD
+
 - `POST /api/diary-posts` — 생성
 - `GET /api/diary-posts/{id}` — 단건 조회 (fetch join: author + mediaList)
 - `GET /api/diary-posts?babyId=&cursor=&size=` — 목록 (Cursor 페이징)
@@ -224,23 +235,28 @@ frontend/
 - `DELETE /api/diary-posts/{id}` — 삭제 (작성자 검증)
 
 ### Comment
+
 - `GET /api/diary-posts/{postId}/comments` — 댓글 목록
 - `POST /api/diary-posts/{postId}/comments` — 댓글 작성
 - `DELETE /api/diary-posts/{postId}/comments/{commentId}` — 댓글 삭제
 
 ### Reaction
+
 - `POST /api/diary-posts/{postId}/reactions` — 토글 (있으면 삭제, 없으면 추가)
 
 ### Schedule
+
 - `GET /api/schedules?year=&month=` — 월별 조회
 - `POST /api/schedules` — 등록
 - `PUT /api/schedules/{id}` — 수정 (작성자 검증)
 - `DELETE /api/schedules/{id}` — 삭제 (작성자 검증)
 
 ### User
+
 - `GET /api/users` — 사용자 목록 조회 (permitAll)
 
 ### Media
+
 - `POST /api/media/upload` — 파일 업로드 (MultipartFile 다건, UUID 파일명)
   - 로컬: 파일 저장 → `http://localhost:8080/api/media/files/originals/{filename}` 반환
   - 운영: GCS 스트리밍 업로드 → `https://storage.googleapis.com/{bucket}/originals/{filename}` 반환
@@ -252,6 +268,7 @@ frontend/
 ### 백엔드
 
 #### 응답 / 예외
+
 - 모든 응답: `ApiResponse<T>` 래핑 (`{data, error}`)
 - `EntityNotFoundException` / `NotFoundException` → 404
 - `IllegalArgumentException` → 400
@@ -260,6 +277,7 @@ frontend/
 - `NoResourceFoundException` → 404 JSON (Spring Boot 3+ 명시적 처리)
 
 #### 인증
+
 - JWT Bearer Token (`Authorization: Bearer {accessToken}`)
   - Access Token: 30분, Refresh Token: 7일 (HttpOnly 쿠키 `refresh_token`)
   - `JwtAuthenticationFilter`: `validateToken()` try-catch → 실패 시 즉시 401 반환
@@ -270,12 +288,14 @@ frontend/
   4. 프론트 `/auth/callback` → 쿠키 저장 → `/auth/success` → (2.3초) → `/diary` 또는 `/onboarding`
 
 #### SecurityConfig 핵심 설정
+
 - `SessionCreationPolicy.STATELESS` + `NullRequestCache` — Cloud Run RequestCache 경로 유실 방지
 - 인증 실패 → 401 JSON, 권한 없음 → 403 JSON (OAuth2 리다이렉트 방지)
 - 공개 엔드포인트: `/api/health`, `/api/media/files/**`, `GET /api/users`, `/oauth2/**`, `/login/oauth2/**`, `/api/auth/refresh`, `/swagger-ui/**`, `/v3/api-docs/**`
 - 나머지 `/api/**`: `.authenticated()`
 
 #### 미디어 서빙 아키텍처
+
 - **업로드**: `ImageStorageService.store()` → 항상 완전한 절대 URL 반환
   - 로컬(`@Profile("local")`): `./uploads/originals/`에 저장, `http://localhost:8080/api/media/files/originals/{filename}` 반환
   - 운영(`@Profile("prod")`): GCS InputStream 스트리밍 업로드, `https://storage.googleapis.com/{bucket}/originals/{filename}` 반환
@@ -285,10 +305,12 @@ frontend/
 - **DTO**: `DiaryPostResponse.from(post, mediaUrlResolver)` → `MediaUrlResolver` 필수 파라미터
 
 #### 가족 그룹 접근 제어 (AOP)
+
 - `@CheckFamilyAuth(target = AuthTarget.BABY/POST)` + `FamilyAuthAspect` — 요청자 family_group 소속 검증
 - `@RequireRole(FamilyRole.PARENT)` + `RequireRoleAspect` — 역할 기반 권한 제어
 
 #### 기타
+
 - Cursor 페이징: ID 역순, size+1 조회로 hasNext 판별
 - N+1 방지: fetch join, `default_batch_fetch_size: 100`
 - Swagger: `http://localhost:8080/swagger-ui/index.html`
@@ -298,6 +320,7 @@ frontend/
 ### 프론트엔드
 
 #### 인증 상태 관리
+
 - **Zustand** (`stores/authStore.ts`): `token`, `user`, `familyGroupId`, `isAuthenticated`
 - 토큰 저장: `js-cookie` (`access_token` 쿠키, 1일), `family_group_id` 쿠키 (365일)
 - 로그아웃: 쿠키 전체 삭제 + 스토어 초기화
@@ -307,6 +330,7 @@ frontend/
   - 인증 처리 경로(`/auth/callback`, `/auth/success`) → 가드 없이 통과
 
 #### 다크모드
+
 - **`tailwind.config.ts`**: `darkMode: "class"` 설정
 - **`next-themes`**: `ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}`
 - **패턴**: `useTheme()` + `isDark = mounted && resolvedTheme === "dark"` 직접 분기
@@ -317,12 +341,14 @@ frontend/
   - 라이트: 구름 2개 (좌→우 이동) + 하늘색 그라디언트
 
 #### 이미지
+
 - `next/image` (`<Image fill ...>`) + `remotePatterns`: GCS(`storage.googleapis.com`) + 로컬(`localhost:8080`)
 - `ImageCarousel`: `diaryId` + `activeIndex` 키로 Framer Motion 슬라이드
 - 이미지 로드 실패: `imgErrors: Record<number, boolean>` → `Images` 아이콘 플레이스홀더
 - `getMediaUrl()`: 상대 경로면 `NEXT_PUBLIC_API_URL` 붙여 절대 경로 변환
 
 #### 카카오맵 SDK
+
 - `NEXT_PUBLIC_KAKAO_JS_KEY`: 지도 SDK용 JavaScript 키
 - `NEXT_PUBLIC_KAKAO_APP_KEY`: 장소 검색 REST API 키 (`KakaoAK` 헤더)
 - **주의**: `<Script strategy="afterInteractive" onLoad=...>`는 SPA 재방문 시 재실행 안 됨
@@ -330,25 +356,30 @@ frontend/
 - 카카오 개발자 센터 Web 플랫폼에 Vercel 도메인 등록 필수
 
 #### UI 패턴
+
 - Optimistic UI: 리액션 토글, 댓글 작성/삭제 (실패 시 롤백)
 - 이미지 업로드: 개별 파일 병렬 업로드 (Promise.all), 최대 10장
 - 삭제: ConfirmModal 확인 후 API 호출 → 피드 state에서 즉시 제거
 - `api.ts`: fetch 기반, `Authorization: Bearer {token}` 자동 주입 (쿠키에서 토큰 읽기)
 
 #### 댓글 바텀 시트
+
 - `CommentBottomSheet` — 무한스크롤(`useInView`), 부모 스크롤 잠금, 슬라이드 애니메이션
 - `CommentSection` — 순수 표시 컴포넌트
 
 #### 일정 캘린더 (`/schedule`)
+
 - `ScheduleSheet` 바텀 시트: 일정 목록 + 등록 폼 + 카카오맵 장소 검색
 - 달력 그리드: `grid grid-cols-7`, dot 최대 3개 표시
 
 ## 주의사항 (Claude 필독)
+
 - `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.
 - 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
 - `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
 
 ## 보안 이슈 / 미해결 TODO
+
 - **[HIGH] Cookie Secure 미설정**: `OAuth2AuthenticationSuccessHandler.java:57` — `cookie.setSecure(false)` → 운영 환경에서 반드시 `true`로 변경 필요
 - **[MED] FamilyGroup 접근 제어**: `@CheckFamilyAuth` AOP로 일부 구현됐으나, 모든 엔드포인트 적용 여부 확인 필요
 - **[INFO] 운영 DB 시드 데이터**: 초대 코드 등 초기 데이터는 `data.sql`이 운영에서 미실행되므로 직접 INSERT 필요

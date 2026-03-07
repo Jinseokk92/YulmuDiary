@@ -11,6 +11,7 @@ import { Menu, ZoomIn } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "@/components/ui/UserAvatar";
 import SideDrawer from "@/components/layout/SideDrawer";
+import { useUiStore } from "@/stores/uiStore";
 
 const GUIDE_INTERVAL_MS = 3 * 60 * 1000; // 5분마다 반복 표시
 
@@ -63,13 +64,18 @@ export default function Header() {
   const { resolvedTheme } = useTheme();
   const { mode: fontSizeMode, toggle: toggleFontSize } = useFontSize();
   const router = useRouter();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerOpen = useUiStore((state) => state.isDrawerOpen);
+  const setDrawerOpen = useUiStore((state) => state.setDrawerOpen);
   const [mounted, setMounted] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    return () => setDrawerOpen(false);
+  }, [setDrawerOpen]);
 
   // mounted 후 1초 뒤 첫 표시, 이후 5분마다 반복
   useEffect(() => {

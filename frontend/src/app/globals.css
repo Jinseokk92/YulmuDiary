@@ -5,6 +5,18 @@
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 브라우저 기본 pull-to-refresh 비활성화 */
+  overscroll-behavior-y: contain;
+}
+
+/* Pull-to-refresh 인디케이터 스피너 */
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
 }
 
 /* 돋보기 모드: 기본 폰트 16px → 20px, rem 기반 모든 크기 자동 스케일업 */

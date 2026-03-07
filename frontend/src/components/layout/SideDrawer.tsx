@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -13,18 +14,18 @@ interface SideDrawerProps {
   onClose: () => void;
 }
 
-// ─── 커스텀 토글 스위치 ────────────────────────────────────────────────────
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none
-                  ${checked ? "bg-primary-500" : "bg-gray-300"}`}
+      className={`relative h-6 w-12 rounded-full transition-colors duration-200 focus:outline-none ${
+        checked ? "bg-primary-500" : "bg-gray-300"
+      }`}
     >
       <motion.span
-        className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
+        className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm"
         animate={{ x: checked ? 24 : 0 }}
         transition={{ type: "spring", stiffness: 500, damping: 35 }}
       />
@@ -32,23 +33,84 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
   );
 }
 
-// ─── 사이드 드로어 ────────────────────────────────────────────────────────
 export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const { currentUser, logout } = useUser();
   const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const scrollYRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 드로어 열릴 때 body 스크롤 잠금
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
-    return () => { document.body.style.overflow = ""; };
-  }, [isOpen]);
+    if (!mounted) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const appShell = document.getElementById("app-shell");
+
+    if (isOpen) {
+      scrollYRef.current = window.scrollY;
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.position = "fixed";
+      body.style.top = `-${scrollYRef.current}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+
+      if (appShell) {
+        appShell.style.pointerEvents = "none";
+        appShell.setAttribute("inert", "");
+      }
+    } else {
+      const lockedY = scrollYRef.current;
+      html.style.overflow = "";
+      body.style.overflow = "";
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+
+      if (appShell) {
+        appShell.style.pointerEvents = "";
+        appShell.removeAttribute("inert");
+      }
+
+      if (lockedY > 0) {
+        window.scrollTo(0, lockedY);
+      }
+    }
+
+    return () => {
+      html.style.overflow = "";
+      body.style.overflow = "";
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+
+      if (appShell) {
+        appShell.style.pointerEvents = "";
+        appShell.removeAttribute("inert");
+      }
+    };
+  }, [isOpen, mounted]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -62,18 +124,18 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
     setTheme(isDark ? "light" : "dark");
   };
 
-  // tailwind.config에 darkMode:"class" 없으므로 isDark로 직접 분기
-  const bg      = isDark ? "bg-[#0f172a]"   : "bg-white";
-  const text     = isDark ? "text-white"      : "text-gray-900";
-  const subText  = isDark ? "text-slate-400"  : "text-gray-500";
-  const divider  = isDark ? "border-slate-700" : "border-gray-100";
+  const bg = isDark ? "bg-[#0f172a]" : "bg-white";
+  const text = isDark ? "text-white" : "text-gray-900";
+  const subText = isDark ? "text-slate-400" : "text-gray-500";
+  const divider = isDark ? "border-slate-700" : "border-gray-100";
   const rowHover = isDark ? "hover:bg-slate-800" : "hover:bg-gray-50";
 
-  return (
+  if (!mounted) return null;
+
+  const drawer = (
     <AnimatePresence>
       {isOpen && (
-        <>
-          {/* ── 오버레이 ── */}
+        <div className="fixed inset-0 z-[1100]">
           <motion.div
             key="overlay"
             initial={{ opacity: 0 }}
@@ -81,34 +143,33 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className={`fixed inset-0 z-40 backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-black/40"}`}
+            className={`absolute inset-0 ${isDark ? "bg-black/60" : "bg-black/40"}`}
           />
 
-          {/* ── 드로어 패널 ── */}
-          <motion.div
+          <motion.aside
             key="drawer"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            className={`fixed top-0 right-0 z-50 h-full w-72 flex flex-col
-                        shadow-2xl ${bg} ${text}`}
+            className={`absolute right-0 top-0 flex w-72 max-w-[86vw] flex-col overflow-y-auto shadow-2xl ${bg} ${text}`}
+            style={{ height: "100dvh" }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="side menu"
           >
-            {/* ── 드로어 헤더 ── */}
-            <div className={`flex items-center justify-between px-5 h-14 border-b ${divider}`}>
-              <span className="font-semibold text-base">메뉴</span>
+            <div className={`flex h-14 items-center justify-between border-b px-5 ${divider}`}>
+              <span className="text-base font-semibold">메뉴</span>
               <button
                 onClick={onClose}
-                className={`w-9 h-9 flex items-center justify-center rounded-xl
-                            ${rowHover} transition-colors`}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${rowHover}`}
                 aria-label="닫기"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* ── 사용자 정보 ── */}
-            <div className={`px-5 py-5 border-b ${divider}`}>
+            <div className={`border-b px-5 py-5 ${divider}`}>
               <div className="flex items-center gap-3">
                 <UserAvatar
                   nickname={currentUser?.name ?? "?"}
@@ -116,36 +177,34 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                   size="md"
                 />
                 <div>
-                  <p className="font-semibold text-sm">
-                    {currentUser?.name ?? "사용자"}{" "}
-                    <span className={subText}>님</span>
+                  <p className="text-sm font-semibold">
+                    {currentUser?.name ?? "사용자"} <span className={subText}>님</span>
                   </p>
-                  <p className={`text-xs mt-0.5 ${subText}`}>가족 구성원</p>
+                  <p className={`mt-0.5 text-xs ${subText}`}>가족 구성원</p>
                 </div>
               </div>
             </div>
 
-            {/* ── 설정 섹션 ── */}
-            <div className="px-5 py-4 flex-1">
-              <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex-1 px-5 py-4">
+              <div className="mb-3 flex items-center gap-1.5">
                 <Settings size={13} className="text-primary-500" />
-                <p className="text-xs font-semibold text-primary-500 uppercase tracking-wider">
-                  설정
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary-500">설정</p>
               </div>
 
-              {/* 다크모드 토글 */}
               <div
-                className={`flex items-center justify-between px-3 py-3.5 rounded-2xl
-                            transition-colors ${rowHover}`}
+                className={`flex items-center justify-between rounded-2xl px-3 py-3.5 transition-colors ${rowHover}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center
-                                  ${isDark ? "bg-slate-700" : "bg-primary-50"}`}>
-                    {isDark
-                      ? <Moon size={16} className="text-primary-400" />
-                      : <Sun  size={16} className="text-primary-500" />
-                    }
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                      isDark ? "bg-slate-700" : "bg-primary-50"
+                    }`}
+                  >
+                    {isDark ? (
+                      <Moon size={16} className="text-primary-400" />
+                    ) : (
+                      <Sun size={16} className="text-primary-500" />
+                    )}
                   </div>
                   <span className="text-sm font-medium">다크 모드</span>
                 </div>
@@ -153,22 +212,24 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
               </div>
             </div>
 
-            {/* ── 로그아웃 ── */}
-            <div className={`px-5 pb-8 border-t ${divider} pt-4`}>
+            <div className={`border-t px-5 pb-8 pt-4 ${divider}`}>
               <button
                 onClick={handleLogout}
-                className={`w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl
-                            text-sm font-medium text-red-400
-                            ${isDark ? "hover:bg-red-500/10" : "hover:bg-red-50"}
-                            transition-colors`}
+                className={`w-full rounded-2xl px-3 py-3.5 text-sm font-medium text-red-400 transition-colors ${
+                  isDark ? "hover:bg-red-500/10" : "hover:bg-red-50"
+                }`}
               >
-                <LogOut size={18} />
-                로그아웃
+                <span className="flex items-center gap-3">
+                  <LogOut size={18} />
+                  로그아웃
+                </span>
               </button>
             </div>
-          </motion.div>
-        </>
+          </motion.aside>
+        </div>
       )}
     </AnimatePresence>
   );
+
+  return createPortal(drawer, document.body);
 }

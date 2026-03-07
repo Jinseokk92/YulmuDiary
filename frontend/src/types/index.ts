@@ -98,6 +98,13 @@ export interface DiaryPostPageResponse {
   hasNext: boolean;
 }
 
+export interface DiaryPostPaginatedResponse {
+  content: DiaryPostResponse[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number; // 1-based
+}
+
 // --- Family ---
 
 export interface FamilyMembershipResponse {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import {
   loadKakaoSdk,
@@ -9,6 +10,9 @@ import {
   type KakaoMarker,
 } from "@/lib/kakao";
 import { useAuth } from "@/hooks/useAuth";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
+import { useUiStore } from "@/stores/uiStore";
 import type { ScheduleRequest, ScheduleResponse } from "@/types";
 
 // ────────────────────────────────────────────────
@@ -707,6 +711,11 @@ export default function SchedulePage() {
   });
 
   const { isParent } = useAuth();
+  const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   const fetchSchedules = useCallback(async (y: number, m: number) => {
     setLoading(true);
@@ -721,6 +730,17 @@ export default function SchedulePage() {
   }, []);
 
   useEffect(() => { fetchSchedules(year, month); }, [fetchSchedules, year, month]);
+
+  const handleRefresh = useCallback(async () => {
+    await fetchSchedules(year, month);
+  }, [fetchSchedules, year, month]);
+
+  const { pullY, isRefreshing, progress } = usePullToRefresh({
+    threshold: 72,
+    onRefresh: handleRefresh,
+    // 바텀 시트가 열려 있으면 pull 감지 비활성화 (시트 내부 스크롤 충돌 방지)
+    disabled: sheet.isOpen || isDrawerOpen,
+  });
 
   const prevMonth = () => {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -753,16 +773,40 @@ export default function SchedulePage() {
   const selectedSchedules = sheet.selectedDate ? (scheduleMap[sheet.selectedDate] ?? []) : [];
 
   return (
+    <>
+    <div style={{ position: "relative" }}>
+    {/* 절대 위치 스피너 — 콘텐츠가 translateY로 밀릴 때 드러나는 공간에 자연스럽게 표시 */}
+    <PullToRefreshIndicator
+      pullY={isDrawerOpen ? 0 : pullY}
+      isRefreshing={isDrawerOpen ? false : isRefreshing}
+      progress={isDrawerOpen ? 0 : progress}
+    />
+    <div
+      style={{
+        transform: isDrawerOpen ? "none" : `translateY(${pullY}px)`,
+        transition: isDrawerOpen ? "none" : isRefreshing ? "transform 0.2s ease" : "none",
+      }}
+    >
     <div className="max-w-lg mx-auto px-4 pt-4 pb-24">
       {/* 월 헤더 */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+        <button
+          onClick={prevMonth}
+          className={`p-2 rounded-full ${isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"}`}
+          style={{ color: isDark ? "#94a3b8" : "#4b5563" }}
+        >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-base font-semibold text-gray-800">{year}년 {month}월</h1>
-        <button onClick={nextMonth} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+        <h1 className="text-base font-semibold" style={{ color: isDark ? "#e2e8f0" : "#1f2937" }}>
+          {year}년 {month}월
+        </h1>
+        <button
+          onClick={nextMonth}
+          className={`p-2 rounded-full ${isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"}`}
+          style={{ color: isDark ? "#94a3b8" : "#4b5563" }}
+        >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
@@ -772,9 +816,17 @@ export default function SchedulePage() {
       {/* 요일 헤더 */}
       <div className="grid grid-cols-7 mb-1">
         {WEEKDAYS.map((d, i) => (
-          <div key={d} className={`text-center text-xs font-medium py-1.5 ${
-            i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-500"
-          }`}>{d}</div>
+          <div
+            key={d}
+            className="text-center text-xs font-medium py-1.5"
+            style={{
+              color: i === 0
+                ? (isDark ? "#fca5a5" : "#f87171")   // 일: red-300/400
+                : i === 6
+                ? (isDark ? "#93c5fd" : "#60a5fa")   // 토: blue-300/400
+                : (isDark ? "#94a3b8" : "#6b7280"),  // 평일: slate-400/gray-500
+            }}
+          >{d}</div>
         ))}
       </div>
 
@@ -805,10 +857,20 @@ export default function SchedulePage() {
                     !isValid ? "cursor-default"
                     : isSelected ? "bg-primary-500 text-white"
                     : isToday ? "bg-orange-100 text-primary-500 font-semibold"
-                    : "hover:bg-gray-100 text-gray-700"
+                    : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100 text-gray-700"
                   } ${!isValid ? "" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : ""} ${
                     isSelected ? "!text-white" : ""
                   }`}
+                style={
+                  !isValid || isSelected ? {} :
+                  isDark ? (
+                    isToday
+                      // 오늘: 주황 은은한 배경 + 주황 텍스트
+                      ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
+                      // 일반: 요일별 색 분기
+                      : { color: dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1" }
+                  ) : {}
+                }
               >
                 {isValid && (
                   <>
@@ -831,7 +893,10 @@ export default function SchedulePage() {
       {/* 이번 달 일정 요약 */}
       {!loading && schedules.length > 0 && (
         <div className="mt-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-2">이번 달 일정</h2>
+          <h2
+            className="text-sm font-semibold mb-2"
+            style={{ color: isDark ? "#cbd5e1" : "#374151" }}
+          >이번 달 일정</h2>
           <ul className="space-y-2">
             {[...schedules]
               .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
@@ -868,19 +933,27 @@ export default function SchedulePage() {
       )}
 
       {!loading && schedules.length === 0 && (
-        <p className="text-center text-sm text-gray-400 mt-10">이번 달 등록된 일정이 없습니다.</p>
+        <p
+          className="text-center text-sm mt-10"
+          style={{ color: isDark ? "#94a3b8" : "#9ca3af" }}
+        >이번 달 등록된 일정이 없습니다.</p>
       )}
 
-      <ScheduleSheet
-        isOpen={sheet.isOpen}
-        selectedDate={sheet.selectedDate}
-        schedulesOnDate={selectedSchedules}
-        isParent={isParent}
-        onClose={() => setSheet((s) => ({ ...s, isOpen: false }))}
-        onCreated={handleCreated}
-        onUpdated={handleUpdated}
-        onDeleted={handleDeleted}
-      />
     </div>
+    </div>
+    </div>
+
+    {/* ScheduleSheet는 fixed 포지션 — transform/relative 컨테이너 밖에서 렌더링 */}
+    <ScheduleSheet
+      isOpen={sheet.isOpen}
+      selectedDate={sheet.selectedDate}
+      schedulesOnDate={selectedSchedules}
+      isParent={isParent}
+      onClose={() => setSheet((s) => ({ ...s, isOpen: false }))}
+      onCreated={handleCreated}
+      onUpdated={handleUpdated}
+      onDeleted={handleDeleted}
+    />
+    </>
   );
 }

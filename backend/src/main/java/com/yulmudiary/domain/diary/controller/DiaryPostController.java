@@ -1,6 +1,7 @@
 package com.yulmudiary.domain.diary.controller;
 
 import com.yulmudiary.domain.diary.dto.DiaryPostPageResponse;
+import com.yulmudiary.domain.diary.dto.DiaryPostPaginatedResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostRequest;
 import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
 import com.yulmudiary.domain.diary.service.DiaryPostService;
@@ -53,6 +54,19 @@ public class DiaryPostController {
             @Parameter(description = "페이지 크기")
             @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.success(diaryPostService.getByBaby(babyId, cursor, size));
+    }
+
+    @Operation(summary = "일기 목록 조회 (페이지 번호 기반)")
+    @CheckFamilyAuth(AuthTarget.BABY_ID)
+    @GetMapping("/pages")
+    public ApiResponse<DiaryPostPaginatedResponse> getByBabyPaged(
+            @Parameter(description = "아기 ID", required = true)
+            @RequestParam Long babyId,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(defaultValue = "5") int size) {
+        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size));
     }
 
     @Operation(summary = "일기 수정")

@@ -1,104 +1,80 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useInView } from "react-intersection-observer";
-import { api } from "@/lib/api";
-import type { DiaryPostResponse, DiaryPostPageResponse } from "@/types";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import type { DiaryPostPaginatedResponse } from "@/types";
 import DiaryCard from "./DiaryCard";
-import DiaryPostSkeleton from "./DiaryPostSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
+import Pagination from "./Pagination";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
+import { useUiStore } from "@/stores/uiStore";
 
 interface DiaryFeedProps {
-  initialItems: DiaryPostResponse[];
-  initialNextCursor: number | null;
-  initialHasNext: boolean;
-  babyId: number;
+  data: DiaryPostPaginatedResponse;
+  currentPage: number; // 1-based (URL 파라미터)
 }
 
-export default function DiaryFeed({
-  initialItems,
-  initialNextCursor,
-  initialHasNext,
-  babyId,
-}: DiaryFeedProps) {
-  const [posts, setPosts] = useState<DiaryPostResponse[]>(initialItems);
-  const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor);
-  const [hasNext, setHasNext] = useState(initialHasNext);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function DiaryFeed({ data, currentPage }: DiaryFeedProps) {
+  const router = useRouter();
+  const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
 
-  const loadMore = useCallback(async () => {
-    if (loading || !hasNext || nextCursor === null) return;
+  const handleRefresh = useCallback(async () => {
+    router.refresh();
+    // router.refresh()는 비동기가 아니므로 약간 대기해서 인디케이터를 자연스럽게 유지
+    await new Promise((r) => setTimeout(r, 800));
+  }, [router]);
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const page = await api.get<DiaryPostPageResponse>(
-        `/api/diary-posts?babyId=${babyId}&cursor=${nextCursor}&size=10`
-      );
-
-      setPosts((prev) => [...prev, ...page.items]);
-      setNextCursor(page.nextCursor);
-      setHasNext(page.hasNext);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "피드를 불러올 수 없습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, hasNext, nextCursor, babyId]);
-
-  // 삭제: posts state에서 즉시 제거
-  const deletePost = useCallback((postId: number) => {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-  }, []);
-
-  const { ref: sentinelRef } = useInView({
-    threshold: 0,
-    rootMargin: "200px",
-    onChange: (inView) => {
-      if (inView) loadMore();
-    },
+  const { pullY, isRefreshing, progress } = usePullToRefresh({
+    threshold: 72,
+    onRefresh: handleRefresh,
+    disabled: isDrawerOpen,
   });
 
-  if (posts.length === 0 && !loading) {
-    return (
-      <EmptyState
-        title="아직 일기가 없어요"
-        description="첫 번째 일기를 작성해 보세요!"
-      />
-    );
-  }
+  // DiaryCard.onDelete는 (postId: number) => void — 파라미터를 명시적으로 받되 무시
+  const handleDelete = useCallback((_postId: number) => {
+    router.refresh();
+  }, [router]);
+
+  const handlePageChange = useCallback((page: number) => {
+    router.push(`/diary?page=${page}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [router]);
 
   return (
-    <div className="flex flex-col py-4">
-      {posts.map((post) => (
-        <DiaryCard key={post.id} post={post} onDelete={deletePost} />
-      ))}
+    <div style={{ position: "relative" }}>
+      {/* 절대 위치 스피너 — 콘텐츠가 translateY로 밀릴 때 드러나는 공간에 자연스럽게 표시 */}
+      <PullToRefreshIndicator
+        pullY={isDrawerOpen ? 0 : pullY}
+        isRefreshing={isDrawerOpen ? false : isRefreshing}
+        progress={isDrawerOpen ? 0 : progress}
+      />
 
-      {loading && <DiaryPostSkeleton />}
+      <div
+        style={{
+          transform: isDrawerOpen ? "none" : `translateY(${pullY}px)`,
+          transition: isDrawerOpen ? "none" : isRefreshing ? "transform 0.2s ease" : "none",
+        }}
+      >
+        {!data?.content?.length ? (
+          <EmptyState
+            title="아직 일기가 없어요"
+            description="첫 번째 일기를 작성해 보세요!"
+          />
+        ) : (
+          <div className="flex flex-col py-4">
+            {data.content.map((post) => (
+              <DiaryCard key={post.id} post={post} onDelete={handleDelete} />
+            ))}
 
-      {error && (
-        <div className="py-6 text-center">
-          <p className="text-sm text-red-400 mb-2">{error}</p>
-          <button
-            onClick={loadMore}
-            className="text-sm text-primary-600 font-medium hover:underline"
-          >
-            다시 시도
-          </button>
-        </div>
-      )}
-
-      {hasNext && !loading && (
-        <div ref={sentinelRef} className="h-1" aria-hidden="true" />
-      )}
-
-      {!hasNext && posts.length > 0 && (
-        <p className="py-8 text-center text-xs text-gray-300 dark:text-slate-600">
-          모든 일기를 불러왔어요
-        </p>
-      )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

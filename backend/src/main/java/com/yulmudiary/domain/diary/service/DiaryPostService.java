@@ -3,6 +3,7 @@ package com.yulmudiary.domain.diary.service;
 import com.yulmudiary.domain.baby.entity.Baby;
 import com.yulmudiary.domain.baby.repository.BabyRepository;
 import com.yulmudiary.domain.diary.dto.DiaryPostPageResponse;
+import com.yulmudiary.domain.diary.dto.DiaryPostPaginatedResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostRequest;
 import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
 import com.yulmudiary.domain.diary.entity.DiaryPost;
@@ -30,6 +31,7 @@ public class DiaryPostService {
     private final BabyRepository babyRepository;
     private final MediaUrlResolver mediaUrlResolver;
 
+
     @Transactional
     public DiaryPostResponse create(Long authorId, DiaryPostRequest request) {
         User author = userRepository.findById(authorId)
@@ -56,6 +58,8 @@ public class DiaryPostService {
         return DiaryPostResponse.from(post, mediaUrlResolver);
     }
 
+    // ── 커서 기반 (기존 유지) ─────────────────────────────────────────
+
     public DiaryPostPageResponse getByBaby(Long babyId, Long cursor, int size) {
         List<DiaryPost> posts;
         if (cursor == null) {
@@ -77,6 +81,27 @@ public class DiaryPostService {
                 .items(items)
                 .nextCursor(nextCursor)
                 .hasNext(hasNext)
+                .build();
+    }
+
+    // ── 페이지 번호 기반 ─────────────────────────────────────────────
+
+    public DiaryPostPaginatedResponse getByBabyPaged(Long babyId, int page, int size) {
+        long total = diaryPostRepository.countByBabyId(babyId);
+        List<DiaryPost> posts = diaryPostRepository.findByBabyIdLatest(
+                babyId, PageRequest.of(page, size));
+
+        List<DiaryPostResponse> content = posts.stream()
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
+                .toList();
+
+        int totalPages = total == 0 ? 1 : (int) Math.ceil((double) total / size);
+
+        return DiaryPostPaginatedResponse.builder()
+                .content(content)
+                .totalElements(total)
+                .totalPages(totalPages)
+                .currentPage(page + 1)
                 .build();
     }
 
@@ -116,7 +141,6 @@ public class DiaryPostService {
         }
         for (int i = 0; i < mediaUrls.size(); i++) {
             String url = mediaUrls.get(i);
-            // 빈 문자열이나 null 필터링
             if (url == null || url.trim().isEmpty()) {
                 continue;
             }
@@ -124,7 +148,7 @@ public class DiaryPostService {
             String thumbnailUrl = (mediaThumbnailUrls != null && i < mediaThumbnailUrls.size())
                     ? mediaThumbnailUrls.get(i)
                     : null;
-            
+
             Media media = Media.builder()
                     .diaryPost(post)
                     .url(url)

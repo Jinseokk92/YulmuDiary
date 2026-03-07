@@ -17,7 +17,7 @@ frontend/public/workbox-*.js.map
 frontend/public/worker-*.js
 frontend/public/worker-*.js.map
 
-# === IDE ===
+# === IDE / Editor ===
 .idea/
 .vscode/
 *.iml
@@ -27,11 +27,15 @@ frontend/public/worker-*.js.map
 .classpath
 .settings/
 .claude/
-frontend/.claude/
+*~
+*.swp
+*.swo
+*.bak
 
 # === OS ===
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # === Project Files ===
 TODOLIST.md
@@ -44,6 +48,14 @@ deploy-backend.ps1
 .env*.local
 !.env.example
 
+# === GCP / Credentials ===
+*-credentials.json
+*service-account*.json
+gcp-*.json
+*.p12
+*.pem
+*.jks
+
 # === Logs ===
 *.log
 logs/
@@ -52,8 +64,16 @@ logs/
 frontend/tsconfig.tsbuildinfo
 backend/.tomcat/
 
+# === JVM ===
+hs_err_pid*
+replay_pid*
+*.hprof
+
 # === Uploads (로컬 미디어 저장소) ===
 uploads/
+
+# === Vercel ===
+.vercel/
 
 # === Docker ===
 postgres_data/

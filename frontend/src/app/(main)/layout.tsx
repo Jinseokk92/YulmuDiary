@@ -83,7 +83,7 @@ export default function MainLayout({
   return (
     <>
       <MainBackground />
-      <div className="min-h-screen pb-16">
+      <div id="app-shell" className="min-h-screen pb-16">
         <Header />
         <main className="max-w-lg mx-auto">{children}</main>
         <BottomNav />
