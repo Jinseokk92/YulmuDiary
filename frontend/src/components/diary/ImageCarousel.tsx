@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Images } from "lucide-react";
@@ -39,6 +39,53 @@ export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
   const isFirst = activeIndex === 0;
   const isLast = activeIndex === media.length - 1;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const axisLockRef = useRef<"x" | "y" | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !isMultiple) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      axisLockRef.current = null;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const dx = e.touches[0].clientX - touchStartRef.current.x;
+      const dy = e.touches[0].clientY - touchStartRef.current.y;
+
+      if (axisLockRef.current === null) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+          axisLockRef.current = "x";
+        } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+          axisLockRef.current = "y";
+        }
+      }
+
+      if (axisLockRef.current === "x") {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = () => {
+      touchStartRef.current = null;
+      axisLockRef.current = null;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isMultiple]);
+
   const navigate = useCallback(
     (nextIndex: number) => {
       if (nextIndex === activeIndex) return;
@@ -61,7 +108,7 @@ export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
   return (
     <div>
       {/* ── 이미지 영역 ── */}
-      <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
+      <div ref={containerRef} className="relative w-full aspect-square bg-gray-100 overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={`${diaryId}-${activeIndex}`}

@@ -1,6 +1,7 @@
 package com.yulmudiary.global.exception;
 
 import com.yulmudiary.global.auth.InvalidTokenException;
+import com.yulmudiary.global.exception.FamilyAuthorizationException;
 import com.yulmudiary.global.exception.ForbiddenException;
 import com.yulmudiary.global.exception.NotFoundException;
 import com.yulmudiary.global.response.ApiResponse;
@@ -61,6 +62,15 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("NOT_FOUND", e.getMessage()));
     }
 
+    // FamilyAuthorizationException (가족 그룹 미소속 / 타 가족 리소스 접근)
+    // RuntimeException 상속이므로 명시적으로 등록하지 않으면 500으로 처리됨 — 반드시 403으로 처리
+    @ExceptionHandler(FamilyAuthorizationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFamilyAuthorization(FamilyAuthorizationException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("FORBIDDEN", e.getMessage()));
+    }
+
+    // ForbiddenException (Role 부족 등 일반 권한 거부)
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

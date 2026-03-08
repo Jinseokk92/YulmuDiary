@@ -32,6 +32,7 @@ export function usePullToRefresh({
 
   // 렌더링과 무관한 가변 값은 ref로 관리해 리스너 재등록 없이 접근
   const startYRef = useRef<number | null>(null);
+  const startXRef = useRef<number | null>(null);
   const pullYRef = useRef(0);
   const isRefreshingRef = useRef(false);
   const onRefreshRef = useRef(onRefresh);
@@ -43,6 +44,7 @@ export function usePullToRefresh({
     if (!disabled) return;
 
     startYRef.current = null;
+    startXRef.current = null;
     pullYRef.current = 0;
     setPullY(0);
     setIsPulling(false);
@@ -71,6 +73,7 @@ export function usePullToRefresh({
       if (disabledRef.current) return;
       if (window.scrollY > 0) return;
       startYRef.current = e.touches[0].clientY;
+      startXRef.current = e.touches[0].clientX;
       setIsPulling(false);
     };
 
@@ -78,6 +81,7 @@ export function usePullToRefresh({
       if (isRefreshingRef.current) return;
       if (disabledRef.current) {
         startYRef.current = null;
+        startXRef.current = null;
         if (pullYRef.current > 0) {
           pullYRef.current = 0;
           setPullY(0);
@@ -88,10 +92,25 @@ export function usePullToRefresh({
       if (startYRef.current === null) return;
       if (window.scrollY > 0) {
         startYRef.current = null;
+        startXRef.current = null;
         return;
       }
 
+      const dx = e.touches[0].clientX - (startXRef.current ?? e.touches[0].clientX);
       const dy = e.touches[0].clientY - startYRef.current;
+
+      // 가로 스와이프 감지: PTR 로직 자체를 비활성화
+      if (Math.abs(dx) > Math.abs(dy)) {
+        startYRef.current = null;
+        startXRef.current = null;
+        if (pullYRef.current > 0) {
+          pullYRef.current = 0;
+          setPullY(0);
+          setIsPulling(false);
+        }
+        return;
+      }
+
       if (dy <= 0) {
         if (pullYRef.current > 0) {
           pullYRef.current = 0;
@@ -116,6 +135,7 @@ export function usePullToRefresh({
       if (isRefreshingRef.current) return;
       if (disabledRef.current) {
         startYRef.current = null;
+        startXRef.current = null;
         pullYRef.current = 0;
         setPullY(0);
         setIsPulling(false);
@@ -124,6 +144,7 @@ export function usePullToRefresh({
       if (startYRef.current === null) return;
 
       startYRef.current = null;
+      startXRef.current = null;
       setIsPulling(false);
 
       if (pullYRef.current >= threshold) {

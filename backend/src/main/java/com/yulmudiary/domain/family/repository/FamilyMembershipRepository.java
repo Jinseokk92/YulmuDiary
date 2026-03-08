@@ -27,4 +27,11 @@ public interface FamilyMembershipRepository extends JpaRepository<FamilyMembersh
             "JOIN DiaryPost dp ON dp.baby = b " +
             "WHERE fm.user.id = :userId AND dp.id = :postId")
     boolean existsByUserIdAndPostId(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    // 앨범 사진 ID → baby → familyGroup 경로로 가족 소속 확인
+    @Query("SELECT COUNT(fm) > 0 FROM FamilyMembership fm " +
+            "JOIN Baby b ON fm.familyGroup = b.familyGroup " +
+            "JOIN AlbumPhoto ap ON ap.baby = b " +
+            "WHERE fm.user.id = :userId AND ap.id = :albumPhotoId")
+    boolean existsByUserIdAndAlbumPhotoId(@Param("userId") Long userId, @Param("albumPhotoId") Long albumPhotoId);
 }

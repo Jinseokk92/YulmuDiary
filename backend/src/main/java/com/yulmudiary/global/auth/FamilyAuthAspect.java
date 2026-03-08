@@ -38,6 +38,16 @@ public class FamilyAuthAspect {
                     throw new FamilyAuthorizationException();
                 }
             }
+            case ALBUM_PHOTO_ID -> {
+                // 경로: albumPhoto.baby.familyGroup ← user.familyMembership
+                Long albumPhotoId = getParameterValue(joinPoint, "id", Long.class);
+                if (albumPhotoId == null) {
+                    throw new IllegalArgumentException("id 파라미터를 찾을 수 없습니다.");
+                }
+                if (!membershipRepository.existsByUserIdAndAlbumPhotoId(userId, albumPhotoId)) {
+                    throw new FamilyAuthorizationException();
+                }
+            }
         }
 
         return joinPoint.proceed();

@@ -158,6 +158,45 @@ export interface FamilyMembershipResponse {
   role: "PARENT" | "RELATIVE";
 }
 
+// --- Album ---
+
+export type GrowthPhaseType = "PREGNANCY" | "BABY";
+
+export interface AlbumPhotoResponse {
+  id: number;
+  babyId: number;
+  uploaderId: number;
+  uploaderNickname: string;
+  uploaderProfileImageUrl: string | null;
+  url: string;
+  thumbnailUrl: string | null;
+  growthPhaseType: GrowthPhaseType;
+  growthIndex: number;
+  caption: string | null;
+  takenAt: string | null; // "YYYY-MM-DD"
+  createdAt: string;
+}
+
+export interface AlbumPhotoPageResponse {
+  items: AlbumPhotoResponse[];
+  nextCursor: number | null;
+  hasNext: boolean;
+}
+
+export interface AlbumPhotoFavoriteResponse {
+  favorited: boolean;
+}
+
+export interface AlbumPhotoRequest {
+  babyId: number;
+  url: string;
+  thumbnailUrl?: string;
+  growthPhaseType: GrowthPhaseType;
+  growthIndex: number;
+  caption?: string;
+  takenAt?: string; // "YYYY-MM-DD"
+}
+
 // --- Schedule ---
 
 export interface ScheduleResponse {

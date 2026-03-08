@@ -9,10 +9,11 @@ import {
   useImperativeHandle,
 } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
+import { useUiStore } from "@/stores/uiStore";
 import type { CommentResponse } from "@/types";
 import CommentSection from "./CommentSection";
 
@@ -48,11 +49,17 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     // ─── 스크롤 영역 ref ─────────────────────────────────────────────
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    // ─── 키보드 높이 (visualViewport 기반) ───────────────────────────
+    // ─── dismiss 드래그 ──────────────────────────────────────────────
+    const handleAreaRef = useRef<HTMLDivElement>(null);
+    const dismissY = useMotionValue(0);
+
+    // ─── 시트 위치/높이 (visualViewport 기반) ───────────────────────
     // iOS: window.innerHeight 고정, visualViewport.height가 줄어듦
-    // Android: window.innerHeight 자체가 줄어들어 kbh=0으로 계산되지만
-    //          시트가 자연스럽게 따라 올라가므로 문제 없음
+    // Android: window.innerHeight 자체가 줄어들어 kbh=0이지만 fixed 위치가 자연히 조정됨
+    // 문제: height:"75svh"(고정) + bottom:kbh → 합계 > window.innerHeight → 시트 상단 넘침
+    // 해결: 시트 높이를 vv.height 기준으로 제한
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [sheetHeight, setSheetHeight] = useState<string | number>("75svh");
 
     // 중복 fetch 방지 ref
     const isFetchingRef = useRef(false);
@@ -86,18 +93,31 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       });
     }, []);
 
-    // ─── visualViewport 기반 키보드 높이 추적 ────────────────────────
+    // ─── visualViewport 기반 시트 위치·높이 통합 계산 ────────────────
     useEffect(() => {
       const vv = window.visualViewport;
       if (!vv) return;
 
+      // 마운트 시점의 window.innerHeight를 목표 높이 기준으로 사용
+      // (이후 키보드가 올라와도 initH는 변하지 않음)
+      const initH = window.innerHeight;
+
       const handleViewportChange = () => {
-        // 키보드 높이 = 전체 창 높이 - 현재 보이는 영역 - 스크롤 오프셋
+        // 키보드 높이 = 전체 창 높이 - 현재 보이는 영역 높이 - 스크롤 오프셋
         const kbh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
         setKeyboardHeight(kbh);
-        // 키보드 올라오면 댓글 최하단으로 스크롤
+
+        // 시트 높이: 목표(initH * 0.75 ≈ 75svh)와 가시 영역 96%의 최솟값
+        // 키보드가 열려 vv.height가 줄면 시트도 같이 줄어들어 넘침 방지
+        const targetH = initH * 0.75;
+        const maxH = Math.floor(vv.height * 0.96);
+        setSheetHeight(Math.min(targetH, maxH));
+
         if (kbh > 0) scrollToBottom();
       };
+
+      // 마운트 시 즉시 계산 (resize/scroll 이벤트 전에 초기값 설정)
+      handleViewportChange();
 
       vv.addEventListener("resize", handleViewportChange);
       vv.addEventListener("scroll", handleViewportChange);
@@ -163,14 +183,75 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       }
     }, [inView, hasNext, isLoading, nextCursor, fetchComments]);
 
-    // ─── 부모 스크롤 잠금 (Scroll Bleeding 방지) ────────────────────
-    // 컴포넌트 마운트 시 항상 잠금 (조건부 렌더링으로 관리)
+    // ─── 언마운트 시 isCommentOpen 정리 ─────────────────────────────
+    // 페이지 이탈 등 비정상 경로로 unmount될 때도 uiStore 누수 방지
+    const setCommentOpen = useUiStore((s) => s.setCommentOpen);
     useEffect(() => {
-      document.body.style.overflow = "hidden";
       return () => {
-        document.body.style.overflow = "unset";
+        setCommentOpen(false);
+      };
+    }, [setCommentOpen]);
+
+    // ─── 부모 스크롤 잠금 (iOS Safari 포함) ────────────────────────
+    // overflow:hidden 단독으로는 iOS Safari에서 배경 스크롤이 막히지 않음.
+    // position:fixed + top:-scrollY 방식으로 완전히 고정하고, 언마운트 시 복원.
+    useEffect(() => {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflowY = "scroll";
+      return () => {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.overflowY = "";
+        window.scrollTo(0, scrollY);
       };
     }, []);
+
+    // ─── 핸들 drag-to-dismiss ────────────────────────────────────────
+    useEffect(() => {
+      const handle = handleAreaRef.current;
+      if (!handle) return;
+
+      let startY = 0;
+
+      const onStart = (e: TouchEvent) => {
+        startY = e.touches[0].clientY;
+      };
+
+      const onMove = (e: TouchEvent) => {
+        const dy = e.touches[0].clientY - startY;
+        if (dy > 0) {
+          dismissY.set(dy);
+          e.preventDefault();
+        }
+      };
+
+      const onEnd = () => {
+        if (dismissY.get() > 80) {
+          animate(dismissY, window.innerHeight * 1.5, {
+            duration: 0.2,
+            ease: "easeIn",
+          }).then(onClose);
+        } else {
+          animate(dismissY, 0, { type: "spring", stiffness: 400, damping: 40 });
+        }
+      };
+
+      handle.addEventListener("touchstart", onStart, { passive: true });
+      handle.addEventListener("touchmove", onMove, { passive: false });
+      handle.addEventListener("touchend", onEnd, { passive: true });
+
+      return () => {
+        handle.removeEventListener("touchstart", onStart);
+        handle.removeEventListener("touchmove", onMove);
+        handle.removeEventListener("touchend", onEnd);
+      };
+    }, [onClose, dismissY]);
 
     // ─── 마운트 시: 초기 fetch + 입력창 포커스 (애니메이션 후) ──────
     useEffect(() => {
@@ -270,28 +351,30 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
         */}
         <motion.div
           initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          animate={{ y: 0, transition: { type: "spring", stiffness: 400, damping: 40 } }}
+          exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
           className="fixed left-0 right-0 mx-auto w-full max-w-lg
                       bg-white dark:bg-slate-900 rounded-t-3xl
                       border-t border-gray-100 dark:border-slate-800
                       shadow-[0_-4px_24px_rgba(0,0,0,0.08)]
                       flex flex-col box-border"
           style={{
+            y: dismissY,
             bottom: keyboardHeight,
-            height: "75svh",
+            height: sheetHeight,
             zIndex: 101,
           }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
+          {/* ── Drag 영역: 핸들 바 + 헤더 ── */}
+          <div ref={handleAreaRef} style={{ touchAction: "none" }} className="shrink-0">
           {/* ── 핸들 바 ── */}
-          <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700" />
           </div>
 
           {/* ── Header (고정) ── */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-slate-800">
             <span className="text-sm font-semibold text-gray-800 dark:text-slate-200">댓글</span>
             <button
               onClick={onClose}
@@ -310,11 +393,13 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
               </svg>
             </button>
           </div>
+          </div>{/* ── Drag 영역 끝 ── */}
 
           {/* ── Scrollable Content (flex-1: 남은 공간 전부 차지) ── */}
           <div
             ref={scrollAreaRef}
             className="flex-1 overflow-y-auto overscroll-contain"
+            style={{ touchAction: "pan-y" }}
           >
             <CommentSection
               comments={comments}
@@ -348,7 +433,8 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
               {/* 입력폼 */}
               <form
                 onSubmit={handleSubmit}
-                className="flex items-center gap-2 px-4 pb-4 pt-1"
+                className="flex items-center gap-2 px-4 pt-1"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
               >
                 <input
                   ref={inputRef}

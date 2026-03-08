@@ -1,18 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef, type KeyboardEvent, type ChangeEvent } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
 import ImagePreview from "@/components/diary/ImagePreview";
 import type { ImageFile } from "@/components/diary/ImagePreview";
 import StickerPicker from "@/components/diary/StickerPicker";
-import type { MediaUploadResponse, DiaryPostResponse } from "@/types";
+import type { MediaUploadResponse, DiaryPostResponse, AlbumPhotoResponse } from "@/types";
+import { calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
 
 const BABY_ID = 1;
 const MAX_IMAGES = 10;
 
-type SubmitStep = "idle" | "uploading" | "saving" | "done";
+// 홈 화면과 동일한 출산 예정일 기준으로 임신 주차를 계산
+const YULMU_DUE_DATE = "2026-06-27";
+
+type SubmitStep = "idle" | "uploading" | "saving" | "albumSaving" | "done";
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -26,6 +30,27 @@ export default function NewPostPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [step, setStep] = useState<SubmitStep>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [saveToAlbum, setSaveToAlbum] = useState(false);
+
+  // ── 권한 + 노출 조건 ────────────────────────────────────────────────────────
+  // PARENT만 앨범 저장 옵션을 볼 수 있고, 사진이 있어야 활성화
+  const isParent = currentUser?.role === "PARENT";
+  const showAlbumOption = isParent && images.length > 0;
+
+  // 이미지 전체 제거 시 토글 자동 리셋
+  useEffect(() => {
+    if (images.length === 0) setSaveToAlbum(false);
+  }, [images.length]);
+
+  // ── 현재 임신 주차 계산 ────────────────────────────────────────────────────
+  // growthPhaseType + growthIndex: 일기 작성 시점 기준으로 자동 결정
+  const currentGrowthPhase = useMemo(() => {
+    const lmp = calcLmpFromDueDate(YULMU_DUE_DATE);
+    const { weeks } = calcPregnancyWeek(lmp);
+    return { type: "PREGNANCY" as const, index: weeks };
+  }, []);
+
+  const growthLabel = `임신 ${currentGrowthPhase.index}주차`;
 
   // --- 이미지 선택 ---
   const handleFileSelect = useCallback(
@@ -43,8 +68,6 @@ export default function NewPostPage() {
       }));
 
       setImages((prev) => [...prev, ...newImages]);
-
-      // input 값 초기화 (같은 파일 재선택 가능하도록)
       e.target.value = "";
     },
     [images.length]
@@ -70,7 +93,6 @@ export default function NewPostPage() {
     const end = textarea.selectionEnd;
     setContent((prev) => prev.slice(0, start) + emoji + prev.slice(end));
 
-    // 커서 위치 재설정 (다음 렌더 후)
     requestAnimationFrame(() => {
       const newPos = start + emoji.length;
       textarea.selectionStart = newPos;
@@ -120,7 +142,6 @@ export default function NewPostPage() {
       setStep("uploading");
 
       try {
-        // 각 파일을 개별 FormData로 감싸서 병렬 업로드
         const uploadPromises = images.map((img) => {
           const fd = new FormData();
           fd.append("files", img.file);
@@ -152,19 +173,43 @@ export default function NewPostPage() {
         mediaUrls: uploadedImageUrls,
         mediaThumbnailUrls: uploadedThumbnailUrls,
       });
-
-      setStep("done");
-
-      // 프리뷰 URL 정리
-      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-
-      router.push("/diary");
-      router.refresh();
     } catch {
       setStep("idle");
       setError("일기 저장에 실패했습니다. 다시 시도해 주세요.");
+      return;
     }
-  }, [currentUser, content, tags, images, router]);
+
+    // Step 3: 앨범 저장 (PARENT + saveToAlbum + 이미지가 실제로 업로드된 경우에만)
+    // 일기는 이미 저장됐으므로 앨범 저장 실패는 조용히 무시 (allSettled)
+    if (saveToAlbum && isParent && uploadedImageUrls.length > 0) {
+      setStep("albumSaving");
+
+      const today = new Date();
+      const takenAt = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0"),
+      ].join("-");
+
+      await Promise.allSettled(
+        uploadedImageUrls.map((url, i) =>
+          api.post<AlbumPhotoResponse>("/api/album-photos", {
+            babyId: BABY_ID,
+            url,
+            thumbnailUrl: uploadedThumbnailUrls[i] ?? url,
+            growthPhaseType: currentGrowthPhase.type,
+            growthIndex: currentGrowthPhase.index,
+            takenAt,
+          })
+        )
+      );
+    }
+
+    setStep("done");
+    images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    router.push("/diary");
+    router.refresh();
+  }, [currentUser, content, tags, images, saveToAlbum, isParent, currentGrowthPhase, router]);
 
   const isSubmitting = step !== "idle";
   const canSubmit = !isSubmitting && (content.trim() || images.length > 0);
@@ -190,7 +235,7 @@ export default function NewPostPage() {
           >
             {step === "uploading"
               ? "업로드 중..."
-              : step === "saving"
+              : step === "saving" || step === "albumSaving"
                 ? "저장 중..."
                 : "공유"}
           </button>
@@ -248,7 +293,6 @@ export default function NewPostPage() {
             />
 
             {images.length === 0 ? (
-              /* 빈 상태: 클릭 가능한 큰 영역 */
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -281,7 +325,6 @@ export default function NewPostPage() {
                 <span className="text-xs text-gray-300">최대 {MAX_IMAGES}장</span>
               </button>
             ) : (
-              /* 사진이 있을 때: 프리뷰 + 추가 버튼 */
               <>
                 <ImagePreview images={images} onRemove={handleRemoveImage} />
                 <button
@@ -314,6 +357,56 @@ export default function NewPostPage() {
                 </button>
               </>
             )}
+
+            {/* ── 앨범 저장 토글 ─────────────────────────────────────────────
+                조건: 사진이 첨부되어 있고 + PARENT 역할인 경우에만 노출
+                RELATIVE 사용자에게는 이 블록 자체가 렌더링되지 않음         */}
+            {showAlbumOption && (
+              <div className="mt-4 flex items-center justify-between
+                              bg-emerald-50 border border-emerald-100
+                              rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-4 h-4 text-emerald-500"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">율무 앨범에도 저장</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{growthLabel}으로 저장</p>
+                  </div>
+                </div>
+
+                {/* iOS 스타일 토글 */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={saveToAlbum}
+                  onClick={() => setSaveToAlbum((v) => !v)}
+                  disabled={isSubmitting}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200
+                             disabled:opacity-50 focus:outline-none
+                             ${saveToAlbum ? "bg-emerald-500" : "bg-gray-200"}`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm
+                                transition-transform duration-200
+                                ${saveToAlbum ? "translate-x-5" : "translate-x-0"}`}
+                  />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 구분선 */}
@@ -328,7 +421,6 @@ export default function NewPostPage() {
                 value={content}
                 onChange={(e) => {
                   setContent(e.target.value);
-                  // 높이 자동 조절
                   if (textareaRef.current) {
                     textareaRef.current.style.height = "auto";
                     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -343,7 +435,7 @@ export default function NewPostPage() {
               />
             </div>
 
-            {/* 해시태그 입력란 */}
+            {/* 해시태그 */}
             <div className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
               {tags.map((tag) => (
                 <span
@@ -393,7 +485,9 @@ export default function NewPostPage() {
           <p className="text-sm text-gray-500">
             {step === "uploading"
               ? "사진을 업로드하고 있어요..."
-              : "일기를 저장하고 있어요..."}
+              : step === "albumSaving"
+                ? "앨범에 저장하고 있어요..."
+                : "일기를 저장하고 있어요..."}
           </p>
         </div>
       )}

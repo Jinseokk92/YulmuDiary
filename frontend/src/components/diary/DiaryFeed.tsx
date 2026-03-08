@@ -18,6 +18,7 @@ interface DiaryFeedProps {
 export default function DiaryFeed({ data, currentPage }: DiaryFeedProps) {
   const router = useRouter();
   const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
+  const isCommentOpen = useUiStore((state) => state.isCommentOpen);
 
   const handleRefresh = useCallback(async () => {
     router.refresh();
@@ -28,7 +29,7 @@ export default function DiaryFeed({ data, currentPage }: DiaryFeedProps) {
   const { pullY, isRefreshing, progress } = usePullToRefresh({
     threshold: 72,
     onRefresh: handleRefresh,
-    disabled: isDrawerOpen,
+    disabled: isDrawerOpen || isCommentOpen,
   });
 
   // DiaryCard.onDelete는 (postId: number) => void — 파라미터를 명시적으로 받되 무시

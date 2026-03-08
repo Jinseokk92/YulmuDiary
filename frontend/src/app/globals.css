@@ -41,3 +41,18 @@ html.font-large body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes album-skeleton-soft-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
+
+.album-skeleton-soft {
+  animation: album-skeleton-soft-pulse 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-skeleton-soft {
+    animation: none;
+  }
+}

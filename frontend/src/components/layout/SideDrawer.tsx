@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   X, Moon, Sun, LogOut, PenLine, ChevronDown,
-  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2,
+  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2, Bookmark,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +22,7 @@ interface SideDrawerProps {
 }
 
 type DrawerView = "menu" | "profile";
-type AccordionKey = "activity" | "settings";
+type AccordionKey = "activity" | "album" | "settings";
 
 // ─── 토글 스위치 ─────────────────────────────────────────────────────────────
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -381,6 +381,18 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                       <AccordionItem label="게시글"  icon={<FileText      size={14} />} rowHover={rowHover} itemColor={itemColor} onClick={() => { onClose(); router.push("/my-posts"); }} />
                       <AccordionItem label="반응"    icon={<Heart         size={14} />} rowHover={rowHover} itemColor={itemColor} onClick={() => { onClose(); router.push("/my-reactions"); }} />
                       <AccordionItem label="댓글"    icon={<MessageCircle size={14} />} rowHover={rowHover} itemColor={itemColor} onClick={() => { onClose(); router.push("/my-comments"); }} />
+                    </AccordionSection>
+
+                    <AccordionSection title="율무 앨범" isOpen={openSection === "album"}
+                      onToggle={() => toggleSection("album")} rowHover={rowHover} labelColor={labelColor}
+                    >
+                      <AccordionItem
+                        label="즐겨찾기"
+                        icon={<Bookmark size={14} />}
+                        rowHover={rowHover}
+                        itemColor={itemColor}
+                        onClick={() => { onClose(); router.push("/album/favorites"); }}
+                      />
                     </AccordionSection>
 
                     <AccordionSection title="설정" isOpen={openSection === "settings"}

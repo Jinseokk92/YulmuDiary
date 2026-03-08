@@ -7,6 +7,7 @@ import type { DiaryPostResponse, ReactionResponse } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
+import { useUiStore } from "@/stores/uiStore";
 import ImageCarousel from "./ImageCarousel";
 import CommentBottomSheet, { type CommentBottomSheetHandle } from "./CommentBottomSheet";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -66,10 +67,16 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
   const [deleting, setDeleting] = useState(false);
 
   // ─── 댓글 시트 ─────────────────────────────────────────────────────
+  const setCommentOpen = useUiStore((s) => s.setCommentOpen);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
   const handleBubbleClick = useCallback(() => {
+    setCommentOpen(true);
     setIsCommentSheetOpen(true);
-  }, []);
+  }, [setCommentOpen]);
+  const handleCommentClose = useCallback(() => {
+    setCommentOpen(false);
+    setIsCommentSheetOpen(false);
+  }, [setCommentOpen]);
 
   const handlePreventDrag = useCallback((e: React.DragEvent) => {
     if (!disableNativeDrag) return;
@@ -428,7 +435,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
           {isCommentSheetOpen && (
             <CommentBottomSheet
               ref={commentSectionRef}
-              onClose={() => setIsCommentSheetOpen(false)}
+              onClose={handleCommentClose}
               postId={post.id}
               initialCommentCount={post.commentCount ?? 0}
             />
