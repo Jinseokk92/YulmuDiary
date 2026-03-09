@@ -18,13 +18,6 @@ export interface BgmState {
   /** 전체 재생 시간. loadedmetadata 이벤트로 갱신된다. */
   duration: number;
 
-  /**
-   * 홈 페이지 율무 이미지 왼쪽 anchor 좌표 (viewport 기준).
-   * page.tsx 마운트 시 설정, 언마운트 시 null.
-   * BgmMiniPlayer가 이 좌표로 collapsed 아이콘을 이동시킨다.
-   */
-  anchorPos: { x: number; y: number } | null;
-
   // ── 액션 ──────────────────────────────────────────────────────────────────
   play: () => Promise<void>;
   pause: () => void;
@@ -40,8 +33,6 @@ export interface BgmState {
    * - volumechange 이벤트를 통해 volume/isMuted가 자동 동기화된다.
    */
   setVolume: (v: number) => void;
-
-  setAnchorPos: (pos: { x: number; y: number } | null) => void;
 }
 
 // ─── 스토어 ──────────────────────────────────────────────────────────────────
@@ -52,10 +43,8 @@ export const useBgmStore = create<BgmState>((set, get) => ({
   volume: BGM_TRACK.volume,
   currentTime: 0,
   duration: 0,
-  anchorPos: null,
 
   setIsPlaying: (v) => set({ isPlaying: v }),
-  setAnchorPos: (pos) => set({ anchorPos: pos }),
 
   play: async () => {
     const audio = getBgmAudio();

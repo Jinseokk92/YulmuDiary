@@ -39,6 +39,7 @@ desktop.ini
 
 # === Project Files ===
 TODOLIST.md
+AGENTS.md
 cors.json
 deploy.ps1
 deploy-backend.ps1

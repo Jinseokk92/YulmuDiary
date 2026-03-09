@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { calcDday, calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
+import { HOME_BGM_ANCHOR_ID } from "@/components/BgmPlayerUI";
 import FloatingYulmu from "@/components/FloatingYulmu";
-import { useFontSize } from "@/contexts/FontSizeContext";
-import { useBgmStore } from "@/stores/bgmStore";
 
 // ─── 날짜 상수 ─────────────────────────────────────────────────────────────
 const YULMU_DUE_DATE = "2026-06-27";
@@ -18,28 +17,9 @@ export default function Home() {
   const HERO_ANCHOR_OFFSET_Y = 104;
 
   const { resolvedTheme } = useTheme();
-  const { mode: fontSizeMode } = useFontSize();
   const [mounted, setMounted] = useState(false);
   const [dday, setDday]                         = useState<string | null>(null);
   const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
-
-  // ── BGM 아이콘 anchor ────────────────────────────────────────────────────
-  const heroFrameRef = useRef<HTMLDivElement>(null);
-  const setAnchorPos = useBgmStore((s) => s.setAnchorPos);
-
-  const measureAnchor = useCallback(() => {
-    if (!heroFrameRef.current) return;
-
-    const rect = heroFrameRef.current.getBoundingClientRect();
-
-    // 레이아웃 계산 전(0, 0)이면 아직 측정하지 않는다.
-    if (rect.left === 0 && rect.top === 0) return;
-
-    setAnchorPos({
-      x: rect.left + HERO_ANCHOR_OFFSET_X,
-      y: rect.top + HERO_ANCHOR_OFFSET_Y,
-    });
-  }, [setAnchorPos]);
 
   useEffect(() => {
     setMounted(true);
@@ -48,57 +28,6 @@ export default function Home() {
     const { weeks, days } = calcPregnancyWeek(lmp);
     setPregnancyDisplay(days === 0 ? `${weeks}주` : `${weeks}주 ${days}일`);
   }, []);
-
-  const heroReady = mounted && dday !== null && pregnancyDisplay !== null;
-
-  useEffect(() => {
-    if (!heroReady) return;
-
-    let rafId1 = 0;
-    let rafId2 = 0;
-    let orientationTimer = 0;
-    let viewportRafId = 0;
-
-    const scheduleStableMeasure = () => {
-      cancelAnimationFrame(rafId1);
-      cancelAnimationFrame(rafId2);
-      rafId1 = window.requestAnimationFrame(() => {
-        rafId2 = window.requestAnimationFrame(measureAnchor);
-      });
-    };
-
-    const handleVisualViewportResize = () => {
-      cancelAnimationFrame(viewportRafId);
-      viewportRafId = window.requestAnimationFrame(scheduleStableMeasure);
-    };
-
-    // 홈 최초 진입, hydration 완료, 돋보기 상태 변경 후 레이아웃 안정 시점에서 측정
-    scheduleStableMeasure();
-
-    const handleResize = () => {
-      scheduleStableMeasure();
-    };
-
-    const handleOrientation = () => {
-      window.clearTimeout(orientationTimer);
-      orientationTimer = window.setTimeout(scheduleStableMeasure, 150);
-    };
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleOrientation);
-    window.visualViewport?.addEventListener("resize", handleVisualViewportResize);
-
-    return () => {
-      cancelAnimationFrame(rafId1);
-      cancelAnimationFrame(rafId2);
-      cancelAnimationFrame(viewportRafId);
-      window.clearTimeout(orientationTimer);
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleOrientation);
-      window.visualViewport?.removeEventListener("resize", handleVisualViewportResize);
-      setAnchorPos(null);
-    };
-  }, [fontSizeMode, heroReady, measureAnchor, setAnchorPos]);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -128,14 +57,15 @@ export default function Home() {
       {/* 중앙: 율무 캐릭터 */}
       <section className="flex justify-center">
         <div
-          ref={heroFrameRef}
           className="relative overflow-visible"
           style={{ width: HERO_FRAME_WIDTH, height: HERO_FRAME_HEIGHT }}
         >
-          {/*
-           * BGM anchor 기준은 hero 고정 프레임 자체다.
-           * icon 좌표는 hero 프레임 rect + 고정 offset으로 계산한다.
-           */}
+          <div
+            id={HOME_BGM_ANCHOR_ID}
+            aria-hidden="true"
+            className="absolute z-[60] h-0 w-0 overflow-visible"
+            style={{ left: HERO_ANCHOR_OFFSET_X, top: HERO_ANCHOR_OFFSET_Y }}
+          />
           {/* 살구색 원형 발판 배경 */}
           <div
             className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full border-4 shadow-lg

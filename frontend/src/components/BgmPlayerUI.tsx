@@ -5,6 +5,7 @@ import { BGM_TRACK } from "@/lib/bgmAudio";
 
 export const BGM_COLLAPSED_TOKEN_SIZE = 42;
 export const BGM_COLLAPSED_TOKEN_ROTATION = -15;
+export const HOME_BGM_ANCHOR_ID = "home-bgm-anchor";
 
 export function getExpandedPlayerGlassStyle(isDark: boolean): CSSProperties {
   return isDark
@@ -53,6 +54,7 @@ interface CollapsedMusicTokenProps {
   onClick: () => void;
   style?: CSSProperties;
   className?: string;
+  position?: "fixed" | "absolute";
 }
 
 export function CollapsedMusicToken({
@@ -62,6 +64,7 @@ export function CollapsedMusicToken({
   onClick,
   style,
   className,
+  position = "fixed",
 }: CollapsedMusicTokenProps) {
   const tokenGlass = getCollapsedTokenGlassStyle(isDark, isPlaying);
 
@@ -69,8 +72,9 @@ export function CollapsedMusicToken({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={`fixed z-40 rounded-[16px] cursor-pointer select-none ${className ?? ""}`}
+      className={`z-40 rounded-[16px] cursor-pointer select-none ${className ?? ""}`}
       style={{
+        position,
         width: BGM_COLLAPSED_TOKEN_SIZE,
         height: BGM_COLLAPSED_TOKEN_SIZE,
         transformOrigin: "center center",
