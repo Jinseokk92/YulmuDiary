@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/Providers";
+import BgmPlayer from "@/components/BgmPlayer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className="font-sans min-h-screen text-gray-900 dark:text-slate-100 transition-colors duration-300">
+        <BgmPlayer />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,36 +1,107 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { calcDday, calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
 import FloatingYulmu from "@/components/FloatingYulmu";
+import { useFontSize } from "@/contexts/FontSizeContext";
+import { useBgmStore } from "@/stores/bgmStore";
 
 // ─── 날짜 상수 ─────────────────────────────────────────────────────────────
-// 출산 예정일만 수정하면 LMP(마지막 생리일)와 모든 계산이 자동으로 갱신됩니다.
-const YULMU_DUE_DATE = "2026-06-27"; // 출산 예정일 (YYYY-MM-DD)
+const YULMU_DUE_DATE = "2026-06-27";
 
 export default function Home() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const HERO_FRAME_WIDTH = 184;
+  const HERO_FRAME_HEIGHT = 188;
+  const HERO_ANCHOR_OFFSET_X = 4;
+  const HERO_ANCHOR_OFFSET_Y = 104;
 
-  // SSR ↔ 클라이언트 Hydration 불일치 방지: 마운트 후 클라이언트에서만 계산
+  const { resolvedTheme } = useTheme();
+  const { mode: fontSizeMode } = useFontSize();
+  const [mounted, setMounted] = useState(false);
   const [dday, setDday]                         = useState<string | null>(null);
   const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
 
+  // ── BGM 아이콘 anchor ────────────────────────────────────────────────────
+  const heroFrameRef = useRef<HTMLDivElement>(null);
+  const setAnchorPos = useBgmStore((s) => s.setAnchorPos);
+
+  const measureAnchor = useCallback(() => {
+    if (!heroFrameRef.current) return;
+
+    const rect = heroFrameRef.current.getBoundingClientRect();
+
+    // 레이아웃 계산 전(0, 0)이면 아직 측정하지 않는다.
+    if (rect.left === 0 && rect.top === 0) return;
+
+    setAnchorPos({
+      x: rect.left + HERO_ANCHOR_OFFSET_X,
+      y: rect.top + HERO_ANCHOR_OFFSET_Y,
+    });
+  }, [setAnchorPos]);
+
   useEffect(() => {
     setMounted(true);
-    // D-day: 출산 예정일 기준
     setDday(calcDday(YULMU_DUE_DATE));
-    // 임신 주수: 출산 예정일에서 LMP를 역산(−280일)하여 경과 기간 계산
     const lmp = calcLmpFromDueDate(YULMU_DUE_DATE);
     const { weeks, days } = calcPregnancyWeek(lmp);
     setPregnancyDisplay(days === 0 ? `${weeks}주` : `${weeks}주 ${days}일`);
   }, []);
 
+  const heroReady = mounted && dday !== null && pregnancyDisplay !== null;
+
+  useEffect(() => {
+    if (!heroReady) return;
+
+    let rafId1 = 0;
+    let rafId2 = 0;
+    let orientationTimer = 0;
+    let viewportRafId = 0;
+
+    const scheduleStableMeasure = () => {
+      cancelAnimationFrame(rafId1);
+      cancelAnimationFrame(rafId2);
+      rafId1 = window.requestAnimationFrame(() => {
+        rafId2 = window.requestAnimationFrame(measureAnchor);
+      });
+    };
+
+    const handleVisualViewportResize = () => {
+      cancelAnimationFrame(viewportRafId);
+      viewportRafId = window.requestAnimationFrame(scheduleStableMeasure);
+    };
+
+    // 홈 최초 진입, hydration 완료, 돋보기 상태 변경 후 레이아웃 안정 시점에서 측정
+    scheduleStableMeasure();
+
+    const handleResize = () => {
+      scheduleStableMeasure();
+    };
+
+    const handleOrientation = () => {
+      window.clearTimeout(orientationTimer);
+      orientationTimer = window.setTimeout(scheduleStableMeasure, 150);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleOrientation);
+    window.visualViewport?.addEventListener("resize", handleVisualViewportResize);
+
+    return () => {
+      cancelAnimationFrame(rafId1);
+      cancelAnimationFrame(rafId2);
+      cancelAnimationFrame(viewportRafId);
+      window.clearTimeout(orientationTimer);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleOrientation);
+      window.visualViewport?.removeEventListener("resize", handleVisualViewportResize);
+      setAnchorPos(null);
+    };
+  }, [fontSizeMode, heroReady, measureAnchor, setAnchorPos]);
+
   const isDark = mounted && resolvedTheme === "dark";
 
-  // 테마별 색상 토큰
   const card  = isDark ? "bg-slate-900/80 border border-slate-800" : "bg-white/90 border border-white/60";
   const sub   = isDark ? "text-slate-400" : "text-gray-400";
   const title = isDark ? "text-slate-100" : "text-gray-900";
@@ -54,19 +125,26 @@ export default function Home() {
         </p>
       </section>
 
-      {/* 중앙: 율무 캐릭터 — 살구색 원형 배경 위에 둥둥 */}
+      {/* 중앙: 율무 캐릭터 */}
       <section className="flex justify-center">
-        <div className="relative flex items-end justify-center">
+        <div
+          ref={heroFrameRef}
+          className="relative overflow-visible"
+          style={{ width: HERO_FRAME_WIDTH, height: HERO_FRAME_HEIGHT }}
+        >
+          {/*
+           * BGM anchor 기준은 hero 고정 프레임 자체다.
+           * icon 좌표는 hero 프레임 rect + 고정 offset으로 계산한다.
+           */}
           {/* 살구색 원형 발판 배경 */}
           <div
-            className={`w-36 h-36 rounded-full border-4 shadow-lg
+            className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full border-4 shadow-lg
                         ${isDark
                           ? "bg-gradient-to-br from-slate-800 to-slate-700 border-slate-900"
                           : "bg-gradient-to-br from-primary-100 to-primary-50 border-white"
                         }`}
           />
-          {/* FloatingYulmu: 원형 배경 중앙 기준으로 절대 배치 */}
-          <div className="absolute bottom-2">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
             <FloatingYulmu
               src="/icons/Yulmu_Logo.png"
               width={120}
@@ -85,19 +163,10 @@ export default function Home() {
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center
                           ${isDark ? "bg-slate-800" : "bg-primary-50"}`}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6 text-primary-500"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-primary-500">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
             </svg>
           </div>
           <div className="text-center">
@@ -113,19 +182,10 @@ export default function Home() {
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center
                           ${isDark ? "bg-slate-800" : "bg-blue-50"}`}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6 text-blue-500"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-500">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
             </svg>
           </div>
           <div className="text-center">
@@ -134,7 +194,6 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* 앨범 카드 — 전체 너비 (col-span-2), 가로 레이아웃 */}
         <Link
           href="/album"
           className={`col-span-2 flex items-center gap-4 ${card} rounded-2xl px-5 py-4 shadow-sm
@@ -142,33 +201,18 @@ export default function Home() {
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0
                           ${isDark ? "bg-slate-800" : "bg-emerald-50"}`}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6 text-emerald-500"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-emerald-500">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-semibold ${label}`}>앨범</p>
             <p className={`text-xs ${desc} mt-0.5`}>임신·성장 사진 모아보기</p>
           </div>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className={`w-4 h-4 shrink-0 ${sub}`}
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            strokeWidth={2} stroke="currentColor" className={`w-4 h-4 shrink-0 ${sub}`}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </Link>

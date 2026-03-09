@@ -7,6 +7,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { api } from "@/lib/api";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
+import BgmMiniPlayer from "@/components/BgmMiniPlayer";
+import BgmFloatingPlayer from "@/components/BgmFloatingPlayer";
 import MainBackground from "@/components/MainBackground";
 import type { UserResponse } from "@/types";
 
@@ -83,10 +85,13 @@ export default function MainLayout({
   return (
     <>
       <MainBackground />
+      {/* pb-16: BottomNav(3.5rem) + 여유 공간. 두 플레이어 모두 collapsed 기본이므로 홈/비홈 동일 */}
       <div id="app-shell" className="min-h-screen pb-16">
         <Header />
         <main className="max-w-lg mx-auto">{children}</main>
         <BottomNav />
+        <BgmMiniPlayer />
+        <BgmFloatingPlayer />
       </div>
     </>
   );

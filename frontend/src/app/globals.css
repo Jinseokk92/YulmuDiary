@@ -56,3 +56,19 @@ html.font-large body {
     animation: none;
   }
 }
+
+/* BGM 플레이어: 재생 중 pulse ring */
+@keyframes bgm-pulse-ring {
+  0%   { transform: scale(0.85); opacity: 0.55; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+.bgm-pulse-ring {
+  animation: bgm-pulse-ring 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bgm-pulse-ring {
+    animation: none;
+  }
+}
