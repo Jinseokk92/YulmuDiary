@@ -154,23 +154,31 @@ frontend/
     ├── middleware.ts         — Edge 미들웨어: 쿠키 기반 라우트 가드
     ├── types/index.ts        — API 타입 (ApiResponse, UserResponse, DiaryPostResponse 등)
     ├── stores/
-    │   └── authStore.ts      — Zustand: token/user/familyGroupId 전역 상태 (Cookies 기반)
+    │   ├── authStore.ts      — Zustand: token/user/familyGroupId 전역 상태 (Cookies 기반)
+    │   ├── bgmStore.ts       — Zustand: BGM 재생 상태, 시간, 볼륨, 홈 anchorPos
+    │   └── uiStore.ts        — Zustand: SideDrawer / 댓글 시트 등 전역 UI 상태
     ├── contexts/
-    │   └── UserContext.tsx   — (레거시) useAuthStore로 대체됨, Providers에서 유지
+    │   ├── UserContext.tsx   — (레거시) useAuthStore로 대체됨, Providers에서 유지
+    │   └── FontSizeContext.tsx — 돋보기(글자 확대) 모드 관리, `<html>.font-large` 클래스 토글
     ├── lib/
     │   ├── api.ts            — fetch 래퍼 (Authorization 헤더 자동 주입, ApiError 통일)
+    │   ├── bgmAudio.ts       — 전역 Audio 싱글톤 + 트랙 메타데이터 + formatTime()
     │   ├── utils.ts          — formatRelativeTime(), getMediaUrl(), calcDday() 등
     │   └── kakao.ts          — 카카오맵 SDK 초기화 유틸
     ├── hooks/
     │   └── useAuth.ts        — 인증 상태 훅
     ├── components/
-    │   ├── Providers.tsx     — ThemeProvider(next-themes) + UserProvider 래핑
+    │   ├── Providers.tsx     — ThemeProvider(next-themes) + UserProvider + FontSizeProvider 래핑
     │   ├── MainBackground.tsx — 다크(별 30개) / 라이트(구름 2개) 애니메이션 배경
     │   ├── LoginBackground.tsx — 로그인 페이지 전용 배경
     │   ├── FloatingYulmu.tsx — 캐릭터 플로팅 컴포넌트
+    │   ├── BgmPlayer.tsx     — 전역 오디오 로직 전담 (autoplay + 첫 제스처 fallback + DOM 이벤트 동기화)
+    │   ├── BgmPlayerUI.tsx   — 홈/비홈 공용 축소 토큰 UI + 앨범아트/아이콘/유리판 스타일
+    │   ├── BgmMiniPlayer.tsx — 홈 전용 BGM 플레이어 (hero anchor 기반 collapsed 토큰 + expanded 플레이어)
+    │   ├── BgmFloatingPlayer.tsx — 비홈 전용 우하단 플레이어 (collapsed 토큰 + expanded 플레이어)
     │   ├── layout/
     │   │   ├── Header.tsx    — 로고 + 유저 아바타/닉네임 + 햄버거 메뉴
-    │   │   │                   가이드 말풍선 (localStorage: "menu-guide-seen", 1초 후 표시, 5초 자동 숨김)
+    │   │   │                   가이드 말풍선 + 돋보기 버튼(FontSizeContext 연동)
     │   │   ├── BottomNav.tsx — 4탭: 홈(/), 일기장(/diary), 일정(/schedule), 새 글(/new)
     │   │   └── SideDrawer.tsx — 우측 슬라이드 드로어: 다크모드 토글 + 로그아웃
     │   ├── ui/
@@ -189,7 +197,7 @@ frontend/
     │       ├── CommentBottomSheet.tsx — 댓글 바텀 시트 (상태·로직·레이아웃 전담)
     │       └── CommentSection.tsx    — 댓글 목록 순수 표시 컴포넌트
     └── app/
-        ├── layout.tsx            — 루트: Providers (ThemeProvider + UserProvider)
+        ├── layout.tsx            — 루트: Providers + BgmPlayer 전역 마운트
         ├── error.tsx             — 전역 에러 바운더리
         ├── login/
         │   └── page.tsx          — 소셜 로그인 페이지 (Google, Kakao)
@@ -199,8 +207,8 @@ frontend/
         ├── onboarding/
         │   └── page.tsx          — 가족 그룹 합류 안내 (초대 코드 미보유 시 표시)
         ├── (main)/               — Route Group: Header + BottomNav 포함
-        │   ├── layout.tsx        — 인증/familyGroup 가드 + MainBackground
-        │   ├── page.tsx          — "/" 홈 대시보드 (D-day, 퀵메뉴)
+        │   ├── layout.tsx        — 인증/familyGroup 가드 + MainBackground + 홈/비홈 BGM UI 마운트
+        │   ├── page.tsx          — "/" 홈 대시보드 (D-day, 퀵메뉴, hero anchor 기반 BGM 토큰 위치 계산)
         │   ├── loading.tsx
         │   ├── diary/
         │   │   ├── page.tsx      — "/diary" 일기 피드
@@ -361,6 +369,61 @@ frontend/
 - 이미지 업로드: 개별 파일 병렬 업로드 (Promise.all), 최대 10장
 - 삭제: ConfirmModal 확인 후 API 호출 → 피드 state에서 즉시 제거
 - `api.ts`: fetch 기반, `Authorization: Bearer {token}` 자동 주입 (쿠키에서 토큰 읽기)
+
+#### 돋보기(글자 확대)
+
+- `FontSizeContext.tsx`
+  - 상태: `"normal" | "large"`
+  - localStorage 키: `font-size-mode`
+  - `<html>`에 `font-large` 클래스 토글 → rem 기반 타이포/레이아웃 확대
+- `Header.tsx`
+  - 돋보기 버튼으로 `toggleFontSize()` 호출
+  - 홈 BGM anchor 위치 재계산 dependency 중 하나로 사용됨
+
+#### BGM 플레이어
+
+- 전역 오디오
+  - `BgmPlayer.tsx`가 UI 없이 전역 오디오만 관리
+  - `sessionStorage` 키 `bgm_autoplay_attempted`로 자동재생 중복 시도 차단
+  - autoplay 차단 시 첫 유저 제스처(`click` / `touchstart` / `keydown`)에서 fallback 재생
+  - `loadedmetadata`, `timeupdate`, `volumechange` 이벤트를 `bgmStore`에 동기화
+- 오디오/상태 구조
+  - `lib/bgmAudio.ts`: `HTMLAudioElement` 싱글톤, 루프 재생, 기본 볼륨, 곡 메타데이터
+  - `stores/bgmStore.ts`: `isPlaying`, `isMuted`, `volume`, `currentTime`, `duration`, `anchorPos`
+- 홈(`/`) 축소 토큰
+  - `BgmMiniPlayer.tsx`는 `createPortal(document.body)` + `position: fixed` 유지
+  - collapsed 토큰은 `BgmPlayerUI.tsx`의 공용 `CollapsedMusicToken` 사용
+  - 위치는 홈 hero의 고정 프레임(`heroFrameRef`) `getBoundingClientRect()` + offset으로 계산
+  - 좌표 재계산 허용 시점:
+    - 홈 최초 진입 후 레이아웃 안정 시점(double `requestAnimationFrame`)
+    - `resize`
+    - `orientationchange`
+    - 돋보기 상태(`fontSizeMode`) 변경
+    - `visualViewport.resize`
+  - **스크롤 중에는 절대 재계산하지 않음**
+  - `anchorPos`가 준비되기 전에는 홈 축소 토큰을 렌더하지 않아 fallback → 실제 좌표 점프를 방지
+- 비홈 축소 토큰
+  - `BgmFloatingPlayer.tsx`가 동일한 `CollapsedMusicToken`을 우하단에 고정 렌더
+  - 홈/비홈 모두 작은 기울어진 음악 토큰 디자인, 같은 그림자/펄스 규칙 사용
+- 확장 플레이어 UI
+  - 홈/비홈 모두 같은 spacing 기준 적용
+  - 정보 영역과 컨트롤 영역을 분리하고, 컨트롤은
+    1. 음소거 + 볼륨 슬라이더
+    2. 재생/일시정지 버튼
+    로 그룹화
+  - 재생 버튼은 오른쪽 끝의 메인 액션으로 단독 배치
+- 비홈 곡명 marquee
+  - 비홈 확장 플레이어에서만 적용
+  - 곡명이 영역보다 길 때만 `ResizeObserver` 기반 overflow 측정 후 marquee 활성화
+  - 재생 중일 때만 움직이고, 일시정지 시 `animationPlayState: paused`
+  - 초기 정지 구간과 느린 속도를 둬서 전체 곡명을 읽을 수 있게 함
+
+#### BGM 음원 출처 / 사용 메모
+
+- 현재 기본 배경음악 `little-village-morning.mp3`는 **SUNO**에서 무료 플랜으로 제작
+- 프로젝트 내 사용 목적은 **비상업적(non-commercial)** 용도
+- 현 시점 기준 내부 메모상 별도 상업 라이선스 이슈 없음
+- 음원 파일 위치: `frontend/public/bgms/`
 
 #### 댓글 바텀 시트
 
