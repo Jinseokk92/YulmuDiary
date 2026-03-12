@@ -10,6 +10,10 @@ import { getMediaUrl } from "@/lib/utils";
 interface ImageCarouselProps {
   media: MediaDto[];
   diaryId: number;
+  /** 싱글탭 시 호출 — 뷰어 열기 등. 제공되면 탭 감지에 280ms 지연이 생긴다. */
+  onImageClick?: (index: number) => void;
+  /** 더블탭 시 호출 — 좋아요 토글 등. */
+  onDoubleTap?: () => void;
 }
 
 const slideVariants = {
@@ -30,7 +34,12 @@ const springTransition = {
   damping: 30,
 } as const;
 
-export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
+export default function ImageCarousel({
+  media,
+  diaryId,
+  onImageClick,
+  onDoubleTap,
+}: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
@@ -42,6 +51,17 @@ export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const axisLockRef = useRef<"x" | "y" | null>(null);
+
+  // ── 탭 감지 (싱글/더블 구분) ──────────────────────────────────────────────
+  const lastTapTimeRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 컴포넌트 언마운트 시 탭 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -130,7 +150,36 @@ export default function ImageCarousel({ media, diaryId }: ImageCarouselProps) {
               if      (swipePower < -8000 || offset.x < -60) goNext();
               else if (swipePower >  8000 || offset.x >  60) goPrev();
             }}
-            className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
+            onTap={() => {
+              // 싱글탭 vs 더블탭 구분 (280ms 윈도우)
+              const now = Date.now();
+              if (now - lastTapTimeRef.current < 300 && lastTapTimeRef.current > 0) {
+                // 더블탭
+                if (tapTimerRef.current) {
+                  clearTimeout(tapTimerRef.current);
+                  tapTimerRef.current = null;
+                }
+                lastTapTimeRef.current = 0;
+                onDoubleTap?.();
+              } else {
+                // 첫 번째 탭 — 280ms 후에도 두 번째 탭이 없으면 싱글탭 처리
+                lastTapTimeRef.current = now;
+                if (onImageClick) {
+                  if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+                  tapTimerRef.current = setTimeout(() => {
+                    tapTimerRef.current = null;
+                    onImageClick(activeIndex);
+                  }, 280);
+                }
+              }
+            }}
+            className={`absolute inset-0 w-full h-full ${
+              isMultiple
+                ? "cursor-grab active:cursor-grabbing"
+                : onImageClick
+                  ? "cursor-pointer"
+                  : ""
+            }`}
           >
             {imgErrors[activeIndex] ? (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center">

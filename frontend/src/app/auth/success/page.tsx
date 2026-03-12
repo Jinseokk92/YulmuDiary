@@ -35,7 +35,7 @@ function SuccessContent() {
 
     // DISPLAY_MS 후 다음 경로로 이동
     const timer = setTimeout(() => {
-      router.replace(onboarding === "true" ? "/onboarding" : "/diary");
+      router.replace(onboarding === "true" ? "/onboarding" : "/");
     }, DISPLAY_MS);
 
     return () => {

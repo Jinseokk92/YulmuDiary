@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
 import { useUiStore } from "@/stores/uiStore";
 import ImageCarousel from "./ImageCarousel";
+import ImageViewer from "./ImageViewer";
 import CommentBottomSheet, { type CommentBottomSheetHandle } from "./CommentBottomSheet";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -143,9 +144,33 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
     }
   }, [post.id, onDelete, currentUser]);
 
+  // ─── 이미지 뷰어 상태 ──────────────────────────────────────────────
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const handleImageClick = useCallback((index: number) => {
+    setViewerIndex(index);
+    setViewerOpen(true);
+  }, []);
+
+  const handleViewerClose = useCallback(() => {
+    setViewerOpen(false);
+  }, []);
+
   // ─── 좋아요(Heart) 상태 ────────────────────────────────────────────
   const [reactions, setReactions] = useState<ReactionResponse[]>(post.reactions ?? []);
   const [isLiking, setIsLiking] = useState(false);
+
+  // ─── 캐러셀 더블탭 하트 오버레이 ───────────────────────────────────
+  const [carouselHeartVisible, setCarouselHeartVisible] = useState(false);
+  const [carouselHeartKey, setCarouselHeartKey] = useState(0);
+  const carouselHeartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (carouselHeartTimerRef.current) clearTimeout(carouselHeartTimerRef.current);
+    };
+  }, []);
 
   const isLiked = currentUser
     ? reactions.some((r) => r.emoji === "❤️" && r.userId === currentUser.id)
@@ -188,6 +213,23 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
       setIsLiking(false);
     }
   }, [currentUser, post.id, reactions, isLiking]);
+
+  // ─── 더블탭 좋아요 ─────────────────────────────────────────────────
+  // 이미 좋아요가 눌린 상태에서는 취소하지 않음 (Instagram 패턴: 하트는 항상 표시)
+  const handleDoubleTapLike = useCallback(() => {
+    if (!isLiked) handleToggleLike();
+  }, [isLiked, handleToggleLike]);
+
+  // 캐러셀 더블탭: 하트 오버레이 + 좋아요
+  const handleCarouselDoubleTap = useCallback(() => {
+    setCarouselHeartKey((k) => k + 1);
+    setCarouselHeartVisible(true);
+    if (carouselHeartTimerRef.current) clearTimeout(carouselHeartTimerRef.current);
+    carouselHeartTimerRef.current = setTimeout(() => {
+      setCarouselHeartVisible(false);
+    }, 750);
+    handleDoubleTapLike();
+  }, [handleDoubleTapLike]);
 
   // ─── 콘텐츠 분리 (첫 줄 = 제목) ──────────────────────────────────
   const lines = displayContent.split("\n");
@@ -271,7 +313,47 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
 
         {/* ── 중단: 사진 ── */}
         {post.media && post.media.length > 0 && (
-          <ImageCarousel media={post.media} diaryId={post.id} />
+          <div className="relative">
+            <ImageCarousel
+              media={post.media}
+              diaryId={post.id}
+              onImageClick={handleImageClick}
+              onDoubleTap={handleCarouselDoubleTap}
+            />
+
+            {/* 더블탭 하트 오버레이 (캐러셀 위) */}
+            <AnimatePresence>
+              {carouselHeartVisible && (
+                <motion.div
+                  key={carouselHeartKey}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.4, 1, 1] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.75, times: [0, 0.18, 0.45, 1] }}
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="#ef4444"
+                    className="w-20 h-20 drop-shadow-2xl"
+                  >
+                    <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                  </svg>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* 이미지 전체 뷰어 */}
+        {viewerOpen && post.media && post.media.length > 0 && (
+          <ImageViewer
+            media={post.media}
+            initialIndex={viewerIndex}
+            onClose={handleViewerClose}
+            onDoubleTap={handleDoubleTapLike}
+          />
         )}
 
         {/* ── 하단: 액션 + 텍스트 ── */}

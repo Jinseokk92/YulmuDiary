@@ -3,6 +3,10 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  SESSION_KEY_AUTOPLAY_ATTEMPTED,
+  BGM_RETRY_EVENT,
+} from "@/components/BgmPlayer";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -26,6 +30,13 @@ function CallbackHandler() {
     //    middleware가 쿠키 기반으로 동작하므로 리다이렉트 전에 반드시 필요
     fetchMe().then(() => {
       console.log("🔑 [Callback] fetchMe complete, onboarding param:", onboarding);
+
+      // 소셜 로그인 전에 세팅된 BGM autoplay 플래그를 초기화하고 재시도를 요청한다.
+      // 같은 탭에서 OAuth 흐름을 거치면 sessionStorage가 유지되어 BgmPlayer가
+      // alreadyAttempted=true 로 판단, fallback 등록 자체를 건너뛰는 문제를 방지한다.
+      sessionStorage.removeItem(SESSION_KEY_AUTOPLAY_ATTEMPTED);
+      window.dispatchEvent(new CustomEvent(BGM_RETRY_EVENT));
+
       // /auth/success에서 2.3초 축하 화면 후 최종 경로로 이동
       const dest =
         onboarding === "true"
