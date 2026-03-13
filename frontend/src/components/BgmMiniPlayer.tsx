@@ -24,8 +24,9 @@ export default function BgmMiniPlayer() {
   const [expanded, setExpanded] = useState(false);
   const [anchorNode, setAnchorNode] = useState<HTMLElement | null>(null);
 
-  const isPlaying   = useBgmStore((s) => s.isPlaying);
-  const isMuted     = useBgmStore((s) => s.isMuted);
+  const isPlaying          = useBgmStore((s) => s.isPlaying);
+  const isAutoplayBlocked  = useBgmStore((s) => s.isAutoplayBlocked);
+  const isMuted            = useBgmStore((s) => s.isMuted);
   const volume      = useBgmStore((s) => s.volume);
   const currentTime = useBgmStore((s) => s.currentTime);
   const duration    = useBgmStore((s) => s.duration);
@@ -68,6 +69,7 @@ export default function BgmMiniPlayer() {
             ariaLabel="배경음악 플레이어 열기"
             isDark={isDark}
             isPlaying={isPlaying}
+            isAutoplayBlocked={isAutoplayBlocked}
             onClick={() => setExpanded(true)}
             position="absolute"
             style={{

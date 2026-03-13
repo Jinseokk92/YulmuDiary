@@ -6,6 +6,12 @@ import { getBgmAudio, BGM_TRACK } from "@/lib/bgmAudio";
 export interface BgmState {
   // ── 재생 ──────────────────────────────────────────────────────────────────
   isPlaying: boolean;
+  /**
+   * true: autoplay가 브라우저 정책에 의해 차단되어 첫 사용자 제스처 대기 중.
+   * BgmPlayer의 unlock 리스너가 등록된 상태를 나타낸다.
+   * audio.play()가 성공하면 자동으로 false로 전환된다.
+   */
+  isAutoplayBlocked: boolean;
 
   // ── 음소거 / 볼륨 ─────────────────────────────────────────────────────────
   isMuted: boolean;
@@ -39,6 +45,7 @@ export interface BgmState {
 
 export const useBgmStore = create<BgmState>((set, get) => ({
   isPlaying: false,
+  isAutoplayBlocked: false,
   isMuted: false,
   volume: BGM_TRACK.volume,
   currentTime: 0,

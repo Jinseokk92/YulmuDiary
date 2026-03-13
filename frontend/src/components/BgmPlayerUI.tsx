@@ -51,6 +51,8 @@ interface CollapsedMusicTokenProps {
   ariaLabel: string;
   isDark: boolean;
   isPlaying: boolean;
+  /** true: autoplay 차단 상태 — 첫 탭/클릭 대기 중임을 나타내는 배지 표시 */
+  isAutoplayBlocked?: boolean;
   onClick: () => void;
   style?: CSSProperties;
   className?: string;
@@ -61,6 +63,7 @@ export function CollapsedMusicToken({
   ariaLabel,
   isDark,
   isPlaying,
+  isAutoplayBlocked = false,
   onClick,
   style,
   className,
@@ -90,6 +93,21 @@ export function CollapsedMusicToken({
           className="absolute inset-[-4px] rounded-[18px] bgm-pulse-ring pointer-events-none"
           style={{ border: "1.5px solid rgba(228, 112, 30, 0.42)" }}
         />
+      )}
+      {/* autoplay 차단 시: 작은 ▶ 배지로 "탭하면 재생" 안내 */}
+      {isAutoplayBlocked && !isPlaying && (
+        <div
+          aria-hidden="true"
+          className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none animate-pulse"
+          style={{
+            background: "#e4701e",
+            boxShadow: "0 0 6px rgba(228, 112, 30, 0.7)",
+          }}
+        >
+          <svg viewBox="0 0 8 8" fill="white" style={{ width: 7, height: 7 }}>
+            <polygon points="1.5,1 7,4 1.5,7" />
+          </svg>
+        </div>
       )}
       <div
         className="absolute inset-[4px] rounded-[13px]"
