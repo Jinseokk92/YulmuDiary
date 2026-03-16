@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface DiaryPostRepository extends JpaRepository<DiaryPost, Long> {
+public interface DiaryPostRepository extends JpaRepository<DiaryPost, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<DiaryPost> {
 
     // ── 커서 기반 (기존 유지) ──────────────────────────────────────────
 

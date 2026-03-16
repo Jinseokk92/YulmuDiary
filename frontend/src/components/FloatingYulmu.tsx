@@ -41,7 +41,7 @@ export default function FloatingYulmu({
           alt="율무"
           width={width}
           height={height}
-          className="object-contain drop-shadow-xl"
+          className="object-contain drop-shadow-xl w-auto h-auto"
           priority
         />
       </motion.div>

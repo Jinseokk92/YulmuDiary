@@ -60,7 +60,7 @@ export function DarkBackground() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-[-10] bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#020617] overflow-hidden"
+      className="absolute inset-0 z-0 bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#020617] overflow-hidden pointer-events-none"
     >
       {/* 별: opacity [0.2 → 1 → 0.2] 무한 반짝임 */}
       {stars.map((star) => (
@@ -112,7 +112,7 @@ function LightBackground() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-[-10] bg-gradient-to-b from-[#e0f2fe] to-[#f8fafc] overflow-hidden"
+      className="absolute inset-0 z-0 bg-gradient-to-b from-[#e0f2fe] to-[#f8fafc] overflow-hidden pointer-events-none"
     >
       {CLOUD_CONFIGS.map((cloud, i) => (
         <motion.div

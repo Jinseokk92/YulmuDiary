@@ -4,6 +4,7 @@ import com.yulmudiary.domain.diary.dto.DiaryPostPageResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostPaginatedResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostRequest;
 import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
+import com.yulmudiary.domain.diary.dto.DiaryPostSortType;
 import com.yulmudiary.domain.diary.service.DiaryPostService;
 import com.yulmudiary.global.auth.AuthTarget;
 import com.yulmudiary.global.auth.CheckFamilyAuth;
@@ -13,9 +14,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @Tag(name = "DiaryPost", description = "육아 일기 API")
 @RestController
@@ -65,8 +69,16 @@ public class DiaryPostController {
             @Parameter(description = "페이지 번호 (1부터 시작)")
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "페이지 크기")
-            @RequestParam(defaultValue = "5") int size) {
-        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size));
+            @RequestParam(defaultValue = "5") int size,
+            @Parameter(description = "정렬 기준 (LATEST | OLDEST)")
+            @RequestParam(defaultValue = "LATEST") DiaryPostSortType sort,
+            @Parameter(description = "시작 날짜 (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "종료 날짜 (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @Parameter(description = "사용자 ID 필터")
+            @RequestParam(required = false) Long userId) {
+        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size, sort, startDate, endDate, userId));
     }
 
     @Operation(summary = "내 게시글 목록 조회 (Cursor 페이징)")

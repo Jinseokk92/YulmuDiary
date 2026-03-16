@@ -9,16 +9,22 @@ import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
 import com.yulmudiary.domain.diary.entity.DiaryPost;
 import com.yulmudiary.domain.diary.entity.Media;
 import com.yulmudiary.domain.diary.entity.MediaType;
+import com.yulmudiary.domain.diary.dto.DiaryPostSortType;
 import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
+import com.yulmudiary.domain.diary.repository.DiaryPostSpec;
 import com.yulmudiary.domain.media.service.MediaUrlResolver;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -112,20 +118,30 @@ public class DiaryPostService {
 
     // ── 페이지 번호 기반 ─────────────────────────────────────────────
 
-    public DiaryPostPaginatedResponse getByBabyPaged(Long babyId, int page, int size) {
-        long total = diaryPostRepository.countByBabyId(babyId);
-        List<DiaryPost> posts = diaryPostRepository.findByBabyIdLatest(
-                babyId, PageRequest.of(page, size));
+    public DiaryPostPaginatedResponse getByBabyPaged(
+            Long babyId, int page, int size,
+            DiaryPostSortType sort, LocalDate startDate, LocalDate endDate, Long userId) {
 
-        List<DiaryPostResponse> content = posts.stream()
+        Specification<DiaryPost> spec = Specification.where(DiaryPostSpec.forBaby(babyId));
+        if (userId != null) spec = spec.and(DiaryPostSpec.forAuthor(userId));
+        if (startDate != null) spec = spec.and(DiaryPostSpec.fromDate(startDate));
+        if (endDate != null) spec = spec.and(DiaryPostSpec.toDate(endDate));
+
+        Sort sortOrder = (sort == DiaryPostSortType.OLDEST)
+                ? Sort.by(Sort.Direction.ASC, "createdAt")
+                : Sort.by(Sort.Direction.DESC, "createdAt");
+
+        Page<DiaryPost> postPage = diaryPostRepository.findAll(spec, PageRequest.of(page, size, sortOrder));
+
+        List<DiaryPostResponse> content = postPage.getContent().stream()
                 .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
                 .toList();
 
-        int totalPages = total == 0 ? 1 : (int) Math.ceil((double) total / size);
+        int totalPages = postPage.getTotalPages() == 0 ? 1 : postPage.getTotalPages();
 
         return DiaryPostPaginatedResponse.builder()
                 .content(content)
-                .totalElements(total)
+                .totalElements(postPage.getTotalElements())
                 .totalPages(totalPages)
                 .currentPage(page + 1)
                 .build();
