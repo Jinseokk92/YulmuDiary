@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Images } from "lucide-react";
 import type { MediaDto } from "@/types";
 import { getMediaUrl } from "@/lib/utils";
+import { useUiStore } from "@/stores/uiStore";
 
 interface ImageCarouselProps {
   media: MediaDto[];
@@ -44,6 +45,39 @@ export default function ImageCarousel({
   const [direction, setDirection] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
 
+  const demoGuideStep = useUiStore((s) => s.demoGuideStep);
+  const setDemoGuideStep = useUiStore((s) => s.setDemoGuideStep);
+
+  // ── 체험판 blob URL 깨짐 감지 ────────────────────────────────────────────
+  // next/image의 onError가 blob URL에 대해 신뢰할 수 없으므로
+  // 마운트 시 native Image probe로 직접 검사 (next/image 우회)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem("demoMode") !== "true") return;
+    if (sessionStorage.getItem("demo_guide_skipped") === "true") return;
+
+    media.forEach((m, idx) => {
+      const url = getMediaUrl(m.thumbnailUrl || m.url);
+      if (!url.startsWith("blob:")) return;
+
+      const probe = new window.Image();
+      probe.onerror = () => {
+        console.log("[ImageCarousel] probe: blob URL 로드 실패 →", url);
+        setImgErrors((prev) => ({ ...prev, [idx]: true }));
+        // getState()로 최신 상태 확인 (클로저 stale 방지)
+        if (useUiStore.getState().demoGuideStep === 0) {
+          setDemoGuideStep(1);
+        }
+      };
+      probe.onload = () => {
+        console.log("[ImageCarousel] probe: blob URL 정상 →", url);
+      };
+      probe.src = url;
+    });
+  // media prop이 바뀔 일 없으므로 마운트 1회만 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isMultiple = media.length > 1;
   const isFirst = activeIndex === 0;
   const isLast = activeIndex === media.length - 1;
@@ -65,7 +99,7 @@ export default function ImageCarousel({
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || !isMultiple) return;
+    if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
       touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -73,6 +107,10 @@ export default function ImageCarousel({
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      // 이미지 영역의 touchmove를 document까지 전파하지 않음
+      // → pull-to-refresh 훅이 뷰어 열리기 전 280ms 타이밍에 작동하는 것을 방지
+      e.stopPropagation();
+
       if (!touchStartRef.current) return;
       const dx = e.touches[0].clientX - touchStartRef.current.x;
       const dy = e.touches[0].clientY - touchStartRef.current.y;
@@ -85,6 +123,7 @@ export default function ImageCarousel({
         }
       }
 
+      // 수평 스와이프 확정 시 페이지 스크롤 차단
       if (axisLockRef.current === "x") {
         e.preventDefault();
       }
@@ -104,7 +143,9 @@ export default function ImageCarousel({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isMultiple]);
+  // containerRef는 마운트 후 불변이므로 빈 deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const navigate = useCallback(
     (nextIndex: number) => {
@@ -185,17 +226,34 @@ export default function ImageCarousel({
               <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                 <Images className="w-8 h-8 text-gray-300" />
               </div>
-            ) : (
-              <Image
-                src={getMediaUrl(media[activeIndex].thumbnailUrl || media[activeIndex].url)}
-                alt=""
-                fill
-                draggable={false}
-                className="object-cover pointer-events-none select-none"
-                sizes="(max-width: 512px) 100vw, 512px"
-                onError={() => setImgErrors((prev) => ({ ...prev, [activeIndex]: true }))}
-              />
-            )}
+            ) : (() => {
+              const src = getMediaUrl(media[activeIndex].thumbnailUrl || media[activeIndex].url);
+              const isLocal = src.startsWith("data:") || src.startsWith("blob:");
+              return (
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  draggable={false}
+                  unoptimized={isLocal}
+                  className="object-cover pointer-events-none select-none"
+                  sizes="(max-width: 512px) 100vw, 512px"
+                  onError={() => {
+                    console.log("[ImageCarousel] onError 발생:", src);
+                    setImgErrors((prev) => ({ ...prev, [activeIndex]: true }));
+                    // blob URL 로드 실패 = 새로고침 후 체험판 이미지 깨짐
+                    if (
+                      src.startsWith("blob:") &&
+                      demoGuideStep === 0 &&
+                      sessionStorage.getItem("demoMode") === "true" &&
+                      sessionStorage.getItem("demo_guide_skipped") !== "true"
+                    ) {
+                      setDemoGuideStep(1);
+                    }
+                  }}
+                />
+              );
+            })()}
           </motion.div>
         </AnimatePresence>
 

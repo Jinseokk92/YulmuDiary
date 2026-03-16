@@ -34,7 +34,10 @@ export default function NewPostPage() {
 
   // ── 권한 + 노출 조건 ────────────────────────────────────────────────────────
   // PARENT만 앨범 저장 옵션을 볼 수 있고, 사진이 있어야 활성화
-  const isParent = currentUser?.role === "PARENT";
+  // 체험판 모드에서는 currentUser가 초기에 null일 수 있으므로 sessionStorage로 보완
+  const isDemoMode =
+    typeof window !== "undefined" && sessionStorage.getItem("demoMode") === "true";
+  const isParent = isDemoMode ? true : currentUser?.role === "PARENT";
   const showAlbumOption = isParent && images.length > 0;
 
   // 이미지 전체 제거 시 토글 자동 리셋
@@ -137,43 +140,53 @@ export default function NewPostPage() {
     let uploadedImageUrls: string[] = [];
     let uploadedThumbnailUrls: string[] = [];
 
-    // Step 1: 이미지 병렬 업로드
+    // Step 1: 이미지 처리
     if (images.length > 0) {
       setStep("uploading");
 
-      try {
-        const uploadPromises = images.map((img) => {
-          const fd = new FormData();
-          fd.append("files", img.file);
-          return api.upload<MediaUploadResponse>("/api/media/upload", fd);
-        });
+      if (isDemoMode) {
+        // 체험판: blob URL을 그대로 사용 (data URL 변환 시 sessionStorage 5MB 초과 위험)
+        uploadedImageUrls = images.map((img) => img.previewUrl);
+        uploadedThumbnailUrls = images.map((img) => img.previewUrl);
+      } else {
+        // 실제 업로드
+        try {
+          const uploadPromises = images.map((img) => {
+            const fd = new FormData();
+            fd.append("files", img.file);
+            return api.upload<MediaUploadResponse>("/api/media/upload", fd);
+          });
 
-        const results = await Promise.all(uploadPromises);
-        for (const r of results) {
-          for (const img of r.images) {
-            uploadedImageUrls.push(img.imageUrl);
-            uploadedThumbnailUrls.push(img.thumbnailUrl);
+          const results = await Promise.all(uploadPromises);
+          for (const r of results) {
+            for (const img of r.images) {
+              uploadedImageUrls.push(img.imageUrl);
+              uploadedThumbnailUrls.push(img.thumbnailUrl);
+            }
           }
+        } catch {
+          setStep("idle");
+          setError("이미지 업로드에 실패했습니다. 다시 시도해 주세요.");
+          return;
         }
-      } catch {
-        setStep("idle");
-        setError("이미지 업로드에 실패했습니다. 다시 시도해 주세요.");
-        return;
       }
     }
 
     // Step 2: 일기 저장
     setStep("saving");
+    console.log("[NewPost] 일기 저장 시도 — isDemoMode:", isDemoMode, "/ 이미지 수:", uploadedImageUrls.length);
 
     try {
-      await api.post<DiaryPostResponse>("/api/diary-posts", {
+      const saved = await api.post<DiaryPostResponse>("/api/diary-posts", {
         babyId: BABY_ID,
         content: content.trim(),
         milestoneTag: tags.length > 0 ? tags.map((t) => `#${t}`).join(" ") : null,
         mediaUrls: uploadedImageUrls,
         mediaThumbnailUrls: uploadedThumbnailUrls,
       });
-    } catch {
+      console.log("[NewPost] 일기 저장 성공 — id:", saved?.id);
+    } catch (err) {
+      console.error("[NewPost] 일기 저장 실패:", err);
       setStep("idle");
       setError("일기 저장에 실패했습니다. 다시 시도해 주세요.");
       return;
@@ -181,6 +194,7 @@ export default function NewPostPage() {
 
     // Step 3: 앨범 저장 (PARENT + saveToAlbum + 이미지가 실제로 업로드된 경우에만)
     // 일기는 이미 저장됐으므로 앨범 저장 실패는 조용히 무시 (allSettled)
+    console.log("[NewPost] 앨범 저장 조건 — saveToAlbum:", saveToAlbum, "/ isParent:", isParent, "/ 이미지 수:", uploadedImageUrls.length);
     if (saveToAlbum && isParent && uploadedImageUrls.length > 0) {
       setStep("albumSaving");
 
@@ -206,9 +220,11 @@ export default function NewPostPage() {
     }
 
     setStep("done");
-    images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    // 체험판 모드에서는 previewUrl(blob URL)을 uploadedImageUrls로 사용하므로 revoke하지 않음
+    if (!isDemoMode) {
+      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    }
     router.push("/diary");
-    router.refresh();
   }, [currentUser, content, tags, images, saveToAlbum, isParent, currentGrowthPhase, router]);
 
   const isSubmitting = step !== "idle";
@@ -355,6 +371,23 @@ export default function NewPostPage() {
                     </span>
                   </span>
                 </button>
+                {isDemoMode && (
+                  <p className="mt-2 flex items-center gap-1.5 text-sm text-gray-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="w-3.5 h-3.5 shrink-0"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    체험판에서는 새로고침 시 이미지가 사라질 수 있어요
+                  </p>
+                )}
               </>
             )}
 

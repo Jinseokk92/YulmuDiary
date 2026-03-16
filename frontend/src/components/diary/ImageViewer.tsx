@@ -44,6 +44,8 @@ export default function ImageViewer({
   const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTapRef = useRef(0);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // 제스처 모드: 단일 터치 진행 중엔 pinch 전환 차단, pinch 중엔 single 전환 차단
+  const gestureModeRef = useRef<"single" | "pinch" | null>(null);
 
   // ── 마운트 / 바디 스크롤 잠금 ──────────────────────────────────────────
   useEffect(() => {
@@ -93,28 +95,44 @@ export default function ImageViewer({
     const el = wrapRef.current;
     if (!el) return;
 
+    // 핀치로 인식하기 위한 두 손가락 최소 거리 (이보다 가까우면 실수 터치로 간주)
+    const PINCH_MIN_START_DIST = 40;
+
     const onTouchStart = (e: TouchEvent) => {
+      // 이벤트가 document까지 전파되지 않도록 차단 (pull-to-refresh 등 방지)
+      e.stopPropagation();
       if (e.touches.length === 2) {
-        // 핀치 시작
         const dx = e.touches[1].clientX - e.touches[0].clientX;
         const dy = e.touches[1].clientY - e.touches[0].clientY;
-        pinchStartDist.current = Math.hypot(dx, dy);
-        pinchStartScale.current = scaleRef.current;
+        const dist = Math.hypot(dx, dy);
+        // 핀치 시작: 단일 터치 제스처 진행 중이거나 손가락이 너무 가까우면 무시
+        if (gestureModeRef.current !== "single" && dist >= PINCH_MIN_START_DIST) {
+          pinchStartDist.current = dist;
+          pinchStartScale.current = scaleRef.current;
+          gestureModeRef.current = "pinch";
+        }
         pointerStartRef.current = null;
       } else if (e.touches.length === 1) {
-        pinchStartDist.current = null;
-        pointerStartRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-          time: Date.now(),
-        };
+        // 단일 터치 시작: pinch 제스처가 이미 진행 중이면 무시
+        if (gestureModeRef.current !== "pinch") {
+          pinchStartDist.current = null;
+          gestureModeRef.current = "single";
+          pointerStartRef.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            time: Date.now(),
+          };
+        }
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && pinchStartDist.current !== null) {
-        // 핀치 줌
-        e.preventDefault();
+      // 전파 차단 + 브라우저 기본 동작(스크롤, pull-to-refresh) 완전 차단
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (e.touches.length === 2 && gestureModeRef.current === "pinch" && pinchStartDist.current !== null) {
+        // 핀치 줌 (pinch 모드에서만)
         const dx = e.touches[1].clientX - e.touches[0].clientX;
         const dy = e.touches[1].clientY - e.touches[0].clientY;
         const dist = Math.hypot(dx, dy);
@@ -124,9 +142,8 @@ export default function ImageViewer({
         );
         scaleRef.current = newScale;
         setScale(newScale);
-      } else if (e.touches.length === 1 && scaleRef.current > 1.05) {
-        // 확대 상태에서 패닝
-        e.preventDefault();
+      } else if (e.touches.length === 1 && gestureModeRef.current === "single" && scaleRef.current > 1.05) {
+        // 확대 상태에서 패닝 (single 모드 + 확대 상태에서만)
         if (!pointerStartRef.current) return;
         const dx = e.touches[0].clientX - pointerStartRef.current.x;
         const dy = e.touches[0].clientY - pointerStartRef.current.y;
@@ -142,11 +159,28 @@ export default function ImageViewer({
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length === 0) pinchStartDist.current = null;
+      // 전파 차단 (pull-to-refresh 등이 touchend를 받지 않도록)
+      e.stopPropagation();
+      const remainingTouches = e.touches.length;
+
+      if (remainingTouches === 0) {
+        pinchStartDist.current = null;
+      } else if (remainingTouches === 1 && gestureModeRef.current === "pinch") {
+        // pinch → single 전환: 남은 손가락으로 패닝 허용
+        gestureModeRef.current = "single";
+        pointerStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          time: Date.now(),
+        };
+        pinchStartDist.current = null;
+        return; // 탭/스와이프로 처리하지 않음
+      }
 
       const start = pointerStartRef.current;
-      if (!start || e.changedTouches.length !== 1) {
+      if (!start || e.changedTouches.length !== 1 || gestureModeRef.current === "pinch") {
         pointerStartRef.current = null;
+        if (remainingTouches === 0) gestureModeRef.current = null;
         return;
       }
 
@@ -177,8 +211,9 @@ export default function ImageViewer({
         }
       }
 
-      // 과도하게 축소된 경우 스냅백
-      if (scaleRef.current < 1) {
+      // scale이 1에 가깝거나(≤1.1) 미만이면 정확히 1로 스냅백 + pan 초기화
+      // 의도치 않은 미세 확대 상태에서 pan이 활성화되는 것을 방지
+      if (scaleRef.current <= 1.1) {
         scaleRef.current = 1;
         setScale(1);
         panRef.current = { x: 0, y: 0 };
@@ -186,6 +221,7 @@ export default function ImageViewer({
       }
 
       pointerStartRef.current = null;
+      if (remainingTouches === 0) gestureModeRef.current = null;
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -207,6 +243,7 @@ export default function ImageViewer({
       aria-modal="true"
       aria-label="이미지 뷰어"
       className="fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none"
+      style={{ touchAction: "none" }}
     >
       {/* ── 닫기 버튼 ── */}
       <button

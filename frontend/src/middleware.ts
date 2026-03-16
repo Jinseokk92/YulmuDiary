@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const TOKEN_KEY = "access_token";
 const FAMILY_GROUP_KEY = "family_group_id";
+const DEMO_MODE_KEY = "demo_mode";
 
 // 로그인 없이 접근 가능한 공개 경로
 const PUBLIC_PATHS = ["/login"];
@@ -17,6 +18,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_KEY)?.value;
   const familyGroupId = request.cookies.get(FAMILY_GROUP_KEY)?.value;
+  const demoMode = request.cookies.get(DEMO_MODE_KEY)?.value === "true";
 
   // 인증 처리 경로는 가드 없이 통과 (쿠키가 세팅되기 전이므로 판단 불가)
   const isAuthProcessing = AUTH_PROCESSING_PATHS.some(
@@ -31,8 +33,8 @@ export function middleware(request: NextRequest) {
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  // 1. 토큰 없음 + 보호된 경로 → /login 리다이렉트
-  if (!token && !isPublicPath) {
+  // 1. 토큰 없음 + 체험판 아님 + 보호된 경로 → /login 리다이렉트
+  if (!token && !demoMode && !isPublicPath) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -41,13 +43,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // 2-1. 체험판 모드 + /login → / 리다이렉트
+  if (demoMode && pathname === "/login") {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   // 3. 토큰 있음 + ( /join or /onboarding ) + 이미 가족 그룹 멤버 → / 리다이렉트
   if (token && isJoinPath && familyGroupId) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // 4. 토큰 있음 + 보호된 경로 + 가족 그룹 없음 → /onboarding 리다이렉트
-  if (token && !isPublicPath && !isJoinPath && !familyGroupId) {
+  // 4. 토큰 있음 + 체험판 아님 + 보호된 경로 + 가족 그룹 없음 → /onboarding 리다이렉트
+  if (token && !demoMode && !isPublicPath && !isJoinPath && !familyGroupId) {
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 

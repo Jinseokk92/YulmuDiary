@@ -197,6 +197,41 @@ export interface AlbumPhotoRequest {
   takenAt?: string; // "YYYY-MM-DD"
 }
 
+// --- Notification ---
+
+export type NotificationType = "COMMENT" | "REACTION";
+
+export interface NotificationResponse {
+  id: number;
+  senderId: number;
+  senderNickname: string;
+  senderProfileImageUrl: string | null;
+  diaryPostId: number;
+  diaryThumbnailUrl: string | null;
+  diaryContentSnippet: string | null;
+  type: NotificationType;
+  message: string;
+  /** COMMENT 알림일 때만 포함. 댓글 내용 미리보기 (최대 30자). */
+  commentPreview: string | null;
+  /** REACTION 알림일 때만 포함. 실제 이모지 문자열 (예: "😍"). */
+  reactionEmoji: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPageResponse {
+  items: NotificationResponse[];
+  nextCursor: number | null;
+  hasNext: boolean;
+}
+
+// --- NotificationSettings ---
+
+export interface NotificationSettingsResponse {
+  commentNotificationEnabled: boolean;
+  reactionNotificationEnabled: boolean;
+}
+
 // --- Schedule ---
 
 export interface ScheduleResponse {
@@ -207,6 +242,8 @@ export interface ScheduleResponse {
   memo: string | null;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay: boolean;
+  startTime: string | null; // "HH:mm"
+  endTime: string | null;   // "HH:mm"
   placeName: string | null;
   placeAddress: string | null;
   createdAt: string;
@@ -217,6 +254,8 @@ export interface ScheduleRequest {
   memo?: string;
   eventDate: string; // "YYYY-MM-DD"
   isAllDay?: boolean;
+  startTime?: string; // "HH:mm"
+  endTime?: string;   // "HH:mm"
   placeName?: string;
   placeAddress?: string;
 }

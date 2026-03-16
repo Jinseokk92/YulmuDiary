@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingYulmu from "@/components/FloatingYulmu";
 import LoginBackground from "@/components/LoginBackground";
+import { useAuthStore } from "@/stores/authStore";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -87,12 +89,20 @@ function GoogleIcon() {
 
 // ─── 페이지 ──────────────────────────────────────────────────────────────────
 export default function LoginPage() {
+  const router = useRouter();
+  const { activateDemo } = useAuthStore();
+
   const handleKakaoLogin = () => {
     window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao`;
   };
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
+  };
+
+  const handleDemo = () => {
+    activateDemo();
+    router.push("/");
   };
 
   return (
@@ -139,6 +149,20 @@ export default function LoginPage() {
           >
             <GoogleIcon />
             Google로 시작하기
+          </button>
+
+          <button
+            onClick={handleDemo}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
+                       font-medium text-sm
+                       transition-all active:scale-[0.98]"
+            style={{
+              backgroundColor: "#FFF3E8",
+              border: "1px dashed #F0C8A0",
+              color: "#C2601A",
+            }}
+          >
+            👀 로그인 없이 체험해보기
           </button>
         </div>
 

@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "schedule")
@@ -36,6 +37,12 @@ public class Schedule extends BaseTimeEntity {
     @Column(nullable = false)
     private Boolean isAllDay;
 
+    @Column
+    private LocalTime startTime;
+
+    @Column
+    private LocalTime endTime;
+
     @Column(length = 200)
     private String placeName;
 
@@ -44,22 +51,28 @@ public class Schedule extends BaseTimeEntity {
 
     @Builder
     public Schedule(User author, String title, String memo, LocalDate eventDate, Boolean isAllDay,
+                    LocalTime startTime, LocalTime endTime,
                     String placeName, String placeAddress) {
         this.author = author;
         this.title = title;
         this.memo = memo;
         this.eventDate = eventDate;
         this.isAllDay = isAllDay != null ? isAllDay : true;
+        this.startTime = startTime;
+        this.endTime = endTime;
         this.placeName = placeName;
         this.placeAddress = placeAddress;
     }
 
     public void update(String title, String memo, LocalDate eventDate, Boolean isAllDay,
+                       LocalTime startTime, LocalTime endTime,
                        String placeName, String placeAddress) {
         this.title = title;
         this.memo = memo;
         this.eventDate = eventDate;
         this.isAllDay = isAllDay != null ? isAllDay : this.isAllDay;
+        this.startTime = startTime;
+        this.endTime = endTime;
         this.placeName = placeName;
         this.placeAddress = placeAddress;
     }

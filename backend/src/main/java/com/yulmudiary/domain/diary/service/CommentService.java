@@ -10,6 +10,8 @@ import com.yulmudiary.domain.diary.entity.Media;
 import com.yulmudiary.domain.diary.repository.CommentRepository;
 import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
 import com.yulmudiary.domain.media.service.MediaUrlResolver;
+import com.yulmudiary.domain.notification.entity.NotificationType;
+import com.yulmudiary.domain.notification.service.NotificationService;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -30,6 +32,7 @@ public class CommentService {
     private final DiaryPostRepository diaryPostRepository;
     private final UserRepository userRepository;
     private final MediaUrlResolver mediaUrlResolver;
+    private final NotificationService notificationService;
 
     @Transactional
     public CommentResponse create(Long diaryPostId, Long authorId, CommentRequest request) {
@@ -45,6 +48,11 @@ public class CommentService {
                 .build();
 
         commentRepository.save(comment);
+
+        // 일기 작성자에게 댓글 알림 — extra: 댓글 내용 전문 (DTO에서 30자 truncate)
+        notificationService.create(author, post.getAuthor(), post,
+                NotificationType.COMMENT, comment.getContent());
+
         return CommentResponse.from(comment);
     }
 

@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { useUser } from "@/contexts/UserContext";
 import { useFontSize } from "@/contexts/FontSizeContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, ZoomIn } from "lucide-react";
+import { Menu, ZoomIn, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import UserAvatar from "@/components/ui/UserAvatar";
 import SideDrawer from "@/components/layout/SideDrawer";
 import { useUiStore } from "@/stores/uiStore";
+import { api } from "@/lib/api";
 
 const GUIDE_INTERVAL_MS = 3 * 60 * 1000; // 5분마다 반복 표시
 
@@ -66,8 +67,12 @@ export default function Header() {
   const router = useRouter();
   const drawerOpen = useUiStore((state) => state.isDrawerOpen);
   const setDrawerOpen = useUiStore((state) => state.setDrawerOpen);
+  const demoGuideStep = useUiStore((state) => state.demoGuideStep);
+  const setDemoGuideStep = useUiStore((state) => state.setDemoGuideStep);
   const [mounted, setMounted] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -97,10 +102,28 @@ export default function Header() {
     return () => clearTimeout(hideTimer);
   }, [showGuide]);
 
+  // 미읽 알림 수 폴링 (30초 간격)
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchUnread = async () => {
+      try {
+        const data = await api.get<{ count: number }>("/api/notifications/unread-count");
+        setUnreadCount(data?.count ?? 0);
+      } catch {
+        // 백엔드 미구현 시 무시
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30_000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   const isDark = mounted && resolvedTheme === "dark";
 
   const handleMenuClick = () => {
     setShowGuide(false);
+    setShowSkip(false);
+    if (demoGuideStep === 1) setDemoGuideStep(2);
     setDrawerOpen(true);
   };
 
@@ -147,11 +170,33 @@ export default function Header() {
                 <ZoomIn size={20} />
               </button>
 
+            {/* 알림 벨 버튼 */}
+            <button
+              onClick={() => {
+                setUnreadCount(0);
+                router.push("/notifications");
+              }}
+              className="relative p-2 rounded-lg transition-colors active:scale-95"
+              style={{ color: isDark ? "#94a3b8" : "#9ca3af" }}
+              aria-label="알림"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+              )}
+            </button>
+
             {/* 메뉴 버튼 + 말풍선을 relative 컨테이너로 감쌈 */}
             <div className="relative">
+              {/* Step 1 가이드: 펄스 링 */}
+              {demoGuideStep === 1 && (
+                <span className="absolute inset-0 rounded-xl animate-ping bg-orange-400/70 pointer-events-none" />
+              )}
+
               <button
                 onClick={handleMenuClick}
-                className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl active:scale-95 transition-all"
+                className="relative p-2 rounded-xl active:scale-95 transition-all"
+                style={{ zIndex: demoGuideStep === 1 ? 1 : undefined }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.backgroundColor = isDark ? "#1e293b" : "#f3f4f6")
                 }
@@ -160,49 +205,49 @@ export default function Header() {
                 }
                 aria-label="메뉴 열기"
               >
-                <UserAvatar
-                  nickname={currentUser.name}
-                  profileImageUrl={currentUser.profileImageUrl}
-                  size="sm"
-                />
-                <span
-                  className="text-sm font-medium max-w-[6rem] truncate"
-                  style={{ color: isDark ? "#e2e8f0" : "#374151" }}
-                >
-                  {currentUser.name}
-                </span>
                 <Menu
-                  size={18}
-                  style={{ color: isDark ? "#64748b" : "#9ca3af" }}
-                  className="ml-0.5"
+                  size={20}
+                  style={{ color: demoGuideStep === 1 ? "#f97316" : isDark ? "#64748b" : "#9ca3af" }}
                 />
               </button>
 
-              {/* 말풍선 */}
-              <AnimatePresence>
-                {showGuide && (
-                  /* 외부 div: 입장/퇴장 페이드 */
-                  <motion.div
-                    className="absolute top-full right-0 mt-3 z-50"
-                    initial={{ opacity: 0, scale: 0.92 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.92 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                  >
-                    {/* 내부 div: 둥둥 float 효과 */}
+              {/* Step 1 가이드: 툴팁 말풍선 */}
+              {demoGuideStep === 1 && (
+                <motion.div
+                  className="absolute top-full right-0 mt-3 z-50 pointer-events-none"
+                  initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: [0, -4, 0] }}
+                  transition={{ y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" }, opacity: { duration: 0.2 }, scale: { duration: 0.2 } }}
+                >
+                  {/* 꼬리 (위쪽) */}
+                  <div className="absolute right-3.5 -top-1.5" style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "8px solid #f97316" }} />
+                  <div className="rounded-2xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg whitespace-nowrap">
+                    여기를 눌러주세요!
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 기존 MenuGuide 말풍선 (Step 1 가이드 중에는 숨김) */}
+              {demoGuideStep !== 1 && (
+                <AnimatePresence>
+                  {showGuide && (
                     <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 2.2,
-                        ease: "easeInOut",
-                      }}
+                      className="absolute top-full right-0 mt-3 z-50"
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.92 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
                     >
-                      <MenuGuide />
+                      <motion.div
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                      >
+                        <MenuGuide />
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </AnimatePresence>
+              )}
             </div>
             </div>
           ) : (
@@ -217,6 +262,45 @@ export default function Header() {
       </header>
 
       <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* Step 1 가이드 오버레이: z-[25] → 헤더(z-30) 아래, 본문 위 */}
+      {demoGuideStep === 1 && mounted && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50"
+          style={{ zIndex: 25 }}
+          onClick={() => setShowSkip(true)}
+        >
+          {showSkip && (
+            <div className="absolute inset-0 flex items-center justify-center px-8">
+              <div
+                className="w-full max-w-xs rounded-2xl bg-white px-6 py-5 text-center shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="mb-4 text-sm font-medium text-gray-800">가이드를 건너뛸까요?</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSkip(false)}
+                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem("demo_guide_skipped", "true");
+                      setDemoGuideStep(0);
+                      setShowSkip(false);
+                    }}
+                    className="flex-1 rounded-xl bg-gray-700 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+                  >
+                    건너뛰기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
     </>
   );
 }

@@ -13,29 +13,41 @@ import { useUiStore } from "@/stores/uiStore";
 interface DiaryFeedProps {
   data: DiaryPostPaginatedResponse;
   currentPage: number; // 1-based (URL 파라미터)
+  onRefresh?: () => Promise<void>;
+  onDelete?: (postId: number) => void;
 }
 
-export default function DiaryFeed({ data, currentPage }: DiaryFeedProps) {
+export default function DiaryFeed({ data, currentPage, onRefresh, onDelete }: DiaryFeedProps) {
   const router = useRouter();
   const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
+
   const isCommentOpen = useUiStore((state) => state.isCommentOpen);
+  const isImageViewerOpen = useUiStore((state) => state.isImageViewerOpen);
+  const setImageViewerOpen = useUiStore((state) => state.setImageViewerOpen);
 
   const handleRefresh = useCallback(async () => {
-    router.refresh();
-    // router.refresh()는 비동기가 아니므로 약간 대기해서 인디케이터를 자연스럽게 유지
-    await new Promise((r) => setTimeout(r, 800));
-  }, [router]);
+    setImageViewerOpen(false);
+    if (onRefresh) {
+      await onRefresh();
+    } else {
+      router.refresh();
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }, [router, setImageViewerOpen, onRefresh]);
 
   const { pullY, isRefreshing, progress } = usePullToRefresh({
     threshold: 72,
     onRefresh: handleRefresh,
-    disabled: isDrawerOpen || isCommentOpen,
+    disabled: isDrawerOpen || isCommentOpen || isImageViewerOpen,
   });
 
-  // DiaryCard.onDelete는 (postId: number) => void — 파라미터를 명시적으로 받되 무시
-  const handleDelete = useCallback((_postId: number) => {
-    router.refresh();
-  }, [router]);
+  const handleDelete = useCallback((postId: number) => {
+    if (onDelete) {
+      onDelete(postId);
+    } else {
+      router.refresh();
+    }
+  }, [router, onDelete]);
 
   const handlePageChange = useCallback((page: number) => {
     router.push(`/diary?page=${page}`);

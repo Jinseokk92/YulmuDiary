@@ -33,6 +33,57 @@ function formatEventDate(dateStr: string) {
   return `${parseInt(m)}월 ${parseInt(d)}일`;
 }
 
+/** 현재 시각 기준 가장 가까운 30분 단위 문자열 반환 (예: "14:30") */
+function roundToNearest30(date: Date): string {
+  const mins = date.getMinutes();
+  const roundedMins = Math.round(mins / 30) * 30;
+  const h = roundedMins === 60 ? (date.getHours() + 1) % 24 : date.getHours();
+  const m = roundedMins === 60 ? 0 : roundedMins;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** startTime에 1시간을 더한 기본 endTime 문자열 반환 */
+function defaultEndTime(startStr: string): string {
+  const [h, m] = startStr.split(":").map(Number);
+  return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** 시간 정보 표시 문자열 반환 (목록용 24h 포맷) */
+function formatTimeInfo(isAllDay: boolean, startTime: string | null, endTime: string | null): string {
+  if (isAllDay) return "하루종일";
+  if (startTime && endTime) return `${startTime} - ${endTime}`;
+  if (startTime) return startTime;
+  return "하루종일";
+}
+
+// ── 시간 휠 피커 상수 ─────────────────────────────────────────────────────────
+
+const AMPM_LIST = ["오전", "오후"] as const;
+const HOUR_LIST = ["12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"] as const;
+const MIN_LIST = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"] as const;
+const WHEEL_ITEM_H = 52; // px
+
+function to24hFromIndices(ampmIdx: number, hourIdx: number): number {
+  const h12 = hourIdx === 0 ? 12 : hourIdx;
+  return ampmIdx === 0 ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+}
+function to12hIndices(hour24: number): { ai: number; hi: number } {
+  if (hour24 === 0) return { ai: 0, hi: 0 };
+  if (hour24 < 12) return { ai: 0, hi: hour24 };
+  if (hour24 === 12) return { ai: 1, hi: 0 };
+  return { ai: 1, hi: hour24 - 12 };
+}
+function minuteToIndex(min: number): number {
+  return Math.round(min / 5) % 12;
+}
+/** 버튼에 표시할 12h 포맷 — "오전 9:30" */
+function formatDisplayTime(timeStr: string): string {
+  if (!timeStr) return "시간 선택";
+  const [h, m] = timeStr.split(":").map(Number);
+  const { ai, hi } = to12hIndices(h);
+  return `${AMPM_LIST[ai]} ${HOUR_LIST[hi]}:${String(m).padStart(2, "0")}`;
+}
+
 // ────────────────────────────────────────────────
 // 타입
 // ────────────────────────────────────────────────
@@ -310,6 +361,291 @@ function PinIcon({ className }: { className?: string }) {
 }
 
 // ────────────────────────────────────────────────
+// ScrollWheelColumn — iOS 스타일 스크롤 휠 단일 열
+// ────────────────────────────────────────────────
+
+interface WheelColumnProps {
+  items: readonly string[];
+  initialIndex: number;
+  onChange: (index: number) => void;
+}
+
+function ScrollWheelColumn({ items, initialIndex, onChange }: WheelColumnProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [displayIndex, setDisplayIndex] = useState(initialIndex);
+
+  // 마운트 시 초기 위치로 즉시 스크롤
+  useEffect(() => {
+    containerRef.current?.scrollTo({ top: initialIndex * WHEEL_ITEM_H, behavior: "instant" as ScrollBehavior });
+    setDisplayIndex(initialIndex);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const idx = Math.max(0, Math.min(items.length - 1, Math.round(el.scrollTop / WHEEL_ITEM_H)));
+    setDisplayIndex(idx); // 즉각 시각적 반영
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      el.scrollTo({ top: idx * WHEEL_ITEM_H, behavior: "smooth" });
+      onChange(idx);
+    }, 100);
+  }, [items.length, onChange]);
+
+  const VISIBLE = 5;
+  const PAD = Math.floor(VISIBLE / 2); // 2
+
+  return (
+    <div className="relative flex-1" style={{ height: WHEEL_ITEM_H * VISIBLE }}>
+      {/* 선택 영역 하이라이트 */}
+      <div
+        className="absolute left-1 right-1 rounded-xl pointer-events-none z-10"
+        style={{ top: PAD * WHEEL_ITEM_H, height: WHEEL_ITEM_H, background: "rgba(228,112,30,0.13)" }}
+      />
+      {/* 상단 페이드 마스크 */}
+      <div
+        className="absolute inset-x-0 top-0 pointer-events-none z-20"
+        style={{ height: PAD * WHEEL_ITEM_H, background: "linear-gradient(to bottom, #FFF8F2 30%, transparent)" }}
+      />
+      {/* 하단 페이드 마스크 */}
+      <div
+        className="absolute inset-x-0 bottom-0 pointer-events-none z-20"
+        style={{ height: PAD * WHEEL_ITEM_H, background: "linear-gradient(to top, #FFF8F2 30%, transparent)" }}
+      />
+      {/* 스크롤 컨테이너 */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        style={{ height: "100%", overflowY: "scroll", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch" }}
+        className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {/* 상단 패딩 (첫 항목이 중앙에 오도록) */}
+        {Array.from({ length: PAD }).map((_, i) => (
+          <div key={`tp${i}`} style={{ height: WHEEL_ITEM_H }} />
+        ))}
+        {items.map((item, idx) => (
+          <div
+            key={`${item}-${idx}`}
+            onClick={() => {
+              containerRef.current?.scrollTo({ top: idx * WHEEL_ITEM_H, behavior: "smooth" });
+              onChange(idx);
+            }}
+            style={{ height: WHEEL_ITEM_H, scrollSnapAlign: "center" }}
+            className={`flex items-center justify-center select-none cursor-pointer transition-all duration-150 ${
+              idx === displayIndex
+                ? "text-[#e4701e] font-bold text-2xl"
+                : "text-gray-400 text-lg font-normal"
+            }`}
+          >
+            {item}
+          </div>
+        ))}
+        {/* 하단 패딩 */}
+        {Array.from({ length: PAD }).map((_, i) => (
+          <div key={`bp${i}`} style={{ height: WHEEL_ITEM_H }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────
+// TimeWheelPicker — 바텀 시트 형태 시간 휠 피커
+// ────────────────────────────────────────────────
+
+interface TimeWheelPickerProps {
+  isOpen: boolean;
+  label: string;
+  value: string; // "HH:mm" 또는 ""
+  onClose: () => void;
+  onConfirm: (time: string) => void;
+}
+
+function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheelPickerProps) {
+  const parseValue = (v: string) => {
+    if (v && v.includes(":")) {
+      const [h, m] = v.split(":").map(Number);
+      return { h, m: Math.round(m / 5) * 5 % 60 };
+    }
+    const now = new Date();
+    return { h: now.getHours(), m: Math.round(now.getMinutes() / 5) * 5 % 60 };
+  };
+
+  const [ampmIdx, setAmpmIdx] = useState(() => to12hIndices(parseValue(value).h).ai);
+  const [hourIdx, setHourIdx] = useState(() => to12hIndices(parseValue(value).h).hi);
+  const [minIdx, setMinIdx] = useState(() => minuteToIndex(parseValue(value).m));
+  // rev가 바뀔 때마다 ScrollWheelColumn 리마운트 → 초기 스크롤 위치 재설정
+  const [rev, setRev] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      const { h, m } = parseValue(value);
+      const { ai, hi } = to12hIndices(h);
+      setAmpmIdx(ai);
+      setHourIdx(hi);
+      setMinIdx(minuteToIndex(m));
+      setRev((r) => r + 1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const handleConfirm = () => {
+    const h24 = to24hFromIndices(ampmIdx, hourIdx);
+    const m = parseInt(MIN_LIST[minIdx]);
+    onConfirm(`${String(h24).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  };
+
+  return (
+    <>
+      {/* 딤 오버레이 */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/20 transition-opacity duration-300 ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+      {/* 바텀 시트 */}
+      <div
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-[60] w-full max-w-lg transform transition-transform duration-300 ${
+          isOpen ? "translate-y-0" : "translate-y-full"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFF8F2", borderRadius: "24px 24px 0 0" }}
+      >
+        {/* 핸들 */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-orange-200" />
+        </div>
+        {/* 타이틀 */}
+        <p className="text-center text-base font-semibold text-gray-700 pt-2 pb-3">{label}</p>
+
+        {/* 세 개의 휠 */}
+        <div
+          className="flex mx-4 gap-1 rounded-2xl overflow-hidden"
+          style={{ background: "#FFF8F2" }}
+        >
+          <ScrollWheelColumn key={`ampm-${rev}`} items={AMPM_LIST} initialIndex={ampmIdx} onChange={setAmpmIdx} />
+          <ScrollWheelColumn key={`hour-${rev}`} items={HOUR_LIST} initialIndex={hourIdx} onChange={setHourIdx} />
+          <ScrollWheelColumn key={`min-${rev}`} items={MIN_LIST} initialIndex={minIdx} onChange={setMinIdx} />
+        </div>
+
+        {/* 버튼 */}
+        <div className="flex gap-3 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3.5 border border-gray-200 rounded-2xl text-gray-600 text-base font-medium bg-white"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="flex-1 py-3.5 rounded-2xl text-white text-base font-semibold"
+            style={{ background: "#e4701e" }}
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ────────────────────────────────────────────────
+// AllDayToggle — 시니어 친화적 종일 토글
+// ────────────────────────────────────────────────
+
+function AllDayToggle({ value, canEdit, onChange }: {
+  value: boolean;
+  canEdit: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => canEdit && onChange(!value)}
+      className={`w-full flex items-center justify-between px-4 rounded-2xl transition-all active:scale-[0.99] ${
+        canEdit ? "cursor-pointer" : "cursor-default opacity-70"
+      }`}
+      style={{ background: "#FFF3E8", minHeight: "58px" }}
+    >
+      <span className="text-base font-medium text-gray-700">하루 종일</span>
+      <div
+        className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200 ${
+          value ? "bg-[#e4701e]" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            value ? "translate-x-8" : "translate-x-1"
+          }`}
+        />
+      </div>
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────
+// TimeRangeRow — 시작/종료 시간 탭 버튼 행
+// ────────────────────────────────────────────────
+
+function TimeRangeRow({ startTime, endTime, canEdit, onStartTap, onEndTap }: {
+  startTime: string;
+  endTime: string;
+  canEdit: boolean;
+  onStartTap: () => void;
+  onEndTap: () => void;
+}) {
+  const btnBase =
+    "flex-1 flex flex-col items-center justify-center rounded-2xl gap-1 transition-all";
+  const btnActive = canEdit ? "active:scale-[0.97] cursor-pointer" : "cursor-default";
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={canEdit ? onStartTap : undefined}
+        className={`${btnBase} ${btnActive}`}
+        style={{ background: "#FFF3E8", minHeight: "66px" }}
+      >
+        <span className="text-xs text-gray-400 font-medium">시작</span>
+        <span className="text-lg font-bold text-[#e4701e] leading-tight">
+          {formatDisplayTime(startTime)}
+        </span>
+      </button>
+
+      {/* 화살표 */}
+      <div className="shrink-0">
+        <svg className="w-5 h-5 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </div>
+
+      <button
+        type="button"
+        onClick={canEdit ? onEndTap : undefined}
+        className={`${btnBase} ${btnActive}`}
+        style={{ background: "#FFF3E8", minHeight: "66px" }}
+      >
+        <span className="text-xs text-gray-400 font-medium">종료</span>
+        <span className="text-lg font-bold text-[#e4701e] leading-tight">
+          {formatDisplayTime(endTime)}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────
 // ScheduleSheet
 // ────────────────────────────────────────────────
 
@@ -339,6 +675,9 @@ function ScheduleSheet({
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [isAllDay, setIsAllDay] = useState(true);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [timePickerTarget, setTimePickerTarget] = useState<"start" | "end" | null>(null);
   const [place, setPlace] = useState<PlaceInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -351,6 +690,8 @@ function ScheduleSheet({
       setTitle("");
       setMemo("");
       setIsAllDay(true);
+      setStartTime("");
+      setEndTime("");
       setPlace(null);
     }
   }, [isOpen, selectedDate]);
@@ -366,6 +707,8 @@ function ScheduleSheet({
     setTitle(item.title);
     setMemo(item.memo ?? "");
     setIsAllDay(item.isAllDay);
+    setStartTime(item.startTime ?? "");
+    setEndTime(item.endTime ?? "");
     // DB에서 로드 시 lat/lng 없음 → KakaoMapView가 Geocoder로 조회
     setPlace(
       item.placeName
@@ -379,6 +722,9 @@ function ScheduleSheet({
     setTitle("");
     setMemo("");
     setIsAllDay(true);
+    const defaultStart = roundToNearest30(new Date());
+    setStartTime(defaultStart);
+    setEndTime(defaultEndTime(defaultStart));
     setPlace(null);
     setView("form");
   };
@@ -390,6 +736,10 @@ function ScheduleSheet({
 
   const handleCreate = async () => {
     if (!title.trim() || !selectedDate) return;
+    if (!isAllDay && (!startTime || !endTime)) {
+      alert("시작 시간과 종료 시간을 입력해주세요.");
+      return;
+    }
     setSaving(true);
     try {
       const body: ScheduleRequest = {
@@ -397,6 +747,8 @@ function ScheduleSheet({
         memo: memo.trim() || undefined,
         eventDate: selectedDate,
         isAllDay,
+        startTime: isAllDay ? undefined : startTime,
+        endTime: isAllDay ? undefined : endTime,
         placeName: place?.name || undefined,
         placeAddress: place?.address || undefined,
       };
@@ -412,6 +764,10 @@ function ScheduleSheet({
 
   const handleUpdate = async () => {
     if (!selectedItem || !title.trim()) return;
+    if (!isAllDay && (!startTime || !endTime)) {
+      alert("시작 시간과 종료 시간을 입력해주세요.");
+      return;
+    }
     setSaving(true);
     try {
       const body: ScheduleRequest = {
@@ -419,6 +775,8 @@ function ScheduleSheet({
         memo: memo.trim() || undefined,
         eventDate: selectedItem.eventDate,
         isAllDay,
+        startTime: isAllDay ? undefined : startTime,
+        endTime: isAllDay ? undefined : endTime,
         placeName: place?.name || undefined,
         placeAddress: place?.address || undefined,
       };
@@ -519,6 +877,9 @@ function ScheduleSheet({
                       <div className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                        <p className="text-xs text-primary-500 mt-0.5">
+                          {formatTimeInfo(s.isAllDay, s.startTime, s.endTime)}
+                        </p>
                         {s.placeName && (
                           <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-0.5">
                             <PinIcon className="w-3 h-3 shrink-0" />
@@ -580,16 +941,18 @@ function ScheduleSheet({
               />
               {/* 장소 + 지도 (PARENT: 수정 가능 / RELATIVE: 읽기 전용 지도 포함) */}
               <PlaceSearchField value={place} onChange={setPlace} readOnly={!isParent} />
-              <div className={`flex items-center gap-2 ${isParent ? "cursor-pointer" : "cursor-default"}`}>
-                <input
-                  type="checkbox"
-                  checked={isAllDay}
-                  onChange={isParent ? (e) => setIsAllDay(e.target.checked) : undefined}
-                  readOnly={!isParent}
-                  className="w-4 h-4 accent-primary-500"
+              {/* 종일 토글 */}
+              <AllDayToggle value={isAllDay} canEdit={isParent} onChange={setIsAllDay} />
+              {/* 시간 입력 (종일 아닌 경우) */}
+              {!isAllDay && (
+                <TimeRangeRow
+                  startTime={startTime}
+                  endTime={endTime}
+                  canEdit={isParent}
+                  onStartTap={() => setTimePickerTarget("start")}
+                  onEndTap={() => setTimePickerTarget("end")}
                 />
-                <span className="text-sm text-gray-600">하루 종일</span>
-              </div>
+              )}
             </div>
           )}
 
@@ -616,15 +979,18 @@ function ScheduleSheet({
               />
               {/* 장소 검색 + 지도 */}
               <PlaceSearchField value={place} onChange={setPlace} />
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isAllDay}
-                  onChange={(e) => setIsAllDay(e.target.checked)}
-                  className="w-4 h-4 accent-primary-500"
+              {/* 종일 토글 */}
+              <AllDayToggle value={isAllDay} canEdit={true} onChange={setIsAllDay} />
+              {/* 시간 입력 (종일 아닌 경우) */}
+              {!isAllDay && (
+                <TimeRangeRow
+                  startTime={startTime}
+                  endTime={endTime}
+                  canEdit={true}
+                  onStartTap={() => setTimePickerTarget("start")}
+                  onEndTap={() => setTimePickerTarget("end")}
                 />
-                <span className="text-sm text-gray-600">하루 종일</span>
-              </label>
+              )}
             </div>
           )}
         </div>
@@ -689,6 +1055,19 @@ function ScheduleSheet({
           )}
         </div>
       </div>
+
+      {/* 시간 휠 피커 — ScheduleSheet 위에 z-[60]으로 렌더 */}
+      <TimeWheelPicker
+        isOpen={timePickerTarget !== null}
+        label={timePickerTarget === "start" ? "시작 시간" : "종료 시간"}
+        value={timePickerTarget === "start" ? startTime : endTime}
+        onClose={() => setTimePickerTarget(null)}
+        onConfirm={(t) => {
+          if (timePickerTarget === "start") setStartTime(t);
+          else setEndTime(t);
+          setTimePickerTarget(null);
+        }}
+      />
     </>
   );
 }
@@ -914,6 +1293,9 @@ export default function SchedulePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                    <p className="text-xs text-primary-500 mt-0.5">
+                      {formatTimeInfo(s.isAllDay, s.startTime, s.endTime)}
+                    </p>
                     {s.placeName && (
                       <p className="text-xs text-gray-500 flex items-center gap-0.5 mt-0.5">
                         <PinIcon className="w-3 h-3 shrink-0" />

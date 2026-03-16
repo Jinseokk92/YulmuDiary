@@ -236,15 +236,24 @@ export default function AlbumDetailPage() {
         ) : (
           <>
             <div className="relative w-full aspect-square bg-black">
-              <Image
-                src={getMediaUrl(photo.url)}
-                alt={photo.caption ?? "앨범 사진"}
-                fill
-                className="object-contain"
-                sizes="100vw"
-                priority
-                unoptimized={photo.url.startsWith("http://localhost")}
-              />
+              {(() => {
+                const src = getMediaUrl(photo.url);
+                return (
+                  <Image
+                    src={src}
+                    alt={photo.caption ?? "앨범 사진"}
+                    fill
+                    className="object-contain"
+                    sizes="100vw"
+                    priority
+                    unoptimized={
+                      src.startsWith("http://localhost") ||
+                      src.startsWith("data:") ||
+                      src.startsWith("blob:")
+                    }
+                  />
+                );
+              })()}
               <button
                 type="button"
                 onClick={handleToggleFavorite}

@@ -60,6 +60,8 @@ public class ScheduleService {
                 .memo(request.getMemo())
                 .eventDate(request.getEventDate())
                 .isAllDay(request.getIsAllDay())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
                 .placeName(request.getPlaceName())
                 .placeAddress(request.getPlaceAddress())
                 .build();
@@ -82,6 +84,7 @@ public class ScheduleService {
         validateSameFamilyGroup(userId, schedule.getAuthor().getId());
 
         schedule.update(request.getTitle(), request.getMemo(), request.getEventDate(), request.getIsAllDay(),
+                request.getStartTime(), request.getEndTime(),
                 request.getPlaceName(), request.getPlaceAddress());
         return ScheduleResponse.from(schedule);
     }

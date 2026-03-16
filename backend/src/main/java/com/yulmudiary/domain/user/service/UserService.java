@@ -4,6 +4,8 @@ import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
 import com.yulmudiary.domain.diary.repository.ReactionRepository;
 import com.yulmudiary.domain.media.dto.ImagePaths;
 import com.yulmudiary.domain.media.service.ImageStorageService;
+import com.yulmudiary.domain.user.dto.NotificationSettingsRequest;
+import com.yulmudiary.domain.user.dto.NotificationSettingsResponse;
 import com.yulmudiary.domain.user.dto.UserResponse;
 import com.yulmudiary.domain.user.dto.UserStatsResponse;
 import com.yulmudiary.domain.user.dto.UserUpdateRequest;
@@ -58,6 +60,23 @@ public class UserService {
                 .photoCount(photoCount)
                 .reactionCount(reactionCount)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationSettingsResponse getNotificationSettings(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+        return NotificationSettingsResponse.from(user);
+    }
+
+    @Transactional
+    public NotificationSettingsResponse updateNotificationSettings(Long userId,
+                                                                    NotificationSettingsRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+        user.updateNotificationSettings(request.commentNotificationEnabled(),
+                request.reactionNotificationEnabled());
+        return NotificationSettingsResponse.from(user);
     }
 
     private void validateImageFile(MultipartFile file) {

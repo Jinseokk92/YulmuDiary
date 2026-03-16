@@ -6,14 +6,17 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
-  X, Moon, Sun, LogOut, PenLine, ChevronDown,
-  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2, Bookmark,
+  X, Moon, Sun, LogOut, LogIn, PenLine, ChevronDown,
+  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2, Bookmark, RotateCcw,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/authStore";
+import { useUiStore } from "@/stores/uiStore";
 import { api } from "@/lib/api";
 import UserAvatar from "@/components/ui/UserAvatar";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { resetDemoData } from "@/lib/demoData";
 import type { UserResponse, UserStatsResponse } from "@/types";
 
 interface SideDrawerProps {
@@ -103,7 +106,9 @@ function AccordionItem({ label, icon, rowHover, itemColor, onClick }: {
 export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const { currentUser, logout } = useUser();
   const { isParent } = useAuth();
-  const { setUser } = useAuthStore();
+  const { setUser, isDemoMode, deactivateDemo } = useAuthStore();
+  const demoGuideStep = useUiStore((state) => state.demoGuideStep);
+  const setDemoGuideStep = useUiStore((state) => state.setDemoGuideStep);
   const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -119,7 +124,9 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [demoNotice, setDemoNotice] = useState(false);
   const [stats, setStats] = useState<UserStatsResponse | null>(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -140,6 +147,13 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
       setOpenSection("activity");
     }
   }, [isOpen]);
+
+  // Step 2 중 드로어가 닫히면 Step 1로 복원 (클로즈 애니메이션 후)
+  useEffect(() => {
+    if (isOpen || demoGuideStep !== 2) return;
+    const t = setTimeout(() => setDemoGuideStep(1), 350);
+    return () => clearTimeout(t);
+  }, [isOpen, demoGuideStep, setDemoGuideStep]);
 
   // 스크롤 잠금 — position:fixed 방식 (iOS Safari 대응)
   useEffect(() => {
@@ -204,6 +218,7 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
     setPhotoUploading(false);
     setPhotoError(null);
     setSaveError(null);
+    setDemoNotice(false);
     setView("profile");
   };
 
@@ -211,7 +226,12 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    e.target.value = ""; // 같은 파일 재선택 허용
+    e.target.value = "";
+
+    if (isDemoMode) {
+      setDemoNotice(true);
+      return;
+    }
 
     const localUrl = URL.createObjectURL(file);
     setPhotoPreview(localUrl); // 낙관적 프리뷰
@@ -240,6 +260,12 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   // 저장
   const handleSaveProfile = async () => {
     if (!editNickname.trim()) return;
+
+    if (isDemoMode) {
+      setDemoNotice(true);
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     try {
@@ -283,6 +309,7 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   if (!mounted) return null;
 
   const drawer = (
+    <>
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[1100]">
@@ -347,6 +374,11 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                           <span className={subText}>님</span>
                         </p>
                         <p className={`mt-0.5 text-xs ${subText}`}>{roleText}</p>
+                        {isDemoMode && (
+                          <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-600 font-medium mt-1">
+                            체험판
+                          </span>
+                        )}
                         {currentUser?.bio && (
                           <p
                             className={`mt-2 text-xs leading-snug ${isDark ? "text-slate-300" : "text-gray-600"}`}
@@ -407,21 +439,69 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                           <ToggleSwitch checked={isDark} onChange={() => setTheme(isDark ? "light" : "dark")} />
                         </div>
                       </div>
-                      <AccordionItem label="알림 설정" icon={<Bell size={14} />} rowHover={rowHover} itemColor={itemColor} />
-                      <AccordionItem label="앱 정보"   icon={<Info size={14} />} rowHover={rowHover} itemColor={itemColor} />
+                      <AccordionItem label="알림 설정" icon={<Bell size={14} />} rowHover={rowHover} itemColor={itemColor} onClick={() => { onClose(); router.push("/settings/notifications"); }} />
+                      <AccordionItem label="앱 정보"   icon={<Info size={14} />} rowHover={rowHover} itemColor={itemColor} onClick={() => { onClose(); router.push("/about"); }} />
                     </AccordionSection>
                   </div>
 
-                  {/* 로그아웃 */}
+                  {/* 로그아웃 / 로그인하기 */}
                   <div className={`border-t px-5 pb-8 pt-4 shrink-0 ${divider}`}>
-                    <button onClick={handleLogout}
-                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-sm font-medium text-red-400 transition-colors ${
-                        isDark ? "hover:bg-red-500/10" : "hover:bg-red-50"
-                      }`}
-                    >
-                      <LogOut size={18} />
-                      로그아웃
-                    </button>
+                    {isDemoMode ? (
+                      <div className="flex flex-col gap-2">
+                        {/* Step 2 가이드: 펄스 + 툴팁 */}
+                        <div className="relative">
+                          {demoGuideStep === 2 && (
+                            <>
+                              <span className="absolute inset-0 rounded-2xl animate-ping bg-orange-400/60 pointer-events-none" />
+                              <div className="absolute bottom-full left-0 right-0 pointer-events-none" style={{ paddingBottom: "8px" }}>
+                                <div className="relative inline-block w-full">
+                                  {/* 꼬리 (아래쪽) */}
+                                  <div className="absolute left-5 -bottom-1.5" style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "8px solid #f97316" }} />
+                                  <motion.div
+                                    animate={{ y: [0, -4, 0] }}
+                                    transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                                    className="rounded-2xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg"
+                                  >
+                                    여기를 눌러 데이터를 초기화하세요!
+                                  </motion.div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          <button
+                            onClick={() => setResetConfirmOpen(true)}
+                            className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-colors ${
+                              demoGuideStep === 2
+                                ? "bg-orange-50 text-orange-600"
+                                : isDark
+                                  ? "text-slate-400 hover:bg-slate-800"
+                                  : "text-gray-400 hover:bg-gray-50"
+                            }`}
+                          >
+                            <RotateCcw size={16} />
+                            체험판 초기화
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => { deactivateDemo(); onClose(); router.push("/login"); }}
+                          className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-sm font-medium text-primary-500 transition-colors ${
+                            isDark ? "hover:bg-primary-500/10" : "hover:bg-primary-50"
+                          }`}
+                        >
+                          <LogIn size={18} />
+                          로그인하기
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={handleLogout}
+                        className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-sm font-medium text-red-400 transition-colors ${
+                          isDark ? "hover:bg-red-500/10" : "hover:bg-red-50"
+                        }`}
+                      >
+                        <LogOut size={18} />
+                        로그아웃
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -527,6 +607,23 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
 
                   {/* 저장 / 취소 버튼 */}
                   <div className={`border-t px-5 pb-8 pt-4 flex flex-col gap-2 shrink-0 ${divider}`}>
+                    {demoNotice && (
+                      <div
+                        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs"
+                        style={{ backgroundColor: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }}
+                      >
+                        <span className="flex-1 leading-snug">
+                          프로필 수정은 로그인 후 이용할 수 있어요
+                        </span>
+                        <button
+                          onClick={() => { deactivateDemo(); onClose(); router.push("/login"); }}
+                          className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold"
+                          style={{ backgroundColor: "#ea580c", color: "#ffffff" }}
+                        >
+                          로그인
+                        </button>
+                      </div>
+                    )}
                     {saveError && (
                       <p className="text-center text-xs text-red-400">{saveError}</p>
                     )}
@@ -558,6 +655,24 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
         </div>
       )}
     </AnimatePresence>
+    {/* 체험판 초기화 확인 모달 — z-[1200]으로 드로어(z-[1100]) 위에 렌더 */}
+    <div className="relative z-[1200]">
+      <ConfirmModal
+        open={resetConfirmOpen}
+        title="체험판 데이터를 모두 초기화할까요?"
+        description="작성한 글과 일정이 모두 사라져요."
+        confirmLabel="초기화"
+        onConfirm={() => {
+          resetDemoData();
+          setDemoGuideStep(0);
+          setResetConfirmOpen(false);
+          onClose();
+          router.push("/");
+        }}
+        onCancel={() => setResetConfirmOpen(false)}
+      />
+    </div>
+    </>
   );
 
   return createPortal(drawer, document.body);

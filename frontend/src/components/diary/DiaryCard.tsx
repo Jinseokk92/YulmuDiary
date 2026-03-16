@@ -69,6 +69,8 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
 
   // ─── 댓글 시트 ─────────────────────────────────────────────────────
   const setCommentOpen = useUiStore((s) => s.setCommentOpen);
+  const isImageViewerOpen = useUiStore((s) => s.isImageViewerOpen);
+  const setImageViewerOpen = useUiStore((s) => s.setImageViewerOpen);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
   const handleBubbleClick = useCallback(() => {
     setCommentOpen(true);
@@ -151,11 +153,21 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
   const handleImageClick = useCallback((index: number) => {
     setViewerIndex(index);
     setViewerOpen(true);
-  }, []);
+    setImageViewerOpen(true);
+  }, [setImageViewerOpen]);
 
   const handleViewerClose = useCallback(() => {
     setViewerOpen(false);
-  }, []);
+    setImageViewerOpen(false);
+  }, [setImageViewerOpen]);
+
+  // 안전장치: PTR 등 외부 원인으로 isImageViewerOpen이 false가 되면 로컬 뷰어도 강제 닫기
+  // (예: soft refresh 직전 DiaryFeed에서 setImageViewerOpen(false) 호출 시)
+  useEffect(() => {
+    if (!isImageViewerOpen && viewerOpen) {
+      setViewerOpen(false);
+    }
+  }, [isImageViewerOpen, viewerOpen]);
 
   // ─── 좋아요(Heart) 상태 ────────────────────────────────────────────
   const [reactions, setReactions] = useState<ReactionResponse[]>(post.reactions ?? []);

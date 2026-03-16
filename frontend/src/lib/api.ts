@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/types";
 import { getAccessToken } from "@/stores/authStore";
+import { handleDemoRequest } from "@/lib/demoData";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/$/, "");
 
@@ -21,6 +22,17 @@ async function request<T>(
   options?: RequestInit
 ): Promise<T> {
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  // 체험판 모드 인터셉트
+  if (typeof window !== "undefined" && sessionStorage.getItem("demoMode") === "true") {
+    const method = options?.method ?? "GET";
+    let body: unknown;
+    if (options?.body && typeof options.body === "string") {
+      try { body = JSON.parse(options.body); } catch { body = options.body; }
+    }
+    return handleDemoRequest<T>(cleanEndpoint, method, body);
+  }
+
   const url = `${API_BASE_URL}${cleanEndpoint}`;
 
   console.log(`📡 [API Request] ${options?.method || "GET"} ${url}`);
@@ -174,6 +186,13 @@ export const api = {
       ...options,
       method: "PUT",
       body: formData,
+    }),
+
+  patch: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: body ? JSON.stringify(body) : undefined,
     }),
 
   delete: <T>(endpoint: string, options?: RequestInit) =>

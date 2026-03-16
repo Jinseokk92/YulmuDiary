@@ -117,7 +117,12 @@ export function formatRelativeTime(dateStr: string): string {
  * 미디어 URL이 상대 경로면 API 서버 URL을 붙여 절대 경로로 변환
  */
 export function getMediaUrl(url: string): string {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
+  ) {
     return url;
   }
   const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";

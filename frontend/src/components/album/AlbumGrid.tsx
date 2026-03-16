@@ -236,14 +236,23 @@ export default function AlbumGrid({ initialData }: AlbumGridProps) {
                 onClick={() => router.push(`/album/${photo.id}`)}
                 className="relative aspect-square overflow-hidden bg-gray-200 active:opacity-75 transition-opacity"
               >
-                <Image
-                  src={getMediaUrl(photo.thumbnailUrl ?? photo.url)}
-                  alt={photo.caption ?? "앨범 사진"}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 33vw, 200px"
-                  unoptimized={photo.url.startsWith("http://localhost")}
-                />
+                {(() => {
+                  const src = getMediaUrl(photo.thumbnailUrl ?? photo.url);
+                  return (
+                    <Image
+                      src={src}
+                      alt={photo.caption ?? "앨범 사진"}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 33vw, 200px"
+                      unoptimized={
+                        src.startsWith("http://localhost") ||
+                        src.startsWith("data:") ||
+                        src.startsWith("blob:")
+                      }
+                    />
+                  );
+                })()}
               </button>
             ))}
           </div>

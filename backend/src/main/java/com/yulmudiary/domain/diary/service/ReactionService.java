@@ -10,6 +10,8 @@ import com.yulmudiary.domain.diary.entity.Reaction;
 import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
 import com.yulmudiary.domain.diary.repository.ReactionRepository;
 import com.yulmudiary.domain.media.service.MediaUrlResolver;
+import com.yulmudiary.domain.notification.entity.NotificationType;
+import com.yulmudiary.domain.notification.service.NotificationService;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +33,7 @@ public class ReactionService {
     private final DiaryPostRepository diaryPostRepository;
     private final UserRepository userRepository;
     private final MediaUrlResolver mediaUrlResolver;
+    private final NotificationService notificationService;
 
     // ── 내 반응 (사용자 기반 커서 페이징) ─────────────────────────
 
@@ -97,6 +100,11 @@ public class ReactionService {
                 .build();
 
         reactionRepository.save(reaction);
+
+        // 일기 작성자에게 반응 알림 — extra: 이모지 문자열
+        notificationService.create(user, post.getAuthor(), post,
+                NotificationType.REACTION, request.emoji());
+
         return ReactionResponse.from(reaction);
     }
 }

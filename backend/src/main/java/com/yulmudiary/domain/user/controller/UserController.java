@@ -4,6 +4,8 @@ import com.yulmudiary.domain.diary.dto.MyCommentPageResponse;
 import com.yulmudiary.domain.diary.dto.MyReactionPageResponse;
 import com.yulmudiary.domain.diary.service.CommentService;
 import com.yulmudiary.domain.diary.service.ReactionService;
+import com.yulmudiary.domain.user.dto.NotificationSettingsRequest;
+import com.yulmudiary.domain.user.dto.NotificationSettingsResponse;
 import com.yulmudiary.domain.user.dto.UserResponse;
 import com.yulmudiary.domain.user.dto.UserStatsResponse;
 import com.yulmudiary.domain.user.dto.UserUpdateRequest;
@@ -79,6 +81,23 @@ public class UserController {
             @RequestParam(defaultValue = "30") int size) {
         Long userId = (Long) authentication.getPrincipal();
         return ApiResponse.success(reactionService.getByUser(userId, cursor, size));
+    }
+
+    @Operation(summary = "내 알림 설정 조회")
+    @GetMapping("/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> getNotificationSettings(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(userService.getNotificationSettings(userId));
+    }
+
+    @Operation(summary = "내 알림 설정 변경")
+    @PatchMapping("/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> updateNotificationSettings(
+            Authentication authentication,
+            @RequestBody NotificationSettingsRequest request) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(userService.updateNotificationSettings(userId, request));
     }
 
     @Operation(summary = "내 프로필 사진 변경")

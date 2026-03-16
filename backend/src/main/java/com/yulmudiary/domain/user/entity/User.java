@@ -40,6 +40,12 @@ public class User extends BaseTimeEntity {
     @Column(length = 100)
     private String bio;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean commentNotificationEnabled = true;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean reactionNotificationEnabled = true;
+
     @Builder
     public User(String email, String name, String provider, String providerId,
                 Role role, String profileImageUrl) {
@@ -49,6 +55,8 @@ public class User extends BaseTimeEntity {
         this.providerId = providerId;
         this.role = role != null ? role : Role.USER;
         this.profileImageUrl = profileImageUrl;
+        this.commentNotificationEnabled = true;
+        this.reactionNotificationEnabled = true;
     }
 
     /** OAuth 로그인 시 소셜 프로필 동기화 (기존 흐름 유지) */
@@ -66,5 +74,12 @@ public class User extends BaseTimeEntity {
     /** 사용자가 직접 프로필 사진 변경 */
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
+    }
+
+    /** 알림 설정 변경 */
+    public void updateNotificationSettings(boolean commentNotificationEnabled,
+                                           boolean reactionNotificationEnabled) {
+        this.commentNotificationEnabled = commentNotificationEnabled;
+        this.reactionNotificationEnabled = reactionNotificationEnabled;
     }
 }
