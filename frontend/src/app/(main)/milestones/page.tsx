@@ -304,6 +304,12 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-primary-500"
     : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary-400";
   const labelCls = isDark ? "text-slate-300" : "text-gray-700";
+  const fieldCls = `w-full rounded-2xl border box-border text-[16px] outline-none transition-colors ${inputCls}`;
+  const singleLineFieldCls = `${fieldCls} min-h-[54px] px-4 py-[0.9375rem] leading-[1.35]`;
+  const textareaFieldCls = `${fieldCls} min-h-[124px] px-4 py-3 leading-[1.5] resize-none`;
+  const footerCls = isDark
+    ? "border-slate-800 bg-slate-900/95 supports-[backdrop-filter]:bg-slate-900/90"
+    : "border-gray-100 bg-white/95 supports-[backdrop-filter]:bg-white/90";
   const photoItems: PhotoItem[] = [
     ...existingPhotos.map((photo) => ({ kind: "existing" as const, ...photo })),
     ...newPhotos.map((photo) => ({ kind: "new" as const, ...photo })),
@@ -410,6 +416,10 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     setNewPhotos((prev) => prev.filter((item) => item.id !== photo.id));
   };
 
+  const openPhotoLibraryPicker = () => {
+    fileRef.current?.click();
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!date) { setError("날짜를 선택해주세요."); return; }
     if (totalPhotoCount === 0) { setError("사진을 최소 1장 추가해주세요."); return; }
@@ -453,26 +463,26 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
         animate={{ y: 0, transition: { type: "spring", stiffness: 400, damping: 40 } }}
         exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
         className={`fixed left-0 right-0 mx-auto w-full max-w-lg rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)]
-          flex flex-col overflow-hidden ${bg}`}
+          flex flex-col overflow-hidden box-border border-t ${isDark ? "border-slate-800" : "border-gray-100"} ${bg}`}
         style={{
           y: dismissY,
           bottom: keyboardHeight,
-          ...(sheetMaxHeight ? { maxHeight: sheetMaxHeight } : {}),
+          maxHeight: sheetMaxHeight ?? "92vh",
           zIndex: 111,
         }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {/* 드래그 핸들 */}
         <div ref={handleAreaRef} style={{ touchAction: "none" }} className="shrink-0">
-          <div className="flex justify-center pt-3 pb-1">
+          <div className="flex justify-center pt-3 pb-2">
             <div className={`w-10 h-1 rounded-full ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
           </div>
-          <div className={`flex items-center justify-between px-5 py-3 border-b ${isDark ? "border-slate-800" : "border-gray-100"}`}>
-            <h3 className="text-base font-bold">
+          <div className={`flex items-center justify-between px-5 pt-1 pb-4 border-b ${isDark ? "border-slate-800" : "border-gray-100"}`}>
+            <h3 className="text-[17px] font-bold leading-6">
               {isEdit ? "기록 수정" : `${milestone.title} 기록하기`}
             </h3>
             <button onClick={onClose}
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"}`}>
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"}`}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -486,7 +496,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
           style={{ touchAction: "pan-y" }}
           onTouchMove={(e) => e.stopPropagation()}
         >
-          <div className="p-5 space-y-4">
+          <div className="px-5 pt-5 pb-6 space-y-5">
             {/* 날짜 */}
             <div>
               <label className={`block text-xs font-semibold mb-1.5 ${labelCls}`}>달성 날짜 *</label>
@@ -494,7 +504,8 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 type="date" value={date}
                 onChange={(e) => setDate(e.target.value)}
                 max={today}
-                className={`w-full px-3 py-2 rounded-xl border text-sm outline-none transition-colors ${inputCls}`}
+                className={`${singleLineFieldCls} milestone-sheet-date-field`}
+                style={{ WebkitTextSizeAdjust: "100%" }}
               />
             </div>
 
@@ -505,28 +516,29 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="이 순간을 기록해주세요"
-                rows={3}
-                className={`w-full px-3 py-2 rounded-xl border text-sm outline-none transition-colors resize-none ${inputCls}`}
+                rows={4}
+                className={textareaFieldCls}
+                style={{ WebkitTextSizeAdjust: "100%" }}
               />
             </div>
 
             {/* 사진 */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-3 mb-2.5">
                 <label className={`text-xs font-semibold ${labelCls}`}>
                   사진 ({totalPhotoCount}/{MAX_PHOTOS})
                 </label>
                 {hasPhotos && (
-                  <span className={`text-[11px] ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                  <span className={`text-[11px] leading-4 text-right ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                     기존 + 새 사진을 한 화면에서 관리
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-3 gap-3">
                 {photoItems.map((p, idx) => (
                   <div
                     key={p.id}
-                    className={`relative aspect-square overflow-hidden rounded-2xl border ${isDark ? "border-slate-800 bg-slate-800" : "border-gray-100 bg-gray-100"}`}
+                    className={`relative aspect-square overflow-hidden rounded-2xl border box-border ${isDark ? "border-slate-800 bg-slate-800" : "border-gray-100 bg-gray-100"}`}
                   >
                     <Image
                       src={getPhotoSrc(p)}
@@ -550,9 +562,9 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 {canAddMore && (
                   <button
                     type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className={`rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-colors
-                      ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[148px] gap-2.5"}
+                    onClick={openPhotoLibraryPicker}
+                    className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors
+                      ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[168px] gap-2.5"}
                       ${isDark ? "border-slate-700 hover:border-primary-500 text-slate-500" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
                   >
                     {hasPhotos ? (
@@ -582,7 +594,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 type="file"
                 accept="image/*"
                 multiple
-                capture="environment"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -593,16 +604,35 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
         </div>
 
         {/* 저장 버튼 */}
-        <div className="shrink-0 px-5 pt-3" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
+        <div
+          className={`shrink-0 border-t px-5 pt-4 backdrop-blur-sm ${footerCls}`}
+          style={{ paddingBottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+        >
           <button
             onClick={handleSubmit}
             disabled={saving || !date}
-            className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm
-              hover:bg-primary-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[54px] rounded-2xl bg-primary-500 px-4 py-3.5 text-[15px] font-semibold text-white hover:bg-primary-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "저장 중..." : isEdit ? "수정하기" : "저장"}
           </button>
         </div>
+
+        <style jsx global>{`
+          .milestone-sheet-date-field {
+            font: inherit;
+          }
+
+          .milestone-sheet-date-field::-webkit-datetime-edit,
+          .milestone-sheet-date-field::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+          }
+
+          .milestone-sheet-date-field::-webkit-datetime-edit,
+          .milestone-sheet-date-field::-webkit-date-and-time-value {
+            min-height: 1.35em;
+            line-height: 1.35;
+          }
+        `}</style>
       </motion.div>
     </>,
     document.body
