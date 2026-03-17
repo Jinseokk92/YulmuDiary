@@ -11,6 +11,7 @@ interface ConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  zIndex?: number;
 }
 
 export default function ConfirmModal({
@@ -22,6 +23,7 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   loading = false,
+  zIndex = 50,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
@@ -43,7 +45,7 @@ export default function ConfirmModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex }}>
       {/* 백드롭 */}
       <div
         className="absolute inset-0 bg-black/40"

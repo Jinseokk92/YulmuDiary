@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { calcDday, calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
+import { api } from "@/lib/api";
 import { HOME_BGM_ANCHOR_ID } from "@/components/BgmPlayerUI";
 import FloatingYulmu from "@/components/FloatingYulmu";
+import type { BabyResponse } from "@/types";
 
-// ─── 날짜 상수 ─────────────────────────────────────────────────────────────
-const YULMU_DUE_DATE = "2026-06-27";
+const BABY_ID = 1;
 
 export default function Home() {
   const HERO_FRAME_WIDTH = 184;
@@ -23,10 +23,18 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    setDday(calcDday(YULMU_DUE_DATE));
-    const lmp = calcLmpFromDueDate(YULMU_DUE_DATE);
-    const { weeks, days } = calcPregnancyWeek(lmp);
-    setPregnancyDisplay(days === 0 ? `${weeks}주` : `${weeks}주 ${days}일`);
+    api.get<BabyResponse>(`/api/babies/${BABY_ID}`)
+      .then((baby) => {
+        const { dDayCount, pregnancyWeeks, pregnancyDays } = baby;
+        // D-day 표시: 양수=D-N(미래), 0=D-Day, 음수=D+N(과거)
+        if (dDayCount === 0) setDday("D-Day");
+        else if (dDayCount > 0) setDday(`D-${dDayCount}`);
+        else setDday(`D+${Math.abs(dDayCount)}`);
+        setPregnancyDisplay(pregnancyDays === 0 ? `${pregnancyWeeks}주` : `${pregnancyWeeks}주 ${pregnancyDays}일`);
+      })
+      .catch(() => {
+        // API 실패 시 표시 없음 유지
+      });
   }, []);
 
   const isDark = mounted && resolvedTheme === "dark";

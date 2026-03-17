@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtProvider jwtProvider;
     private final FamilyService familyService;
+    private final Environment env;
 
     @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
@@ -54,7 +57,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         Cookie cookie = new Cookie("refresh_token", refreshToken);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // 개발환경: false, 운영환경: true
+        cookie.setSecure(env.acceptsProfiles(Profiles.of("prod"))); // prod 프로파일: true, local: false
         cookie.setPath("/");
         cookie.setMaxAge((int) (refreshTokenExpiry / 1000));
         response.addCookie(cookie);

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   X, Moon, Sun, LogOut, LogIn, PenLine, ChevronDown,
-  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2, Bookmark, RotateCcw,
+  FileText, Heart, MessageCircle, Bell, Info, ArrowLeft, Camera, Loader2, Bookmark, RotateCcw, Shield,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -407,6 +407,21 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
 
                   {/* 아코디언 메뉴 */}
                   <div className="flex-1 py-2">
+                    {/* 관리자 전용 메뉴 */}
+                    {currentUser?.isAdmin && (
+                      <div className="px-3 py-0.5">
+                        <button
+                          onClick={() => { onClose(); router.push("/family-manage"); }}
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors ${rowHover}`}
+                        >
+                          <Shield size={14} className="text-primary-500 shrink-0" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-primary-500">
+                            가족 관리
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
                     <AccordionSection title="내 활동" isOpen={openSection === "activity"}
                       onToggle={() => toggleSection("activity")} rowHover={rowHover} labelColor={labelColor}
                     >

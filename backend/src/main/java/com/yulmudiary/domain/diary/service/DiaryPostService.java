@@ -162,11 +162,16 @@ public class DiaryPostService {
     }
 
     @Transactional
-    public void delete(Long id, Long authorId) {
+    public void delete(Long id, Long requesterId) {
         DiaryPost post = diaryPostRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("일기를 찾을 수 없습니다. id=" + id));
 
-        validateAuthor(post, authorId);
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다. id=" + requesterId));
+
+        if (!requester.isAdmin()) {
+            validateAuthor(post, requesterId);
+        }
 
         diaryPostRepository.delete(post);
     }

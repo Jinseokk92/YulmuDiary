@@ -36,6 +36,12 @@ public class Baby extends BaseTimeEntity {
     @JoinColumn(name = "family_group_id", nullable = false)
     private FamilyGroup familyGroup;
 
+    /** 아기 이름·출생(예정)일 변경 */
+    public void updateInfo(String name, LocalDate birthDate) {
+        this.name = name;
+        this.birthDate = birthDate;
+    }
+
     @Builder
     public Baby(String name, LocalDate birthDate, Gender gender, String profileImageUrl,
                 FamilyGroup familyGroup) {

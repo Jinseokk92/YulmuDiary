@@ -29,11 +29,14 @@ export default function CommentSection({
               {formatRelativeTime(c.createdAt)}
             </span>
           </div>
-          {currentUser?.id === c.authorId && (
+          {(currentUser?.id === c.authorId || currentUser?.isAdmin) && (
             <button
               onClick={() => onDelete(c.id)}
-              className="shrink-0 opacity-0 group-hover:opacity-100 p-2
-                         text-gray-300 dark:text-slate-600 hover:text-red-400 transition-all"
+              className={`shrink-0 p-2 text-gray-300 dark:text-slate-600 hover:text-red-400 transition-all
+                ${currentUser?.id === c.authorId
+                  ? "opacity-0 group-hover:opacity-100"
+                  : "opacity-50 active:opacity-100"
+                }`}
               aria-label="댓글 삭제"
             >
               <svg

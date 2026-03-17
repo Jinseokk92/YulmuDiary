@@ -4,6 +4,7 @@ import com.yulmudiary.domain.diary.dto.MyReactionPageResponse;
 import com.yulmudiary.domain.diary.dto.MyReactionResponse;
 import com.yulmudiary.domain.diary.dto.ReactionRequest;
 import com.yulmudiary.domain.diary.dto.ReactionResponse;
+import com.yulmudiary.domain.diary.dto.ReactionUserResponse;
 import com.yulmudiary.domain.diary.entity.DiaryPost;
 import com.yulmudiary.domain.diary.entity.Media;
 import com.yulmudiary.domain.diary.entity.Reaction;
@@ -36,6 +37,13 @@ public class ReactionService {
     private final NotificationService notificationService;
 
     // ── 내 반응 (사용자 기반 커서 페이징) ─────────────────────────
+
+    public List<ReactionUserResponse> getReactionUsers(Long postId) {
+        return reactionRepository.findByDiaryPostIdWithUser(postId)
+                .stream()
+                .map(ReactionUserResponse::from)
+                .toList();
+    }
 
     public MyReactionPageResponse getByUser(Long userId, Long cursor, int size) {
         List<Reaction> reactions;

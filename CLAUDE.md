@@ -152,7 +152,7 @@ frontend/
 ├── tsconfig.json             — @/* → ./src/* 경로 별칭
 └── src/
     ├── middleware.ts         — Edge 미들웨어: 쿠키 기반 라우트 가드
-    ├── types/index.ts        — API 타입 (ApiResponse, UserResponse, DiaryPostResponse 등)
+    ├── types/index.ts        — API 타입 (ApiResponse, UserResponse, DiaryPostResponse, NotificationResponse 등)
     ├── stores/
     │   ├── authStore.ts      — Zustand: token/user/familyGroupId 전역 상태 (Cookies 기반)
     │   ├── bgmStore.ts       — Zustand: BGM 재생 상태, 시간, 볼륨, 홈 anchorPos
@@ -164,17 +164,20 @@ frontend/
     │   ├── api.ts            — fetch 래퍼 (Authorization 헤더 자동 주입, ApiError 통일)
     │   ├── bgmAudio.ts       — 전역 Audio 싱글톤 + 트랙 메타데이터 + formatTime()
     │   ├── utils.ts          — formatRelativeTime(), getMediaUrl(), calcDday() 등
-    │   └── kakao.ts          — 카카오맵 SDK 초기화 유틸
+    │   ├── kakao.ts          — 카카오맵 SDK 초기화 유틸
+    │   └── demoData.ts       — 체험판 가상 데이터 생성/초기화 (sessionStorage 기반)
     ├── hooks/
-    │   └── useAuth.ts        — 인증 상태 훅
+    │   ├── useAuth.ts            — 인증 상태 훅
+    │   └── usePullToRefresh.ts   — 당겨서 새로고침 훅 (threshold, onRefresh, disabled)
     ├── components/
-    │   ├── Providers.tsx     — ThemeProvider(next-themes) + UserProvider + FontSizeProvider 래핑
-    │   ├── MainBackground.tsx — 다크(별 30개) / 라이트(구름 2개) 애니메이션 배경
-    │   ├── LoginBackground.tsx — 로그인 페이지 전용 배경
-    │   ├── FloatingYulmu.tsx — 캐릭터 플로팅 컴포넌트
-    │   ├── BgmPlayer.tsx     — 전역 오디오 로직 전담 (autoplay + 첫 제스처 fallback + DOM 이벤트 동기화)
-    │   ├── BgmPlayerUI.tsx   — 홈/비홈 공용 축소 토큰 UI + 앨범아트/아이콘/유리판 스타일
-    │   ├── BgmMiniPlayer.tsx — 홈 전용 BGM 플레이어 (hero anchor 기반 collapsed 토큰 + expanded 플레이어)
+    │   ├── Providers.tsx         — ThemeProvider(next-themes) + UserProvider + FontSizeProvider 래핑
+    │   ├── MainBackground.tsx    — 다크(별 30개) / 라이트(구름 2개) 애니메이션 배경
+    │   ├── LoginBackground.tsx   — 로그인 페이지 전용 배경
+    │   ├── FloatingYulmu.tsx     — 캐릭터 플로팅 컴포넌트
+    │   ├── DemoBanner.tsx        — 체험판 모드 진행 중 상단 배너
+    │   ├── BgmPlayer.tsx         — 전역 오디오 로직 전담 (autoplay + 첫 제스처 fallback + DOM 이벤트 동기화)
+    │   ├── BgmPlayerUI.tsx       — 홈/비홈 공용 축소 토큰 UI + 앨범아트/아이콘/유리판 스타일
+    │   ├── BgmMiniPlayer.tsx     — 홈 전용 BGM 플레이어 (hero anchor 기반 collapsed 토큰 + expanded 플레이어)
     │   ├── BgmFloatingPlayer.tsx — 비홈 전용 우하단 플레이어 (collapsed 토큰 + expanded 플레이어)
     │   ├── layout/
     │   │   ├── Header.tsx    — 로고 + 유저 아바타/닉네임 + 햄버거 메뉴
@@ -186,14 +189,28 @@ frontend/
     │   ├── ui/
     │   │   ├── Skeleton.tsx
     │   │   ├── EmptyState.tsx
-    │   │   ├── ConfirmModal.tsx   — 삭제 확인 등 범용 모달
-    │   │   └── UserAvatar.tsx    — 프로필 이미지 / 이니셜 폴백
+    │   │   ├── ConfirmModal.tsx          — 삭제 확인 등 범용 모달
+    │   │   ├── UserAvatar.tsx           — 프로필 이미지 / 이니셜 폴백
+    │   │   └── PullToRefreshIndicator.tsx — 당겨서 새로고침 스피너 UI
+    │   ├── activity/
+    │   │   ├── PostDetailModal.tsx      — 게시글 상세 모달 (my-posts 등에서 사용)
+    │   │   └── SquareThumbnailCell.tsx  — 정사각 썸네일 셀 (앨범/활동 그리드용)
+    │   ├── album/
+    │   │   └── AlbumGrid.tsx            — 앨범 이미지 그리드
     │   └── diary/
-    │       ├── DiaryFeed.tsx         — 무한스크롤 피드 (IntersectionObserver sentinel)
+    │       ├── DiaryFeed.tsx         — 페이지네이션 피드 + 당겨서 새로고침 (usePullToRefresh)
     │       ├── DiaryCard.tsx         — 일기 카드 (memo), 좋아요·삭제 인라인 처리
+    │       │                           highlight prop: 알림에서 이동 시 오렌지 flash + scrollIntoView
     │       ├── DiaryPostSkeleton.tsx
+    │       ├── FilterBar.tsx         — 일기 피드 필터 (범위: 전체/사용자별/날짜범위, 정렬: 최신/오래된순)
+    │       │                           바텀시트 UI, 모바일 스크롤 잠금(position:fixed + touchmove 차단)
+    │       ├── Pagination.tsx        — 페이지 번호 네비게이션
     │       ├── ImageCarousel.tsx     — Framer Motion 스와이프, next/image, per-index 에러 폴백
     │       │                           마운트 시 native Image probe로 blob URL 유효성 검사 → 체험판 가이드 트리거
+    │       ├── ImageViewer.tsx       — 전체화면 이미지 뷰어 (createPortal)
+    │       │                           핀치줌(최대 5x), 패닝, 더블탭 하트, 아래 스와이프 닫기
+    │       │                           좌우 30% 탭 존(onPointerDown): 핀치줌 후에도 이미지 이동 보장
+    │       │                           touchstart passive:false + 2터치 preventDefault → iOS 브라우저 자체 줌 차단
     │       ├── ImagePreview.tsx      — 작성 시 썸네일 프리뷰
     │       ├── ReactionBar.tsx       — 이모지 리액션 표시 바
     │       ├── StickerPicker.tsx     — 이모지 스티커 선택 UI
@@ -210,20 +227,38 @@ frontend/
         │   └── success/page.tsx  — 로그인 성공 축하 화면 (체크마크 + 스파클 애니메이션, 2.3초 후 이동)
         ├── onboarding/
         │   └── page.tsx          — 가족 그룹 합류 안내 (초대 코드 미보유 시 표시)
-        ├── (main)/               — Route Group: Header + BottomNav 포함
-        │   ├── layout.tsx        — 인증/familyGroup 가드 + MainBackground + 홈/비홈 BGM UI 마운트
-        │   ├── page.tsx          — "/" 홈 대시보드 (D-day, 퀵메뉴, hero anchor 기반 BGM 토큰 위치 계산)
-        │   ├── loading.tsx
-        │   ├── diary/
-        │   │   ├── page.tsx      — "/diary" 일기 피드
-        │   │   ├── loading.tsx
-        │   │   └── error.tsx
-        │   ├── schedule/
-        │   │   └── page.tsx      — "/schedule" 일정 캘린더 + 카카오맵 장소 검색
-        │   └── join/
-        │       └── page.tsx      — "/join" 초대 코드 입력 페이지
-        └── new/
-            └── page.tsx          — "/new" 글 작성 (독립 레이아웃)
+        ├── new/
+        │   └── page.tsx          — "/new" 글 작성 (독립 레이아웃)
+        └── (main)/               — Route Group: Header + BottomNav 포함
+            ├── layout.tsx        — 인증/familyGroup 가드 + MainBackground + 홈/비홈 BGM UI 마운트
+            ├── page.tsx          — "/" 홈 대시보드 (D-day, 퀵메뉴, hero anchor 기반 BGM 토큰 위치 계산)
+            ├── loading.tsx
+            ├── about/
+            │   └── page.tsx      — "/about" 앱 소개 페이지
+            ├── album/
+            │   ├── page.tsx      — "/album" 앨범 (가족 사진 모아보기)
+            │   ├── favorites/page.tsx — "/album/favorites" 즐겨찾기 사진
+            │   └── [id]/page.tsx — "/album/:id" 앨범 상세
+            ├── diary/
+            │   ├── page.tsx      — "/diary" 일기 피드 (FilterBar + DiaryFeed + 페이지네이션)
+            │   │                   ?highlightId=: 알림에서 이동 시 해당 카드 flash 처리
+            │   ├── loading.tsx
+            │   └── error.tsx
+            ├── my-posts/
+            │   └── page.tsx      — "/my-posts" 내가 쓴 일기 목록
+            ├── my-comments/
+            │   └── page.tsx      — "/my-comments" 내가 쓴 댓글 목록
+            ├── my-reactions/
+            │   └── page.tsx      — "/my-reactions" 내가 누른 리액션 목록
+            ├── notifications/
+            │   └── page.tsx      — "/notifications" 알림 목록 (무한스크롤)
+            │                       알림 탭 → /diary?highlightId={diaryPostId} 이동
+            ├── settings/
+            │   └── notifications/page.tsx — "/settings/notifications" 알림 설정
+            ├── schedule/
+            │   └── page.tsx      — "/schedule" 일정 캘린더 + 카카오맵 장소 검색
+            └── join/
+                └── page.tsx      — "/join" 초대 코드 입력 페이지
 ```
 
 ## API 구현 상태
@@ -266,6 +301,11 @@ frontend/
 ### User
 
 - `GET /api/users` — 사용자 목록 조회 (permitAll)
+- `PUT /api/users/me` — 닉네임·한 줄 소개 수정 (JWT 필요)
+- `PUT /api/users/me/profile-image` — 프로필 사진 변경 (multipart, JWT 필요)
+- `GET /api/users/me/stats` — 내 활동 통계 (게시글 수, 사진 수, 반응 수)
+- `GET /api/users/me/comments` — 내 댓글 목록 (Cursor 페이징)
+- `GET /api/users/me/reactions` — 내 반응 목록 (Cursor 페이징)
 
 ### Media
 
@@ -477,8 +517,25 @@ demoGuideStep: 0 | 1 | 2  // 0=비활성, 1=햄버거 안내, 2=초기화 버튼
 - 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
 - `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
 
-## 보안 이슈 / 미해결 TODO
+## 보안 이슈
 
-- **[HIGH] Cookie Secure 미설정**: `OAuth2AuthenticationSuccessHandler.java:57` — `cookie.setSecure(false)` → 운영 환경에서 반드시 `true`로 변경 필요
+- **[DONE] ~~Cookie Secure 미설정~~**: `OAuth2AuthenticationSuccessHandler.java` — `env.acceptsProfiles(Profiles.of("prod"))`로 prod 시 자동 `true` 처리 완료
 - **[MED] FamilyGroup 접근 제어**: `@CheckFamilyAuth` AOP로 일부 구현됐으나, 모든 엔드포인트 적용 여부 확인 필요
+- **[MED] 파일 업로드 검증 미흡**: `MediaController` 업로드 시 `file.getContentType()`은 클라이언트 전송값으로 위조 가능 → 실제 바이트 매직 넘버 검증 없음
 - **[INFO] 운영 DB 시드 데이터**: 초대 코드 등 초기 데이터는 `data.sql`이 운영에서 미실행되므로 직접 INSERT 필요
+
+## 향후 구현 예정
+
+### 백엔드
+
+| 항목 | 설명 |
+|------|------|
+| 가족 초대 코드 재발급 API | 현재 수동 DB INSERT만 가능 |
+| FCM 기기 푸시 알림 | 인앱 알림(DB 저장·조회)은 구현됨. 앱이 꺼진 상태에서 기기 상단에 뜨는 푸시 알림은 미구현 (Firebase SDK, 디바이스 토큰 등록 필요) |
+| 파일 업로드 매직 넘버 검증 | 이미지 파일 여부를 바이트로 확인하는 로직 추가 필요 |
+
+### 프론트엔드
+
+| 항목 | 설명 |
+|------|------|
+| 가족 초대 코드 재발급 UI | SideDrawer 또는 설정 페이지에서 접근 가능하도록 |

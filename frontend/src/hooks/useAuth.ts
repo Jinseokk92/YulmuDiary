@@ -40,6 +40,25 @@ export function useAuth(): UseAuthReturn {
  * const { isParent } = useRequireParent("/schedule");
  * if (!isParent) return null; // 리다이렉트 대기 중 렌더 차단
  */
+/**
+ * 관리자 권한이 필요한 페이지의 접근 제어 Guard 훅.
+ * isAdmin이 아닌 유저가 접근하면 redirectTo로 replace.
+ */
+export function useRequireAdmin(redirectTo = "/") {
+  const router = useRouter();
+  const { user, isLoading } = useAuthStore();
+  const isAdmin = user?.isAdmin === true;
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAdmin) {
+      router.replace(redirectTo);
+    }
+  }, [isAdmin, isLoading, router, redirectTo]);
+
+  return { isAdmin, isLoading };
+}
+
 export function useRequireParent(redirectTo = "/") {
   const router = useRouter();
   const { isParent, isLoading } = useAuth();

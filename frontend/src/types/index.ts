@@ -22,6 +22,43 @@ export interface UserResponse {
   familyGroupId?: number | null;
   /** 한 줄 소개 — PUT /api/users/me 구현 후 백엔드 연결 */
   bio?: string | null;
+  /** 관리자 여부 */
+  isAdmin?: boolean;
+}
+
+// --- Admin ---
+
+export interface AdminInviteCodesResponse {
+  relativeCode: string;
+  parentCode: string | null;
+}
+
+export interface AdminMemberResponse {
+  userId: number;
+  name: string;
+  email: string;
+  profileImageUrl: string | null;
+  role: "PARENT" | "RELATIVE";
+  joinedAt: string;
+}
+
+export interface AdminAppSettingsResponse {
+  babyId: number;
+  babyName: string;
+  dueDate: string; // "YYYY-MM-DD"
+}
+
+// --- Baby ---
+
+export interface BabyResponse {
+  id: number;
+  name: string;
+  dueDate: string;       // "YYYY-MM-DD"
+  dDayCount: number;     // 양수=D-N(미래), 0=D-Day, 음수=D+N(과거)
+  pregnancyWeeks: number;
+  pregnancyDays: number;
+  gender: string;
+  profileImageUrl: string | null;
 }
 
 // --- Media ---
@@ -50,6 +87,13 @@ export interface ReactionResponse {
   userId: number;
   emoji: string;
   createdAt: string;
+}
+
+export interface ReactionUserResponse {
+  userId: number;
+  nickname: string;
+  profileImageUrl: string | null;
+  emoji: string;
 }
 
 export interface ReactionRequest {

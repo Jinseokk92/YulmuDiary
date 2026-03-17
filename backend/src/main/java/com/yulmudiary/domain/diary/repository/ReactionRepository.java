@@ -19,6 +19,9 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
     // ── 내 반응 (게시글 기준 dedup, 최신 반응 대표, 커서 페이징) ──
     // 같은 게시글에 여러 반응이 있어도 MAX(id) 반응 1개만 조회한다.
 
+    @Query("SELECT r FROM Reaction r JOIN FETCH r.user WHERE r.diaryPost.id = :postId ORDER BY r.id DESC")
+    List<Reaction> findByDiaryPostIdWithUser(@Param("postId") Long postId);
+
     @Query("SELECT r FROM Reaction r JOIN FETCH r.user JOIN FETCH r.diaryPost " +
             "WHERE r.user.id = :userId " +
             "AND r.id = (SELECT MAX(r2.id) FROM Reaction r2 " +

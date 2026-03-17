@@ -16,6 +16,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useUiStore } from "@/stores/uiStore";
 import type { CommentResponse } from "@/types";
 import CommentSection from "./CommentSection";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 const QUICK_EMOJIS = ["❤️", "😍", "👍", "😂", "😭", "🥰", "🙌", "✨"] as const;
 
@@ -192,22 +193,37 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       };
     }, [setCommentOpen]);
 
-    // ─── 부모 스크롤 잠금 (iOS Safari 포함) ────────────────────────
-    // overflow:hidden 단독으로는 iOS Safari에서 배경 스크롤이 막히지 않음.
-    // position:fixed + top:-scrollY 방식으로 완전히 고정하고, 언마운트 시 복원.
+    // ─── 부모 스크롤 잠금 ───────────────────────────────────────────
+    // - position:fixed + overflow:hidden : 배경 스크롤 차단
+    // - touchmove preventDefault : document 레벨에서 모든 터치 스크롤 차단
+    // - 스크롤 영역 내부는 onTouchMove stopPropagation으로 document 리스너 도달 차단
     useEffect(() => {
       const scrollY = window.scrollY;
+      console.log("[CommentBottomSheet] 스크롤 잠금 시작 — scrollY:", scrollY, "파일: CommentBottomSheet.tsx");
+
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
       document.body.style.left = "0";
       document.body.style.right = "0";
-      document.body.style.overflowY = "scroll";
+      document.body.style.overflow = "hidden";
+
+      console.log("[CommentBottomSheet] body.position:", document.body.style.position, "body.top:", document.body.style.top);
+
+      const preventTouchMove = (e: TouchEvent) => {
+        console.log("[CommentBottomSheet] touchmove 차단 — target:", (e.target as HTMLElement)?.tagName, (e.target as HTMLElement)?.className?.slice?.(0, 40));
+        e.preventDefault();
+      };
+
+      document.addEventListener("touchmove", preventTouchMove, { passive: false });
+
       return () => {
+        console.log("[CommentBottomSheet] 스크롤 잠금 해제 — scrollY 복원:", scrollY);
         document.body.style.position = "";
         document.body.style.top = "";
         document.body.style.left = "";
         document.body.style.right = "";
-        document.body.style.overflowY = "";
+        document.body.style.overflow = "";
+        document.removeEventListener("touchmove", preventTouchMove);
         window.scrollTo(0, scrollY);
       };
     }, []);
@@ -224,10 +240,11 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       };
 
       const onMove = (e: TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         const dy = e.touches[0].clientY - startY;
         if (dy > 0) {
           dismissY.set(dy);
-          e.preventDefault();
         }
       };
 
@@ -312,8 +329,12 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       [input, currentUser, isSubmitting, postId, scrollToBottom]
     );
 
+    // ─── admin 타인 댓글 삭제 확인 ─────────────────────────────────
+    const [adminDeleteTarget, setAdminDeleteTarget] = useState<number | null>(null);
+    const [isAdminDeleting, setIsAdminDeleting] = useState(false);
+
     // ─── 댓글 삭제 (낙관적 업데이트) ───────────────────────────────
-    const handleDelete = useCallback(
+    const executeDelete = useCallback(
       async (commentId: number) => {
         if (!currentUser) return;
         const prevComments = [...commentsRef.current];
@@ -327,6 +348,20 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
         }
       },
       [postId, currentUser]
+    );
+
+    const handleDelete = useCallback(
+      (commentId: number) => {
+        if (!currentUser) return;
+        const target = commentsRef.current.find((c) => c.id === commentId);
+        // admin이 타인 댓글 삭제 → 확인 다이얼로그
+        if (currentUser.isAdmin && target && target.authorId !== currentUser.id) {
+          setAdminDeleteTarget(commentId);
+          return;
+        }
+        executeDelete(commentId);
+      },
+      [currentUser, executeDelete]
     );
 
     // ─── 렌더 ───────────────────────────────────────────────────────
@@ -400,6 +435,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
             ref={scrollAreaRef}
             className="flex-1 overflow-y-auto overscroll-contain"
             style={{ touchAction: "pan-y" }}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <CommentSection
               comments={comments}
@@ -463,7 +499,28 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       </>
     );
 
-    return createPortal(sheet, document.body);
+    return createPortal(
+      <>
+        {sheet}
+        <ConfirmModal
+          open={adminDeleteTarget !== null}
+          title="댓글을 삭제할까요?"
+          description="관리자 권한으로 다른 멤버의 댓글을 삭제합니다."
+          confirmLabel="삭제"
+          loading={isAdminDeleting}
+          zIndex={200}
+          onConfirm={async () => {
+            if (adminDeleteTarget === null) return;
+            setIsAdminDeleting(true);
+            await executeDelete(adminDeleteTarget);
+            setIsAdminDeleting(false);
+            setAdminDeleteTarget(null);
+          }}
+          onCancel={() => setAdminDeleteTarget(null)}
+        />
+      </>,
+      document.body
+    );
   }
 );
 

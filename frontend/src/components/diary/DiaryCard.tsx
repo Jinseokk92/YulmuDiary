@@ -11,6 +11,7 @@ import { useUiStore } from "@/stores/uiStore";
 import ImageCarousel from "./ImageCarousel";
 import ImageViewer from "./ImageViewer";
 import CommentBottomSheet, { type CommentBottomSheetHandle } from "./CommentBottomSheet";
+import ReactionUsersSheet from "./ReactionUsersSheet";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 
@@ -61,6 +62,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
   const commentSectionRef = useRef<CommentBottomSheetHandle>(null);
   const cardRef = useRef<HTMLElement>(null);
   const isAuthor = currentUser?.id === post.authorId;
+  const isAdmin = currentUser?.isAdmin === true;
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === "dark";
@@ -190,6 +192,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
   // ─── 좋아요(Heart) 상태 ────────────────────────────────────────────
   const [reactions, setReactions] = useState<ReactionResponse[]>(post.reactions ?? []);
   const [isLiking, setIsLiking] = useState(false);
+  const [showReactionUsers, setShowReactionUsers] = useState(false);
 
   // ─── 캐러셀 더블탭 하트 오버레이 ───────────────────────────────────
   const [carouselHeartVisible, setCarouselHeartVisible] = useState(false);
@@ -298,31 +301,33 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
             </div>
           </div>
 
-          {/* 작성자에게만 노출, 수정 모드 중엔 숨김 */}
-          {isAuthor && !isEditing && (
+          {/* 작성자 또는 어드민에게 노출, 수정 모드 중엔 숨김 */}
+          {(isAuthor || isAdmin) && !isEditing && (
             <div className="flex items-center">
-              {/* 수정 — 연필 아이콘 */}
-              <button
-                onClick={handleEditStart}
-                className="p-2 text-gray-300 dark:text-slate-600 hover:text-primary-500 transition-colors"
-                aria-label="수정"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-4 h-4"
+              {/* 수정 — 작성자에게만 */}
+              {isAuthor && (
+                <button
+                  onClick={handleEditStart}
+                  className="p-2 text-gray-300 dark:text-slate-600 hover:text-primary-500 transition-colors"
+                  aria-label="수정"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                  />
-                </svg>
-              </button>
-              {/* 삭제 — 휴지통 아이콘 */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                    />
+                  </svg>
+                </button>
+              )}
+              {/* 삭제 — 작성자 또는 어드민 */}
               <button
                 onClick={() => setConfirmOpen(true)}
                 className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
@@ -465,9 +470,12 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
           {/* 좋아요 수 (수정 모드 중 숨김) */}
           {!isEditing && likeCount > 0 && (
             <div className="mb-2">
-              <span className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+              <button
+                onClick={() => setShowReactionUsers(true)}
+                className={`text-sm font-bold active:opacity-70 transition-opacity ${isDark ? "text-slate-100" : "text-gray-900"}`}
+              >
                 좋아요 {likeCount}개
-              </span>
+              </button>
             </div>
           )}
 
@@ -560,6 +568,16 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
           )}
         </AnimatePresence>
       </article>
+
+      {/* 좋아요 누른 사람 목록 */}
+      {showReactionUsers && (
+        <ReactionUsersSheet
+          postId={post.id}
+          likeCount={likeCount}
+          onClose={() => setShowReactionUsers(false)}
+          isDark={isDark}
+        />
+      )}
 
       {/* 삭제 확인 모달 */}
       <ConfirmModal

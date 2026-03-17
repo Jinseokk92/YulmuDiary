@@ -40,6 +40,9 @@ public class User extends BaseTimeEntity {
     @Column(length = 100)
     private String bio;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isAdmin = false;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean commentNotificationEnabled = true;
 

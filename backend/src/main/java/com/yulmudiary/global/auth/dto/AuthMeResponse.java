@@ -1,5 +1,6 @@
 package com.yulmudiary.global.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yulmudiary.domain.family.entity.FamilyRole;
 import com.yulmudiary.domain.user.entity.User;
 import lombok.Builder;
@@ -17,6 +18,8 @@ public class AuthMeResponse {
     private String role;
     private Long familyGroupId;
     private String bio;
+    @JsonProperty("isAdmin")
+    private boolean isAdmin;
 
     public static AuthMeResponse of(User user, Long familyGroupId, FamilyRole familyRole) {
         return AuthMeResponse.builder()
@@ -27,6 +30,7 @@ public class AuthMeResponse {
                 .role(familyRole != null ? familyRole.name() : null)
                 .familyGroupId(familyGroupId)
                 .bio(user.getBio())
+                .isAdmin(user.isAdmin())
                 .build();
     }
 }

@@ -123,12 +123,16 @@ export default function AboutPage() {
   const footerColor  = isDark ? "#475569"   : "#b0a090";
 
   const letterLines = [
-    { text: "이 일기장은 아직 세상에 오지 않은 너를 기다리며 만들기 시작했어.", delay: 0 },
-    { text: "네가 처음 심장소리를 들려줬던 날,", delay: 80 },
-    { text: "우리는 얼마나 울었는지 몰라.", delay: 160 },
-    { text: "매일매일이 기적 같았고 하루하루가 선물이었어.", delay: 0 },
-    { text: "언젠가 네가 이 일기장을 펼쳐본다면 알아줬으면 좋겠어.", delay: 0 },
-    { text: "네가 태어나기 전부터 이렇게나 사랑받고 있었다는 걸.", delay: 0 },
+    { text: "율무야,", delay: 0 },
+    { text: "언젠가 이 일기장을 펼쳐보는 날이 오면", delay: 80 },
+    { text: "네가 오기 전부터 얼마나 소중했는지", delay: 160 },
+    { text: "꼭 알게 되었으면 좋겠다 🌱", delay: 240 },
+    { text: "25주차의 너는 850g,", delay: 0 },
+    { text: "주수에 비해 커서 간식을 줄여야한데 😅", delay: 80 },
+    { text: "엄마가 얼마나 입덧이 심했는지 넌 모를거야 🤢", delay: 160 },
+    { text: "건강하게만 자라다오", delay: 0 },
+    { text: "그리고 엄마말 안들으면 죽음이야 🌚", delay: 80 },
+    { text: "엄마, 아빠는 봐주고 그런거 없어", delay: 160 },
   ];
 
   return (
@@ -232,34 +236,12 @@ export default function AboutPage() {
         <div style={{ height: "8px" }} />
 
         <LetterLine
-          text="율무야, 사랑해."
+          text="그럼에도 불구하고 사랑한다 율무야 ❤️"
           delay={0}
           color={lastLineColor}
-          fontSize="22px"
+          fontSize="20px"
           fontStyle="italic"
         />
-
-        <div style={{ height: "4px" }} />
-
-        <LetterLine
-          text="그리고...."
-          delay={0}
-          color={letterColor}
-          fontSize="15px"
-        />
-
-        <FadeBlock delay={200} className="text-center px-8">
-          <p
-            style={{
-              color: isDark ? "#9ca3af" : "#7a6a5a",
-              fontSize: "15px",
-              fontFamily: "Georgia, serif",
-              lineHeight: 1.8,
-            }}
-          >
-            엄마 말 안들으면 아빠한테 혼난다 🌚
-          </p>
-        </FadeBlock>
       </div>
 
       {/* 구분선 */}

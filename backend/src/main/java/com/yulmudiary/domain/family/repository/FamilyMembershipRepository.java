@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FamilyMembershipRepository extends JpaRepository<FamilyMembership, Long> {
@@ -16,6 +17,9 @@ public interface FamilyMembershipRepository extends JpaRepository<FamilyMembersh
      */
     @Query("SELECT fm FROM FamilyMembership fm JOIN FETCH fm.familyGroup WHERE fm.user.id = :userId")
     Optional<FamilyMembership> findByUserIdWithFamilyGroup(@Param("userId") Long userId);
+
+    @Query("SELECT fm FROM FamilyMembership fm JOIN FETCH fm.user WHERE fm.familyGroup.id = :familyGroupId ORDER BY fm.createdAt ASC")
+    List<FamilyMembership> findAllByFamilyGroupIdWithUser(@Param("familyGroupId") Long familyGroupId);
 
     @Query("SELECT COUNT(fm) > 0 FROM FamilyMembership fm " +
             "JOIN Baby b ON fm.familyGroup = b.familyGroup " +

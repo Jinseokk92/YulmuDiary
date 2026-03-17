@@ -42,6 +42,11 @@ public class FamilyGroup extends BaseTimeEntity {
         this.parentInviteCode = newCode;
     }
 
+    /** inviteCode(RELATIVE)를 새로운 6자리 코드로 재발급한다. */
+    public void regenerateInviteCode(String newCode) {
+        this.inviteCode = newCode;
+    }
+
     /** UUID 앞 6자리 대문자 코드를 생성한다. */
     public static String generateCode() {
         return UUID.randomUUID()

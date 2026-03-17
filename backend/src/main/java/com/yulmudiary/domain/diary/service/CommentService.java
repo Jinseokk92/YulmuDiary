@@ -106,13 +106,14 @@ public class CommentService {
     }
 
     @Transactional
-    public void delete(Long commentId, Long authorId) {
-        if (!commentRepository.existsById(commentId)) {
-            throw new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + commentId);
-        }
-        int deleted = commentRepository.deleteByIdAndAuthorId(commentId, authorId);
-        if (deleted == 0) {
+    public void delete(Long commentId, Long requesterId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + commentId));
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다. id=" + requesterId));
+        if (!requester.isAdmin() && !comment.getAuthor().getId().equals(requesterId)) {
             throw new IllegalArgumentException("작성자만 삭제할 수 있습니다.");
         }
+        commentRepository.delete(comment);
     }
 }
