@@ -76,7 +76,7 @@ export default function DiaryFeed({ data, currentPage, onRefresh, onDelete, high
             description="첫 번째 일기를 작성해 보세요!"
           />
         ) : (
-          <div className="flex flex-col py-4">
+          <div className="flex flex-col pt-1 pb-4">
             {data.content.map((post) => (
               <DiaryCard key={post.id} post={post} onDelete={handleDelete} highlight={highlightId === post.id} />
             ))}

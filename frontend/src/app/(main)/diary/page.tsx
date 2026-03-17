@@ -79,7 +79,7 @@ export default function DiaryPage() {
 
   return (
     <div>
-      <div className="px-4 pt-3 pb-1">
+      <div className="px-4 pt-2 pb-0">
         <FilterBar filters={filters} onChange={handleFiltersChange} />
       </div>
 
