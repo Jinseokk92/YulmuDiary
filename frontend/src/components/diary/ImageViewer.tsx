@@ -36,6 +36,10 @@ export default function ImageViewer({
   const [heartKey, setHeartKey] = useState(0);
   const heartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── 좌우 탭 존 화살표 플래시 ─────────────────────────────────────────────
+  const [flashDir, setFlashDir] = useState<"left" | "right" | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── 제스처 추적 refs ──────────────────────────────────────────────────────
   const scaleRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
@@ -51,9 +55,27 @@ export default function ImageViewer({
   useEffect(() => {
     setMounted(true);
     document.body.style.overflow = "hidden";
+
+    // ── 디버그: capture phase에서 click 이벤트 타깃 로깅 ──────────────────
+    const debugClick = (e: Event) => {
+      const t = e.target as Element;
+      const cs = getComputedStyle(t);
+      console.log(
+        "[DEBUG click] tagName:", t.tagName,
+        "| class:", (t.className as string)?.slice?.(0, 80),
+        "| id:", t.id,
+        "| z-index:", cs.zIndex,
+        "| pointer-events:", cs.pointerEvents,
+        "| target:", t,
+      );
+    };
+    document.addEventListener("click", debugClick, true);
+
     return () => {
       document.body.style.overflow = "";
       if (heartTimerRef.current) clearTimeout(heartTimerRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      document.removeEventListener("click", debugClick, true);
     };
   }, []);
 
@@ -90,6 +112,17 @@ export default function ImageViewer({
     onDoubleTap?.();
   }, [onDoubleTap]);
 
+  // ── 최신 값 refs (touch useEffect를 [] deps로 고정, stale closure 방지) ──
+  // goTo / triggerHeart 선언 이후에 위치해야 TDZ 오류가 없음
+  const indexRef = useRef(index);
+  indexRef.current = index;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const goToRef = useRef(goTo);
+  goToRef.current = goTo;
+  const triggerHeartRef = useRef(triggerHeart);
+  triggerHeartRef.current = triggerHeart;
+
   // ── 터치 제스처 (핀치 줌 / 패닝 / 스와이프) ──────────────────────────────
   useEffect(() => {
     const el = wrapRef.current;
@@ -101,6 +134,12 @@ export default function ImageViewer({
     const onTouchStart = (e: TouchEvent) => {
       // 이벤트가 document까지 전파되지 않도록 차단 (pull-to-refresh 등 방지)
       e.stopPropagation();
+      // 두 손가락 이상: iOS Safari 브라우저 자체 핀치줌 방지
+      // (passive: false 로 등록해야 preventDefault 호출 가능)
+      if (e.touches.length >= 2) {
+        e.preventDefault();
+      }
+      console.log("[Viewer] touchStart", { gestureMode: gestureModeRef.current, scale: scaleRef.current, touches: e.touches.length });
       if (e.touches.length === 2) {
         const dx = e.touches[1].clientX - e.touches[0].clientX;
         const dy = e.touches[1].clientY - e.touches[0].clientY;
@@ -162,6 +201,7 @@ export default function ImageViewer({
       // 전파 차단 (pull-to-refresh 등이 touchend를 받지 않도록)
       e.stopPropagation();
       const remainingTouches = e.touches.length;
+      console.log("[Viewer] touchEnd", { gestureMode: gestureModeRef.current, scale: scaleRef.current, remainingTouches, changedTouches: e.changedTouches.length, hasStart: !!pointerStartRef.current });
 
       if (remainingTouches === 0) {
         pinchStartDist.current = null;
@@ -179,11 +219,12 @@ export default function ImageViewer({
 
       const start = pointerStartRef.current;
       if (!start || e.changedTouches.length !== 1 || gestureModeRef.current === "pinch") {
+        console.log("[Viewer] touchEnd early-return", { reason: !start ? "no-start" : e.changedTouches.length !== 1 ? "multi-changed" : "pinch-mode", scale: scaleRef.current });
         pointerStartRef.current = null;
         if (remainingTouches === 0) {
           gestureModeRef.current = null;
-          // 두 손가락 동시에 떼는 경우(changedTouches.length === 2)에도 스냅백 적용
-          if (scaleRef.current <= 1.1) {
+          // 모든 손가락을 뗐을 때 scale > 1이면 무조건 1로 리셋 (스와이프 차단 방지)
+          if (scaleRef.current > 1) {
             scaleRef.current = 1;
             setScale(1);
             panRef.current = { x: 0, y: 0 };
@@ -203,26 +244,30 @@ export default function ImageViewer({
         // 탭 — 더블탭 감지
         const now = Date.now();
         if (now - lastTapRef.current < 350 && lastTapRef.current > 0) {
-          triggerHeart();
+          triggerHeartRef.current();
           lastTapRef.current = 0;
         } else {
           lastTapRef.current = now;
         }
-      } else if (scaleRef.current <= 1.1) {
-        // 스와이프 제스처 (스냅백 임계값 이하에서만 — 패닝 임계값 1.1과 일치)
-        if (dy > 80 && Math.abs(dx) < Math.abs(dy)) {
-          // 아래로 스와이프 → 닫기
-          onClose();
-        } else if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-          // 좌우 스와이프 → 이미지 이동 (x 이동이 y 이동보다 크면 수평 스와이프로 인식)
-          if (dx < 0) goTo(index + 1);
-          else goTo(index - 1);
+      } else {
+        const swipeable = scaleRef.current <= 1.1;
+        console.log("[Viewer] swipe check", { dx: Math.round(dx), dy: Math.round(dy), moved: Math.round(moved), scale: scaleRef.current, swipeable });
+        if (swipeable) {
+          // 스와이프 제스처
+          if (dy > 80 && Math.abs(dx) < Math.abs(dy)) {
+            // 아래로 스와이프 → 닫기
+            onCloseRef.current();
+          } else if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+            // 좌우 스와이프 → 이미지 이동
+            if (dx < 0) goToRef.current(indexRef.current + 1);
+            else goToRef.current(indexRef.current - 1);
+          }
         }
       }
 
-      // scale이 1에 가깝거나(≤1.1) 미만이면 정확히 1로 스냅백 + pan 초기화
-      // 의도치 않은 미세 확대 상태에서 pan이 활성화되는 것을 방지
-      if (scaleRef.current <= 1.1) {
+      // 모든 손가락을 뗐을 때 scale > 1이면 무조건 1로 리셋
+      if (remainingTouches === 0 && scaleRef.current > 1) {
+        console.log("[Viewer] snapback", { scale: scaleRef.current });
         scaleRef.current = 1;
         setScale(1);
         panRef.current = { x: 0, y: 0 };
@@ -233,7 +278,7 @@ export default function ImageViewer({
       if (remainingTouches === 0) gestureModeRef.current = null;
     };
 
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchstart", onTouchStart, { passive: false }); // false: 2터치 preventDefault 가능
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
 
@@ -242,7 +287,8 @@ export default function ImageViewer({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [index, onClose, goTo, triggerHeart]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!mounted) return null;
 
@@ -334,6 +380,55 @@ export default function ImageViewer({
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── 좌우 탭 존 (핀치줌 후 스와이프가 안 될 때의 대체 이동 수단) ─────────
+           wrapRef 의 형제(sibling)로 배치해 터치 이벤트가 wrapRef 로 버블링되지
+           않도록 분리. gesture/scale 상태와 무관하게 onClick 만으로 동작. ── */}
+      {media.length > 1 && (
+        <>
+          {/* 좌측 30% — 이전 이미지 */}
+          <div
+            className="absolute left-0 top-0 w-[30%] h-full z-[10] flex items-center justify-start pl-3"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              console.log("[TAP ZONE LEFT] pointerDown, index:", index);
+              if (index === 0) return;
+              setFlashDir("left");
+              if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+              flashTimerRef.current = setTimeout(() => setFlashDir(null), 300);
+              goTo(index - 1);
+            }}
+            aria-label="이전 이미지"
+            role="button"
+          >
+            <ChevronLeft
+              className="w-9 h-9 text-white drop-shadow-lg transition-opacity duration-150"
+              style={{ opacity: flashDir === "left" ? 0.8 : 0 }}
+            />
+          </div>
+
+          {/* 우측 30% — 다음 이미지 */}
+          <div
+            className="absolute right-0 top-0 w-[30%] h-full z-[10] flex items-center justify-end pr-3"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              console.log("[TAP ZONE RIGHT] pointerDown, index:", index);
+              if (index === media.length - 1) return;
+              setFlashDir("right");
+              if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+              flashTimerRef.current = setTimeout(() => setFlashDir(null), 300);
+              goTo(index + 1);
+            }}
+            aria-label="다음 이미지"
+            role="button"
+          >
+            <ChevronRight
+              className="w-9 h-9 text-white drop-shadow-lg transition-opacity duration-150"
+              style={{ opacity: flashDir === "right" ? 0.8 : 0 }}
+            />
+          </div>
+        </>
+      )}
 
       {/* ── 이전/다음 버튼 (데스크톱 전용) ── */}
       {index > 0 && (
