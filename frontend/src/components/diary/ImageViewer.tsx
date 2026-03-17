@@ -142,7 +142,7 @@ export default function ImageViewer({
         );
         scaleRef.current = newScale;
         setScale(newScale);
-      } else if (e.touches.length === 1 && gestureModeRef.current === "single" && scaleRef.current > 1.05) {
+      } else if (e.touches.length === 1 && gestureModeRef.current === "single" && scaleRef.current > 1.1) {
         // 확대 상태에서 패닝 (single 모드 + 확대 상태에서만)
         if (!pointerStartRef.current) return;
         const dx = e.touches[0].clientX - pointerStartRef.current.x;
@@ -180,7 +180,16 @@ export default function ImageViewer({
       const start = pointerStartRef.current;
       if (!start || e.changedTouches.length !== 1 || gestureModeRef.current === "pinch") {
         pointerStartRef.current = null;
-        if (remainingTouches === 0) gestureModeRef.current = null;
+        if (remainingTouches === 0) {
+          gestureModeRef.current = null;
+          // 두 손가락 동시에 떼는 경우(changedTouches.length === 2)에도 스냅백 적용
+          if (scaleRef.current <= 1.1) {
+            scaleRef.current = 1;
+            setScale(1);
+            panRef.current = { x: 0, y: 0 };
+            setPan({ x: 0, y: 0 });
+          }
+        }
         return;
       }
 
@@ -199,13 +208,13 @@ export default function ImageViewer({
         } else {
           lastTapRef.current = now;
         }
-      } else if (scaleRef.current <= 1.05) {
-        // 스와이프 제스처 (축소 상태에서만)
+      } else if (scaleRef.current <= 1.1) {
+        // 스와이프 제스처 (스냅백 임계값 이하에서만 — 패닝 임계값 1.1과 일치)
         if (dy > 80 && Math.abs(dx) < Math.abs(dy)) {
           // 아래로 스와이프 → 닫기
           onClose();
-        } else if (Math.abs(dx) > 50 && Math.abs(dy) < 60) {
-          // 좌우 스와이프 → 이미지 이동
+        } else if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+          // 좌우 스와이프 → 이미지 이동 (x 이동이 y 이동보다 크면 수평 스와이프로 인식)
           if (dx < 0) goTo(index + 1);
           else goTo(index - 1);
         }

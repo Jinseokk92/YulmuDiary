@@ -156,7 +156,7 @@ frontend/
     ├── stores/
     │   ├── authStore.ts      — Zustand: token/user/familyGroupId 전역 상태 (Cookies 기반)
     │   ├── bgmStore.ts       — Zustand: BGM 재생 상태, 시간, 볼륨, 홈 anchorPos
-    │   └── uiStore.ts        — Zustand: SideDrawer / 댓글 시트 등 전역 UI 상태
+    │   └── uiStore.ts        — Zustand: SideDrawer / 댓글 시트 / 이미지 뷰어 / 체험판 가이드 단계 전역 UI 상태
     ├── contexts/
     │   ├── UserContext.tsx   — (레거시) useAuthStore로 대체됨, Providers에서 유지
     │   └── FontSizeContext.tsx — 돋보기(글자 확대) 모드 관리, `<html>.font-large` 클래스 토글
@@ -179,8 +179,10 @@ frontend/
     │   ├── layout/
     │   │   ├── Header.tsx    — 로고 + 유저 아바타/닉네임 + 햄버거 메뉴
     │   │   │                   가이드 말풍선 + 돋보기 버튼(FontSizeContext 연동)
+    │   │   │                   체험판 Step 1 가이드: 오렌지 펄스링 + 툴팁 + 다크 오버레이 포털(z-[25]) + 건너뛰기 다이얼로그
     │   │   ├── BottomNav.tsx — 4탭: 홈(/), 일기장(/diary), 일정(/schedule), 새 글(/new)
     │   │   └── SideDrawer.tsx — 우측 슬라이드 드로어: 다크모드 토글 + 로그아웃
+    │   │                        체험판 초기화 버튼(푸터) + Step 2 가이드: 오렌지 펄스링 + 위쪽 툴팁
     │   ├── ui/
     │   │   ├── Skeleton.tsx
     │   │   ├── EmptyState.tsx
@@ -191,6 +193,7 @@ frontend/
     │       ├── DiaryCard.tsx         — 일기 카드 (memo), 좋아요·삭제 인라인 처리
     │       ├── DiaryPostSkeleton.tsx
     │       ├── ImageCarousel.tsx     — Framer Motion 스와이프, next/image, per-index 에러 폴백
+    │       │                           마운트 시 native Image probe로 blob URL 유효성 검사 → 체험판 가이드 트리거
     │       ├── ImagePreview.tsx      — 작성 시 썸네일 프리뷰
     │       ├── ReactionBar.tsx       — 이모지 리액션 표시 바
     │       ├── StickerPicker.tsx     — 이모지 스티커 선택 UI
@@ -200,7 +203,8 @@ frontend/
         ├── layout.tsx            — 루트: Providers + BgmPlayer 전역 마운트
         ├── error.tsx             — 전역 에러 바운더리
         ├── login/
-        │   └── page.tsx          — 소셜 로그인 페이지 (Google, Kakao)
+        │   └── page.tsx          — 소셜 로그인 페이지 (카카오 → Google → 체험하기 full-width 버튼 3개)
+        │                           체험하기 버튼: 베이지 배경(#FFF3E8) + 점선 오렌지 테두리, 로그인 없이 진입
         ├── auth/
         │   ├── callback/page.tsx — OAuth2 콜백: URL 쿼리파라미터 token → 쿠키 저장 → /auth/success 이동
         │   └── success/page.tsx  — 로그인 성공 축하 화면 (체크마크 + 스파클 애니메이션, 2.3초 후 이동)
@@ -424,6 +428,38 @@ frontend/
 - 프로젝트 내 사용 목적은 **비상업적(non-commercial)** 용도
 - 현 시점 기준 내부 메모상 별도 상업 라이선스 이슈 없음
 - 음원 파일 위치: `frontend/public/bgms/`
+
+#### 체험판(Demo) 모드
+
+- **진입**: 로그인 페이지 "👀 로그인 없이 체험해보기" 버튼 → `authStore.activateDemo()` → `/`
+- **감지**: `sessionStorage("demoMode") === "true"` + Zustand `isDemoMode`
+- **데이터**: `lib/demoData.ts`의 `ensureDemoDataInitialized()` — sessionStorage에 가상 일기/댓글/리액션 생성
+- **초기화**: `resetDemoData()` — 모든 STORAGE_KEYS 클리어 후 `ensureDemoDataInitialized()` 재실행 → `/`로 이동
+
+##### blob URL 이미지 깨짐 감지 → 가이드 흐름
+
+체험판에서 이미지를 첨부한 후 새로고침하면 blob URL이 무효화됨. `next/image`의 `onError`는 blob URL 실패에 신뢰할 수 없으므로 native `Image` probe 사용.
+
+1. `ImageCarousel` 마운트 시 `new window.Image()` probe로 각 blob URL 직접 검사
+2. `probe.onerror` → `demoGuideStep(1)` 설정 (stale closure 방지: `useUiStore.getState()` 사용)
+3. Step 1: `Header`에서 햄버거 버튼에 오렌지 펄스링 + "여기를 눌러주세요!" 툴팁 표시
+   - `createPortal(document.body)`로 `z-[25]` 다크 오버레이 렌더 (Header `z-30` 아래 → 버튼 자연 클릭 가능)
+   - 오버레이 탭 → 건너뛰기 다이얼로그 (`sessionStorage("demo_guide_skipped") = "true"`)
+4. 햄버거 클릭 → `demoGuideStep(2)` → SideDrawer 열림
+5. Step 2: `SideDrawer`에서 초기화 버튼에 오렌지 펄스링 + 위쪽 툴팁 표시
+   - Drawer 닫힘 → Step 2 중이면 Step 1로 되돌림 (350ms delay)
+6. 초기화 확인 → `resetDemoData()` + `demoGuideStep(0)` + 홈 이동
+
+##### Zustand `demoGuideStep`
+
+```typescript
+// uiStore.ts
+demoGuideStep: 0 | 1 | 2  // 0=비활성, 1=햄버거 안내, 2=초기화 버튼 안내
+```
+
+##### 체험판 이미지 업로드 안내
+
+- `new/page.tsx`: 이미지 첨부 시(`images.length > 0 && isDemoMode`) "새로고침 시 이미지가 사라질 수 있어요" 안내 문구 표시
 
 #### 댓글 바텀 시트
 

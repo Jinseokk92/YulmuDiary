@@ -168,14 +168,21 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = "0";
     document.body.style.right = "0";
-    document.body.style.overflowY = "scroll";
+    document.body.style.overflow = "hidden";
+
+    // 모바일 Safari/Chrome: CSS만으로 차단이 안 되는 touchmove 이벤트를 직접 막음
+    const preventTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", preventTouchMove, { passive: false });
 
     return () => {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
       document.body.style.right = "";
-      document.body.style.overflowY = "";
+      document.body.style.overflow = "";
+      document.removeEventListener("touchmove", preventTouchMove);
       window.scrollTo(0, scrollY);
     };
   }, [open]);
@@ -492,9 +499,11 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                   </div>
 
                   <div
+                    onTouchMove={(e) => e.stopPropagation()}
                     style={{
                       overflowY: "auto",
                       flex: 1,
+                      overscrollBehavior: "contain",
                       padding: showDateFooter
                         ? "0 16px 28px"
                         : "0 16px max(20px, env(safe-area-inset-bottom))",

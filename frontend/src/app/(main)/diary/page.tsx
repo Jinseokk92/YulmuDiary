@@ -19,6 +19,8 @@ export default function DiaryPage() {
   const router = useRouter();
   const pageParam = searchParams.get("page");
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const highlightParam = searchParams.get("highlightId");
+  const highlightId = highlightParam ? parseInt(highlightParam, 10) : null;
 
   const [filters, setFilters] = useState<DiaryFilters>(DEFAULT_DIARY_FILTERS);
   const [data, setData] = useState<DiaryPostPaginatedResponse | null>(null);
@@ -93,6 +95,7 @@ export default function DiaryPage() {
           currentPage={currentPage}
           onRefresh={handleRefresh}
           onDelete={handleDelete}
+          highlightId={highlightId}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { memo, useState, useCallback, useRef, useEffect, type RefObject, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
@@ -18,6 +18,7 @@ interface DiaryCardProps {
   post: DiaryPostResponse;
   onDelete: (postId: number) => void;
   disableNativeDrag?: boolean;
+  highlight?: boolean;
 }
 
 interface ActionIconButtonProps {
@@ -53,15 +54,32 @@ function ActionIconButton({
   );
 }
 
-function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCardProps) {
+function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight = false }: DiaryCardProps) {
   const { currentUser } = useUser();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const commentSectionRef = useRef<CommentBottomSheetHandle>(null);
+  const cardRef = useRef<HTMLElement>(null);
   const isAuthor = currentUser?.id === post.authorId;
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === "dark";
+
+  // ─── 하이라이트 (알림에서 진입 시) ──────────────────────────────────
+  const [isHighlighted, setIsHighlighted] = useState(highlight);
+
+  useEffect(() => {
+    if (!highlight) return;
+    setIsHighlighted(true);
+    const scrollTimer = setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+    const fadeTimer = setTimeout(() => setIsHighlighted(false), 1500);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(fadeTimer);
+    };
+  }, [highlight]);
 
   // ─── 삭제 상태 ─────────────────────────────────────────────────────
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -250,11 +268,17 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false }: DiaryCard
 
   return (
     <>
-      <article className={`border-b pb-8 mb-8 last:border-0 last:mb-0 backdrop-blur-sm
-        ${isDark
-          ? "bg-slate-900/85 border-slate-800"
-          : "bg-white/90 border-gray-100"
-        }`}>
+      <article
+        ref={cardRef as RefObject<HTMLElement>}
+        className={`border-b pb-8 mb-8 last:border-0 last:mb-0 backdrop-blur-sm
+          ${isDark ? "border-slate-800" : "border-gray-100"}`}
+        style={{
+          backgroundColor: isHighlighted
+            ? (isDark ? "rgba(120, 53, 15, 0.55)" : "#fff7ed")
+            : (isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)"),
+          transition: "background-color 1.5s ease",
+        }}
+      >
 
         {/* ── 상단: 프로필 + 수정/삭제 버튼 ── */}
         <div className="flex items-center justify-between px-4 py-3">

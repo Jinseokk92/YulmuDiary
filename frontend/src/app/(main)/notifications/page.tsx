@@ -330,7 +330,7 @@ export default function NotificationsPage() {
                   <NotificationRow
                     item={item}
                     isDark={isDark}
-                    onClick={() => router.push("/diary")}
+                    onClick={() => router.push(`/diary?highlightId=${item.diaryPostId}`)}
                   />
                   {idx < group.length - 1 && (
                     <div className="h-px mx-4" style={{ backgroundColor: divider }} />

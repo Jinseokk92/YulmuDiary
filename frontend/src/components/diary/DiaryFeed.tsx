@@ -15,9 +15,10 @@ interface DiaryFeedProps {
   currentPage: number; // 1-based (URL 파라미터)
   onRefresh?: () => Promise<void>;
   onDelete?: (postId: number) => void;
+  highlightId?: number | null;
 }
 
-export default function DiaryFeed({ data, currentPage, onRefresh, onDelete }: DiaryFeedProps) {
+export default function DiaryFeed({ data, currentPage, onRefresh, onDelete, highlightId }: DiaryFeedProps) {
   const router = useRouter();
   const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
 
@@ -77,7 +78,7 @@ export default function DiaryFeed({ data, currentPage, onRefresh, onDelete }: Di
         ) : (
           <div className="flex flex-col py-4">
             {data.content.map((post) => (
-              <DiaryCard key={post.id} post={post} onDelete={handleDelete} />
+              <DiaryCard key={post.id} post={post} onDelete={handleDelete} highlight={highlightId === post.id} />
             ))}
 
             <Pagination
