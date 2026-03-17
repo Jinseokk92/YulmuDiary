@@ -16,13 +16,23 @@ interface DatePickerSheetProps {
   onChange: (date: string) => void;
   onClose: () => void;
   isDark: boolean;
+  lockBody?: boolean;
+  maxDate?: string;
 }
 
-export default function DatePickerSheet({ value, onChange, onClose, isDark }: DatePickerSheetProps) {
+export default function DatePickerSheet({
+  value,
+  onChange,
+  onClose,
+  isDark,
+  lockBody = true,
+  maxDate,
+}: DatePickerSheetProps) {
   const today = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-  const initDate = value ? new Date(value.replace(/-/g, "/")) : today;
+  const safeValue = value && (!maxDate || value <= maxDate) ? value : maxDate;
+  const initDate = safeValue ? new Date(safeValue.replace(/-/g, "/")) : today;
   const [viewYear,  setViewYear]  = useState(initDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initDate.getMonth() + 1);
   const [mounted,   setMounted]   = useState(false);
@@ -31,6 +41,7 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
 
   // 바텀시트 열릴 때 body 스크롤 고정 (iOS Safari 포함)
   useEffect(() => {
+    if (!lockBody) return;
     const scrollY = window.scrollY;
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
@@ -50,7 +61,7 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
       document.removeEventListener("touchmove", preventTouchMove);
       window.scrollTo(0, scrollY);
     };
-  }, []);
+  }, [lockBody]);
 
   if (!mounted) return null;
 
@@ -66,6 +77,9 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
     if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1); }
     else setViewMonth(m => m + 1);
   };
+  const maxMonthKey = maxDate ? maxDate.slice(0, 7) : null;
+  const viewMonthKey = `${viewYear}-${String(viewMonth).padStart(2, "0")}`;
+  const canGoNext = !maxMonthKey || viewMonthKey < maxMonthKey;
 
   // ── 색상 ─────────────────────────────────────────────
   const sheetBg     = isDark ? "#1e293b" : "#ffffff";
@@ -131,8 +145,9 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
 
             <button
               onClick={nextMonth}
+              disabled={!canGoNext}
               className="flex items-center justify-center w-9 h-9 rounded-2xl transition-colors"
-              style={{ color: headerText }}
+              style={{ color: headerText, opacity: canGoNext ? 1 : 0.35 }}
               onMouseEnter={e => (e.currentTarget.style.background = navHover)}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               aria-label="다음 달"
@@ -166,13 +181,19 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
               const day      = i - firstDow + 1;
               const isValid  = day >= 1 && day <= daysInMonth;
               const dateStr  = isValid ? toDateStr(viewYear, viewMonth, day) : "";
+              const exceedsMax = !!(isValid && maxDate && dateStr > maxDate);
               const isSelected = isValid && dateStr === value;
               const isToday    = isValid && dateStr === todayStr;
               const dow        = i % 7;
 
               let cellStyle: React.CSSProperties = { opacity: isValid ? 1 : 0 };
               if (isValid) {
-                if (isSelected) {
+                if (exceedsMax) {
+                  cellStyle = {
+                    color: isDark ? "#64748b" : "#cbd5e1",
+                    opacity: 0.45,
+                  };
+                } else if (isSelected) {
                   cellStyle = {
                     background: "#e4701e",
                     color: "#ffffff",
@@ -200,20 +221,20 @@ export default function DatePickerSheet({ value, onChange, onClose, isDark }: Da
               return (
                 <button
                   key={i}
-                  disabled={!isValid}
+                  disabled={!isValid || exceedsMax}
                   onClick={() => {
-                    if (!isValid) return;
+                    if (!isValid || exceedsMax) return;
                     onChange(dateStr);
                     onClose();
                   }}
                   className="relative flex items-center justify-center aspect-square rounded-full text-xs font-medium transition-colors mx-0.5"
                   style={cellStyle}
                   onMouseEnter={e => {
-                    if (!isValid || isSelected) return;
+                    if (!isValid || exceedsMax || isSelected) return;
                     e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "#f5f5f5";
                   }}
                   onMouseLeave={e => {
-                    if (!isValid || isSelected) return;
+                    if (!isValid || exceedsMax || isSelected) return;
                     if (isToday) {
                       e.currentTarget.style.background = isDark ? "rgba(228,112,30,0.18)" : "#fff7ed";
                     } else {

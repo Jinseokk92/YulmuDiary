@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, animate } from "framer-motion";
 import { api } from "@/lib/api";
 import ImageViewer from "@/components/diary/ImageViewer";
 import { useAuthStore } from "@/stores/authStore";
 import { getMediaUrl } from "@/lib/utils";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import type { MediaDto, MilestoneResponse } from "@/types";
 
 // ── 상수 ──────────────────────────────────────────────────────────────────────
@@ -272,6 +273,12 @@ function getPhotoSrc(photo: PhotoItem): string {
   return photo.kind === "new" ? photo.preview : getMediaUrl(photo.url);
 }
 
+function formatRecordDate(date: string) {
+  const [year, month, day] = date.split("-");
+  if (!year || !month || !day) return date;
+  return `${year}.${month}.${day}`;
+}
+
 interface RecordBottomSheetProps {
   milestone: MilestoneResponse;
   isEdit: boolean;
@@ -293,8 +300,11 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   const [error, setError]             = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showPhotoSourceSheet, setShowPhotoSourceSheet] = useState(false);
 
-  const fileRef       = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const handleAreaRef = useRef<HTMLDivElement>(null);
   const previewUrlsRef = useRef<Set<string>>(new Set());
   const dismissY      = useMotionValue(0);
@@ -307,6 +317,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   const fieldCls = `w-full rounded-2xl border box-border text-[16px] outline-none transition-colors ${inputCls}`;
   const singleLineFieldCls = `${fieldCls} min-h-[54px] px-4 py-[0.9375rem] leading-[1.35]`;
   const textareaFieldCls = `${fieldCls} min-h-[124px] px-4 py-3 leading-[1.5] resize-none`;
+  const buttonFieldCls = `${singleLineFieldCls} flex items-center justify-between gap-3 text-left`;
   const footerCls = isDark
     ? "border-slate-800 bg-slate-900/95 supports-[backdrop-filter]:bg-slate-900/90"
     : "border-gray-100 bg-white/95 supports-[backdrop-filter]:bg-white/90";
@@ -389,6 +400,19 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   }, [onClose, dismissY]);
 
   // 파일 추가
+  const appendPhotos = useCallback((files: File[]) => {
+    if (!files.length) return;
+    const remaining = MAX_PHOTOS - totalPhotoCount;
+    const toAdd = files.slice(0, remaining);
+    if (!toAdd.length) return;
+    const nextPhotos = toAdd.map((file) => {
+      const preview = URL.createObjectURL(file);
+      previewUrlsRef.current.add(preview);
+      return createNewPhoto(file, preview);
+    });
+    setNewPhotos((prev) => [...prev, ...nextPhotos]);
+  }, [totalPhotoCount]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -405,6 +429,11 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   };
 
   // 사진 삭제
+  const handleCameraFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    appendPhotos(Array.from(e.target.files ?? []));
+    e.target.value = "";
+  };
+
   const handleRemovePhoto = (photo: PhotoItem) => {
     if (photo.kind === "existing") {
       setExistingPhotos((prev) => prev.filter((item) => item.id !== photo.id));
@@ -416,8 +445,19 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     setNewPhotos((prev) => prev.filter((item) => item.id !== photo.id));
   };
 
+  const openPhotoSourceSheet = () => {
+    if (saving || !canAddMore) return;
+    setShowPhotoSourceSheet(true);
+  };
+
   const openPhotoLibraryPicker = () => {
-    fileRef.current?.click();
+    setShowPhotoSourceSheet(false);
+    galleryInputRef.current?.click();
+  };
+
+  const openCameraPicker = () => {
+    setShowPhotoSourceSheet(false);
+    cameraInputRef.current?.click();
   };
 
   const handleSubmit = useCallback(async () => {
@@ -496,17 +536,29 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
           style={{ touchAction: "pan-y" }}
           onTouchMove={(e) => e.stopPropagation()}
         >
-          <div className="px-5 pt-5 pb-6 space-y-5">
+          <div className="px-5 pt-5 pb-6 space-y-6">
             {/* 날짜 */}
             <div>
               <label className={`block text-xs font-semibold mb-1.5 ${labelCls}`}>달성 날짜 *</label>
-              <input
-                type="date" value={date}
-                onChange={(e) => setDate(e.target.value)}
-                max={today}
-                className={`${singleLineFieldCls} milestone-sheet-date-field`}
-                style={{ WebkitTextSizeAdjust: "100%" }}
-              />
+              <button
+                type="button"
+                onClick={() => setShowDatePicker(true)}
+                className={buttonFieldCls}
+                aria-haspopup="dialog"
+                aria-expanded={showDatePicker}
+              >
+                <span className="flex min-w-0 flex-col items-start">
+                  <span className="text-[15px] font-medium leading-5">
+                    {formatRecordDate(date)}
+                  </span>
+                  <span className={`mt-0.5 text-[11px] leading-4 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                    달성한 날짜를 선택해주세요
+                  </span>
+                </span>
+                <svg className={`h-5 w-5 shrink-0 ${isDark ? "text-slate-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3.75v2.25m7.5-2.25v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0120.25 6.75v11.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V6.75a1.5 1.5 0 011.5-1.5z" />
+                </svg>
+              </button>
             </div>
 
             {/* 감상 */}
@@ -562,7 +614,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 {canAddMore && (
                   <button
                     type="button"
-                    onClick={openPhotoLibraryPicker}
+                    onClick={openPhotoSourceSheet}
                     className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors
                       ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[168px] gap-2.5"}
                       ${isDark ? "border-slate-700 hover:border-primary-500 text-slate-500" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
@@ -590,12 +642,20 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 )}
               </div>
               <input
-                ref={fileRef}
+                ref={galleryInputRef}
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleCameraFileChange}
               />
             </div>
 
@@ -616,24 +676,79 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
             {saving ? "저장 중..." : isEdit ? "수정하기" : "저장"}
           </button>
         </div>
-
-        <style jsx global>{`
-          .milestone-sheet-date-field {
-            font: inherit;
-          }
-
-          .milestone-sheet-date-field::-webkit-datetime-edit,
-          .milestone-sheet-date-field::-webkit-datetime-edit-fields-wrapper {
-            padding: 0;
-          }
-
-          .milestone-sheet-date-field::-webkit-datetime-edit,
-          .milestone-sheet-date-field::-webkit-date-and-time-value {
-            min-height: 1.35em;
-            line-height: 1.35;
-          }
-        `}</style>
       </motion.div>
+
+      <AnimatePresence>
+        {showPhotoSourceSheet && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 bg-black/45"
+              style={{ zIndex: 112 }}
+              onClick={() => setShowPhotoSourceSheet(false)}
+            />
+            <motion.div
+              initial={{ y: 48, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 48, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+              className="fixed inset-x-0 mx-auto w-full max-w-lg px-3"
+              style={{
+                zIndex: 113,
+                bottom: 0,
+                paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.25rem))",
+              }}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <div className={`overflow-hidden rounded-[28px] border shadow-[0_-12px_36px_rgba(0,0,0,0.18)] ${isDark ? "border-slate-800 bg-slate-900" : "border-gray-100 bg-white"}`}>
+                <div className="px-5 pt-5 pb-3">
+                  <p className="text-sm font-semibold">사진 추가</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                    사진 보관함 또는 카메라에서 바로 추가할 수 있어요.
+                  </p>
+                </div>
+                <div className="space-y-2 px-3 pb-3">
+                  <button
+                    type="button"
+                    onClick={openPhotoLibraryPicker}
+                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  >
+                    사진 보관함
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openCameraPicker}
+                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  >
+                    사진 찍기
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPhotoSourceSheet(false)}
+                className={`mt-2 flex min-h-[54px] w-full items-center justify-center rounded-2xl border text-[15px] font-semibold transition-colors ${isDark ? "border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                취소
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {showDatePicker && (
+        <DatePickerSheet
+          value={date}
+          onChange={setDate}
+          onClose={() => setShowDatePicker(false)}
+          isDark={isDark}
+          lockBody={false}
+          maxDate={today}
+        />
+      )}
     </>,
     document.body
   );
