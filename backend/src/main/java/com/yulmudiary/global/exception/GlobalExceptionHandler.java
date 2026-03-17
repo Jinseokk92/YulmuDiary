@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -41,13 +43,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .findFirst()
-                .orElse("Validation failed");
-
         return ResponseEntity.badRequest()
-                .body(ApiResponse.error("VALIDATION_ERROR", message));
+                .body(ApiResponse.error("VALIDATION_ERROR", extractValidationMessage(e.getBindingResult())));
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBindException(BindException e) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("VALIDATION_ERROR", extractValidationMessage(e.getBindingResult())));
     }
 
     @ExceptionHandler(NotFoundException.class)
@@ -96,5 +99,14 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception at {}: {}", request.getRequestURI(), e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("INTERNAL_ERROR", "서버 내부 오류가 발생했습니다."));
+    }
+    private String extractValidationMessage(BindingResult bindingResult) {
+        return bindingResult.getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .findFirst()
+                .orElseGet(() -> bindingResult.getGlobalErrors().stream()
+                        .map(error -> error.getDefaultMessage())
+                        .findFirst()
+                        .orElse("Validation failed"));
     }
 }

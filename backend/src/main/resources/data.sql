@@ -19,3 +19,8 @@ VALUES
 -- 아기
 INSERT INTO baby (name, birth_date, gender, profile_image_url, family_group_id, created_at, updated_at)
 VALUES ('율무', '2024-06-15', 'MALE', NULL, 1, NOW(), NOW());
+
+
+UPDATE users
+SET is_admin = true
+WHERE email = 'wlstjra@kakao.com';

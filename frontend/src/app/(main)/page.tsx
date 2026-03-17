@@ -9,6 +9,8 @@ import FloatingYulmu from "@/components/FloatingYulmu";
 import type { BabyResponse } from "@/types";
 
 const BABY_ID = 1;
+const LS_DDAY = "home_dday";
+const LS_PREGNANCY = "home_pregnancy";
 
 export default function Home() {
   const HERO_FRAME_WIDTH = 184;
@@ -23,27 +25,40 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
+
+    // 캐시된 값을 즉시 표시
+    const cachedDday = localStorage.getItem(LS_DDAY);
+    const cachedPregnancy = localStorage.getItem(LS_PREGNANCY);
+    if (cachedDday) setDday(cachedDday);
+    if (cachedPregnancy) setPregnancyDisplay(cachedPregnancy);
+
+    // API 호출 후 최신값으로 갱신 + 캐시 업데이트
     api.get<BabyResponse>(`/api/babies/${BABY_ID}`)
       .then((baby) => {
         const { dDayCount, pregnancyWeeks, pregnancyDays } = baby;
         // D-day 표시: 양수=D-N(미래), 0=D-Day, 음수=D+N(과거)
-        if (dDayCount === 0) setDday("D-Day");
-        else if (dDayCount > 0) setDday(`D-${dDayCount}`);
-        else setDday(`D+${Math.abs(dDayCount)}`);
-        setPregnancyDisplay(pregnancyDays === 0 ? `${pregnancyWeeks}주` : `${pregnancyWeeks}주 ${pregnancyDays}일`);
+        const ddayStr = dDayCount === 0 ? "D-Day"
+          : dDayCount > 0 ? `D-${dDayCount}`
+          : `D+${Math.abs(dDayCount)}`;
+        const pregnancyStr = pregnancyDays === 0
+          ? `${pregnancyWeeks}주`
+          : `${pregnancyWeeks}주 ${pregnancyDays}일`;
+        setDday(ddayStr);
+        setPregnancyDisplay(pregnancyStr);
+        localStorage.setItem(LS_DDAY, ddayStr);
+        localStorage.setItem(LS_PREGNANCY, pregnancyStr);
       })
-      .catch(() => {
-        // API 실패 시 표시 없음 유지
-      });
+      .catch(() => {});
   }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
 
-  const card  = isDark ? "bg-slate-900/80 border border-slate-800" : "bg-white/90 border border-white/60";
-  const sub   = isDark ? "text-slate-400" : "text-gray-400";
-  const title = isDark ? "text-slate-100" : "text-gray-900";
-  const desc  = isDark ? "text-slate-500" : "text-gray-400";
-  const label = isDark ? "text-slate-200" : "text-gray-800";
+  const card     = isDark ? "bg-slate-900/80 border border-slate-800" : "bg-white/90 border border-white/60";
+  const sub      = isDark ? "text-slate-400" : "text-gray-400";
+  const title    = isDark ? "text-slate-100" : "text-gray-900";
+  const desc     = isDark ? "text-slate-500" : "text-gray-400";
+  const label    = isDark ? "text-slate-200" : "text-gray-800";
+  const skelCls  = `inline-block rounded align-middle animate-pulse ${isDark ? "bg-slate-700" : "bg-gray-200"}`;
 
   return (
     <div className="px-4 py-6 space-y-4">
@@ -53,12 +68,16 @@ export default function Home() {
         <h2 className={`text-2xl font-bold ${title}`}>
           임신{" "}
           <span className="text-primary-500">
-            {pregnancyDisplay ?? "···"}
+            {pregnancyDisplay != null
+              ? pregnancyDisplay
+              : <span className={`${skelCls} w-14 h-5`} />}
           </span>
           차
         </h2>
         <p className="mt-2 text-xl font-bold text-primary-500">
-          {dday ?? "···"}
+          {dday != null
+            ? dday
+            : <span className={`${skelCls} w-12 h-5`} />}
         </p>
       </section>
 
@@ -148,6 +167,29 @@ export default function Home() {
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-semibold ${label}`}>앨범</p>
             <p className={`text-xs ${desc} mt-0.5`}>임신·성장 사진 모아보기</p>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            strokeWidth={2} stroke="currentColor" className={`w-4 h-4 shrink-0 ${sub}`}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </Link>
+
+        <Link
+          href="/milestones"
+          className={`col-span-2 flex items-center gap-4 ${card} rounded-2xl px-5 py-4 shadow-sm
+                     hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm`}
+        >
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0
+                          ${isDark ? "bg-slate-800" : "bg-violet-50"}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-violet-500">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold ${label}`}>이정표</p>
+            <p className={`text-xs ${desc} mt-0.5`}>율무의 성장 여정</p>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
             strokeWidth={2} stroke="currentColor" className={`w-4 h-4 shrink-0 ${sub}`}>

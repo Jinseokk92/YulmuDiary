@@ -276,6 +276,21 @@ export interface NotificationSettingsResponse {
   reactionNotificationEnabled: boolean;
 }
 
+// --- Milestone ---
+
+export interface MilestoneResponse {
+  id: number;
+  milestoneKey: string;
+  title: string;
+  description: string;
+  expectedMonth: string;
+  photoUrls: string[];
+  achievedDate: string | null; // "YYYY-MM-DD"
+  memo: string | null;
+  displayOrder: number;
+  achieved: boolean;
+}
+
 // --- Schedule ---
 
 export interface ScheduleResponse {

@@ -81,6 +81,20 @@ public class GcsImageStorageServiceImpl implements ImageStorageService {
         return new ImagePaths(publicUrl, publicUrl);
     }
 
+    @Override
+    public void deleteByUrl(String url) {
+        if (url == null || url.isBlank()) return;
+        if (!url.startsWith(gcsBaseUrl)) return;
+        // gcsBaseUrl = "https://storage.googleapis.com/{bucket}/originals/"
+        // url = gcsBaseUrl + filename → objectName = "originals/" + filename
+        String filename = url.substring(gcsBaseUrl.length());
+        String objectName = "originals/" + filename;
+        try {
+            storage.delete(BlobId.of(bucketName, objectName));
+        } catch (Exception ignored) {
+        }
+    }
+
     private String resolveContentType(MultipartFile file, String extension) {
         String contentType = file.getContentType();
         if (contentType != null && !contentType.isBlank()) {

@@ -99,6 +99,27 @@ public class LocalImageStorageServiceImpl implements ImageStorageService {
         }
     }
 
+    @Override
+    public void deleteByUrl(String url) {
+        if (url == null || url.isBlank()) return;
+        if (!url.startsWith(baseUrl)) return;
+        // baseUrl = "http://localhost:8080/api/media/files/"
+        // url = baseUrl + "originals/{filename}" or "thumbnails/{filename}"
+        String relativePath = url.substring(baseUrl.length());
+        try {
+            Files.deleteIfExists(uploadDir.resolve(relativePath));
+        } catch (IOException ignored) {
+        }
+        // 썸네일도 함께 삭제 (originals URL이 들어온 경우 thumbnails에서도 제거)
+        String filename = relativePath.contains("/")
+                ? relativePath.substring(relativePath.lastIndexOf('/') + 1)
+                : relativePath;
+        try {
+            Files.deleteIfExists(thumbnailsDir.resolve(filename));
+        } catch (IOException ignored) {
+        }
+    }
+
     /**
      * 로컬 파일 서빙용. MediaController에서 직접 호출한다.
      */

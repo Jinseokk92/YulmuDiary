@@ -29,6 +29,10 @@ async function request<T>(
     let body: unknown;
     if (options?.body && typeof options.body === "string") {
       try { body = JSON.parse(options.body); } catch { body = options.body; }
+    } else if (options?.body instanceof FormData) {
+      const formObj: Record<string, unknown> = {};
+      (options.body as FormData).forEach((value, key) => { formObj[key] = value; });
+      body = formObj;
     }
     return handleDemoRequest<T>(cleanEndpoint, method, body);
   }
@@ -193,6 +197,13 @@ export const api = {
       ...options,
       method: "PATCH",
       body: body ? JSON.stringify(body) : undefined,
+    }),
+
+  patchForm: <T>(endpoint: string, formData: FormData, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: formData,
     }),
 
   delete: <T>(endpoint: string, options?: RequestInit) =>

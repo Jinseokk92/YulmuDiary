@@ -15,6 +15,10 @@ import ReactionUsersSheet from "./ReactionUsersSheet";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 
+type EditMedia =
+  | { kind: "existing"; url: string; thumbnailUrl: string }
+  | { kind: "new"; file: File; preview: string };
+
 interface DiaryCardProps {
   post: DiaryPostResponse;
   onDelete: (postId: number) => void;
@@ -110,48 +114,120 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
   // 수정 성공 후 props를 기다리지 않고 즉시 반영하기 위한 로컬 표시 상태
   const [displayContent, setDisplayContent] = useState(post.content);
   const [displayTag, setDisplayTag] = useState<string | null>(post.milestoneTag);
+  const [displayMedia, setDisplayMedia] = useState(post.media);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [editTag, setEditTag] = useState("");
+  const [editMediaList, setEditMediaList] = useState<EditMedia[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditStart = useCallback(() => {
     setEditContent(displayContent);
     setEditTag(displayTag ?? "");
+    setEditMediaList(
+      displayMedia.map(m => ({
+        kind: "existing" as const,
+        url: m.url,
+        thumbnailUrl: m.thumbnailUrl ?? m.url,
+      }))
+    );
     setIsEditing(true);
-  }, [displayContent, displayTag]);
+  }, [displayContent, displayTag, displayMedia]);
 
   const handleEditCancel = useCallback(() => {
+    setEditMediaList(prev => {
+      prev.forEach(m => { if (m.kind === "new") URL.revokeObjectURL(m.preview); });
+      return [];
+    });
     setIsEditing(false);
   }, []);
 
+  const handleEditImageRemove = useCallback((index: number) => {
+    setEditMediaList(prev => {
+      const item = prev[index];
+      if (item.kind === "new") URL.revokeObjectURL(item.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const handleEditImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setEditMediaList(prev => {
+      const remaining = 10 - prev.length;
+      const newItems: EditMedia[] = files.slice(0, remaining).map(file => ({
+        kind: "new",
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      return [...prev, ...newItems];
+    });
+    e.target.value = "";
+  }, []);
+
   const handleEditSave = useCallback(async () => {
-    // 방어 로직: 빈 값 또는 공백만 있는 경우 전송 차단
     if (!editContent.trim()) return;
     if (!currentUser) return;
 
     setIsSaving(true);
     try {
-      await api.put(
+      // 새 파일이 있으면 먼저 업로드
+      const newItems = editMediaList.filter(
+        (m): m is Extract<EditMedia, { kind: "new" }> => m.kind === "new"
+      );
+      let uploadedPaths: { imageUrl: string; thumbnailUrl: string }[] = [];
+      if (newItems.length > 0) {
+        const formData = new FormData();
+        newItems.forEach(item => formData.append("files", item.file));
+        const result = await api.upload<{ images: { imageUrl: string; thumbnailUrl: string }[] }>(
+          "/api/media/upload",
+          formData
+        );
+        uploadedPaths = result.images;
+      }
+
+      // 최종 mediaUrls / mediaThumbnailUrls 구성
+      let uploadedIdx = 0;
+      const finalUrls: string[] = [];
+      const finalThumbnailUrls: string[] = [];
+      for (const item of editMediaList) {
+        if (item.kind === "existing") {
+          finalUrls.push(item.url);
+          finalThumbnailUrls.push(item.thumbnailUrl);
+        } else {
+          const u = uploadedPaths[uploadedIdx++];
+          finalUrls.push(u.imageUrl);
+          finalThumbnailUrls.push(u.thumbnailUrl);
+        }
+      }
+
+      const updated = await api.put<DiaryPostResponse>(
         `/api/diary-posts/${post.id}`,
         {
           babyId: post.babyId,
           content: editContent.trim(),
           milestoneTag: editTag.trim() || undefined,
-          mediaUrls: post.media.map((m) => m.url),
-          mediaThumbnailUrls: post.media.map((m) => m.thumbnailUrl ?? m.url),
+          mediaUrls: finalUrls,
+          mediaThumbnailUrls: finalThumbnailUrls,
         }
       );
-      setDisplayContent(editContent.trim());
-      setDisplayTag(editTag.trim() || null);
+
+      // preview URL 해제
+      newItems.forEach(item => URL.revokeObjectURL(item.preview));
+
+      setDisplayContent(updated.content);
+      setDisplayTag(updated.milestoneTag ?? null);
+      setDisplayMedia(updated.media);
+      setEditMediaList([]);
       setIsEditing(false);
     } catch {
       alert("수정에 실패했습니다.");
     } finally {
       setIsSaving(false);
     }
-  }, [editContent, editTag, currentUser, post.id, post.babyId, post.media]);
+  }, [editContent, editTag, editMediaList, currentUser, post.id, post.babyId]);
 
   // ─── 삭제 핸들러 ───────────────────────────────────────────────────
   const handleDelete = useCallback(async () => {
@@ -269,6 +345,23 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
   const title = lines.length > 1 ? lines[0] : null;
   const body = lines.length > 1 ? lines.slice(1).join("\n") : displayContent;
 
+  // ─── 더보기/접기 ────────────────────────────────────────────────
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [displayContent]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (isExpanded) return;
+    const el = textRef.current;
+    if (!el) return;
+    setIsTruncated(el.scrollHeight > el.clientHeight + 1);
+  }, [displayContent, mounted, isExpanded]);
+
   return (
     <>
       <article
@@ -353,10 +446,10 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
         </div>
 
         {/* ── 중단: 사진 ── */}
-        {post.media && post.media.length > 0 && (
+        {displayMedia && displayMedia.length > 0 && (
           <div className="relative">
             <ImageCarousel
-              media={post.media}
+              media={displayMedia}
               diaryId={post.id}
               onImageClick={handleImageClick}
               onDoubleTap={handleCarouselDoubleTap}
@@ -388,9 +481,9 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
         )}
 
         {/* 이미지 전체 뷰어 */}
-        {viewerOpen && post.media && post.media.length > 0 && (
+        {viewerOpen && displayMedia && displayMedia.length > 0 && (
           <ImageViewer
-            media={post.media}
+            media={displayMedia}
             initialIndex={viewerIndex}
             onClose={handleViewerClose}
             onDoubleTap={handleDoubleTapLike}
@@ -482,6 +575,53 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
           {/* ── 수정 모드 ── */}
           {isEditing ? (
             <div className="space-y-2">
+
+              {/* 이미지 편집 */}
+              <div className="flex flex-wrap gap-2">
+                {editMediaList.map((item, index) => (
+                  <div key={index} className="relative w-20 h-20 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.kind === "existing" ? item.thumbnailUrl : item.preview}
+                      alt=""
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleEditImageRemove(index)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black/70 text-white rounded-full
+                                 flex items-center justify-center text-xs leading-none"
+                      aria-label="이미지 제거"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {editMediaList.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => editImageInputRef.current?.click()}
+                    className={`w-20 h-20 shrink-0 rounded-lg border-2 border-dashed
+                               flex items-center justify-center text-2xl transition-colors
+                               ${isDark
+                                 ? "border-slate-600 text-slate-500 hover:border-primary-500 hover:text-primary-400"
+                                 : "border-gray-300 text-gray-400 hover:border-primary-400 hover:text-primary-500"
+                               }`}
+                    aria-label="이미지 추가"
+                  >
+                    +
+                  </button>
+                )}
+                <input
+                  ref={editImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleEditImageSelect}
+                />
+              </div>
+
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
@@ -533,10 +673,29 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               {title && (
                 <h3 className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>{title}</h3>
               )}
-              <p className={`text-sm leading-relaxed line-clamp-2 ${isDark ? "text-slate-200" : "text-gray-800"}`}>
+              <p
+                ref={textRef}
+                className={`text-sm leading-relaxed ${isExpanded ? "" : "line-clamp-3"} ${isDark ? "text-slate-200" : "text-gray-800"}`}
+              >
                 <span className="font-bold mr-2">{post.authorNickname}</span>
                 {body}
               </p>
+              {!isExpanded && isTruncated && (
+                <button
+                  onClick={() => setIsExpanded(true)}
+                  className={`text-sm ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-400 hover:text-gray-600"} transition-colors`}
+                >
+                  더보기
+                </button>
+              )}
+              {isExpanded && (
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className={`text-sm ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-400 hover:text-gray-600"} transition-colors`}
+                >
+                  접기
+                </button>
+              )}
               {displayTag && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {displayTag.split(/\s+/).map((tag, i) => (

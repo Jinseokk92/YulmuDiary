@@ -12,11 +12,13 @@ import com.yulmudiary.domain.diary.entity.MediaType;
 import com.yulmudiary.domain.diary.dto.DiaryPostSortType;
 import com.yulmudiary.domain.diary.repository.DiaryPostRepository;
 import com.yulmudiary.domain.diary.repository.DiaryPostSpec;
+import com.yulmudiary.domain.media.service.ImageStorageService;
 import com.yulmudiary.domain.media.service.MediaUrlResolver;
 import com.yulmudiary.domain.user.entity.User;
 import com.yulmudiary.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -36,6 +39,7 @@ public class DiaryPostService {
     private final UserRepository userRepository;
     private final BabyRepository babyRepository;
     private final MediaUrlResolver mediaUrlResolver;
+    private final ImageStorageService imageStorageService;
 
 
     @Transactional
@@ -154,9 +158,25 @@ public class DiaryPostService {
 
         validateAuthor(post, authorId);
 
+        // 새 요청에 포함되지 않은 기존 미디어 URL → 저장소에서 삭제
+        List<String> newUrls = request.getMediaUrls() != null ? request.getMediaUrls() : List.of();
+        List<String> urlsToDelete = post.getMediaList().stream()
+                .map(Media::getUrl)
+                .filter(url -> !newUrls.contains(url))
+                .toList();
+
         post.update(request.getContent(), request.getMilestoneTag());
         post.clearMedia();
         addMedia(post, request.getMediaUrls(), request.getMediaThumbnailUrls());
+
+        // DB 트랜잭션과 무관하게 저장소 파일 삭제 (실패해도 수정은 유지)
+        urlsToDelete.forEach(url -> {
+            try {
+                imageStorageService.deleteByUrl(url);
+            } catch (Exception e) {
+                log.warn("미디어 파일 삭제 실패: {}", url, e);
+            }
+        });
 
         return DiaryPostResponse.from(post, mediaUrlResolver);
     }

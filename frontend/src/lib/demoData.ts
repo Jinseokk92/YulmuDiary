@@ -20,6 +20,7 @@ import type {
   AlbumPhotoFavoriteResponse,
   AlbumPhotoRequest,
   MediaUploadResponse,
+  MilestoneResponse,
 } from "@/types";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ const STORAGE_KEYS = {
   demoMode: "demoMode",
   albumPhotos: "demo_album_photos",
   albumFavorites: "demo_album_favorites",
+  milestones: "demo_milestones",
 } as const;
 
 // ─── 날짜 헬퍼 ───────────────────────────────────────────────────────────────
@@ -201,6 +203,25 @@ function buildInitialNotificationSettings(): NotificationSettingsResponse {
   };
 }
 
+function buildInitialMilestones(): MilestoneResponse[] {
+  return [
+    { id: 7001, milestoneKey: "BORN",           title: "세상에 태어난 날",    description: "우리 가족이 된 첫 순간",                  expectedMonth: "0개월",      photoUrls: [], achievedDate: daysFromNow(-90), memo: "드디어 율무가 왔어요!",         displayOrder: 1,  achieved: true  },
+    { id: 7002, milestoneKey: "FIRST_HOME",     title: "처음 집에 온 날",     description: "드디어 우리 집에 온 날",                  expectedMonth: "0개월",      photoUrls: [], achievedDate: daysFromNow(-88), memo: null,                             displayOrder: 2,  achieved: true  },
+    { id: 7003, milestoneKey: "SOCIAL_SMILE",   title: "사회적 미소",         description: "엄마, 아빠를 보며 방긋 웃는 순간",        expectedMonth: "2개월",      photoUrls: [], achievedDate: daysFromNow(-30), memo: "너무 귀여워서 심장이 녹았어요",  displayOrder: 3,  achieved: true  },
+    { id: 7004, milestoneKey: "BABBLING",       title: "옹알이",              description: "아우, 우, 구 처음 소리를 내기 시작한 날", expectedMonth: "3개월",      photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 4,  achieved: false },
+    { id: 7005, milestoneKey: "HEAD_CONTROL",   title: "목 가누기",           description: "안았을 때 머리를 안정적으로 드는 순간",   expectedMonth: "4개월",      photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 5,  achieved: false },
+    { id: 7006, milestoneKey: "ROLLING",        title: "뒤집기",              description: "스스로 뒤집은 그 감동의 순간",            expectedMonth: "5~6개월",    photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 6,  achieved: false },
+    { id: 7007, milestoneKey: "SITTING",        title: "혼자 앉기",           description: "혼자 앉아있는 모습에 감동",               expectedMonth: "6~7개월",    photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 7,  achieved: false },
+    { id: 7008, milestoneKey: "COMMANDO_CRAWL", title: "배밀이",              description: "세상을 향해 움직이기 시작한 날",          expectedMonth: "7~9개월",    photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 8,  achieved: false },
+    { id: 7009, milestoneKey: "CRAWLING",       title: "기어다니기",          description: "활동 반경이 확 넓어진 순간",              expectedMonth: "7~9개월",    photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 9,  achieved: false },
+    { id: 7010, milestoneKey: "PULLING_UP",     title: "붙잡고 서기",         description: "걸음마 직전, 두 다리로 선 날",            expectedMonth: "9~11개월",   photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 10, achieved: false },
+    { id: 7011, milestoneKey: "FIRST_TOOTH",    title: "첫니",                description: "작은 이가 반짝, 큰 변화",                 expectedMonth: "10~12개월",  photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 11, achieved: false },
+    { id: 7012, milestoneKey: "CLAPPING",       title: "짝짜꿍/빠이빠이",     description: "가족 모두가 환호한 순간",                 expectedMonth: "10~12개월",  photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 12, achieved: false },
+    { id: 7013, milestoneKey: "FIRST_STEPS",    title: "첫 걸음마",           description: "두세 걸음이라도 떼면 대형 이벤트",        expectedMonth: "12개월",     photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 13, achieved: false },
+    { id: 7014, milestoneKey: "FIRST_WORD",     title: "첫말",                description: "엄마, 아빠 첫 의미 있는 말",              expectedMonth: "12개월",     photoUrls: [], achievedDate: null,            memo: null,                             displayOrder: 14, achieved: false },
+  ];
+}
+
 // ─── sessionStorage 헬퍼 ─────────────────────────────────────────────────────
 
 function ssGet<T>(key: string): T | null {
@@ -256,6 +277,9 @@ export function ensureDemoDataInitialized(): void {
   }
   if (!sessionStorage.getItem(STORAGE_KEYS.albumFavorites)) {
     ssSet(STORAGE_KEYS.albumFavorites, [] as number[]);
+  }
+  if (!sessionStorage.getItem(STORAGE_KEYS.milestones)) {
+    ssSet(STORAGE_KEYS.milestones, buildInitialMilestones());
   }
 }
 
@@ -810,6 +834,56 @@ export function handleDemoRequest<T>(
     const saved = ssGet<AlbumPhotoResponse[]>(STORAGE_KEYS.albumPhotos);
     console.log("[Demo] POST /api/album-photos → 저장 후 총 사진 수:", saved?.length, "/ 새 사진 id:", newId);
     return newPhoto as unknown as T;
+  }
+
+  // ── GET /api/milestones ──────────────────────────────────────────────────
+  if (method === "GET" && path === "/api/milestones") {
+    const all = ssGet<MilestoneResponse[]>(STORAGE_KEYS.milestones) ?? buildInitialMilestones();
+    return all as unknown as T;
+  }
+
+  // ── PATCH /api/milestones/:id/achieve ─────────────────────────────────────
+  const milestoneAchieveMatch = path.match(/^\/api\/milestones\/(\d+)\/achieve$/);
+  if (method === "PATCH" && milestoneAchieveMatch) {
+    const mid = Number(milestoneAchieveMatch[1]);
+    const req = body as { achievedDate?: string; memo?: string; keepImageUrls?: string | string[]; photos?: File | File[] } | undefined;
+    const all = ssGet<MilestoneResponse[]>(STORAGE_KEYS.milestones) ?? buildInitialMilestones();
+    let result: MilestoneResponse | null = null;
+
+    // keepImageUrls: string 또는 string[] 모두 처리
+    const keepRaw = req?.keepImageUrls;
+    const keepUrls: string[] = !keepRaw ? [] : Array.isArray(keepRaw) ? keepRaw : [keepRaw];
+
+    // photos: File 또는 File[] 모두 처리
+    const photosRaw = req?.photos;
+    const photoFiles: File[] = !photosRaw ? [] : Array.isArray(photosRaw) ? photosRaw : [photosRaw];
+    const newPhotoUrls = photoFiles
+      .filter(f => f instanceof File)
+      .map(f => URL.createObjectURL(f));
+
+    ssSet(STORAGE_KEYS.milestones, all.map(m => {
+      if (m.id !== mid) return m;
+      result = {
+        ...m,
+        achieved: true,
+        achievedDate: req?.achievedDate ?? new Date().toISOString().slice(0, 10),
+        memo: req?.memo ?? null,
+        photoUrls: [...keepUrls, ...newPhotoUrls],
+      };
+      return result;
+    }));
+    return result as unknown as T;
+  }
+
+  // ── DELETE /api/milestones/:id/achieve ────────────────────────────────────
+  const milestoneAchieveDeleteMatch = path.match(/^\/api\/milestones\/(\d+)\/achieve$/);
+  if (method === "DELETE" && milestoneAchieveDeleteMatch) {
+    const mid = Number(milestoneAchieveDeleteMatch[1]);
+    const all = ssGet<MilestoneResponse[]>(STORAGE_KEYS.milestones) ?? buildInitialMilestones();
+    ssSet(STORAGE_KEYS.milestones, all.map(m =>
+      m.id !== mid ? m : { ...m, achieved: false, achievedDate: null, memo: null, photoUrls: [] }
+    ));
+    return null as unknown as T;
   }
 
   // ── POST /api/media/upload ────────────────────────────────────────────────
