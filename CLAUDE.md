@@ -167,92 +167,20 @@ src/
 
 ## 바텀시트/모달 필수 규칙
 
-모든 바텀시트, 모달, 오버레이 컴포넌트를 새로 만들거나 수정할 때
-반드시 아래 body 스크롤 차단 로직을 포함할 것:
+모든 바텀시트/모달/오버레이 컴포넌트를 새로 만들거나 수정할 때 반드시 적용할 것.
 
-- 열릴 때: scrollY 저장 → body position: fixed, top: -scrollY, width: 100%
-- 닫힐 때: body 스타일 원복 → window.scrollTo(0, scrollY)
-- 드래그 핸들이 있는 경우: addEventListener('touchmove', handler, { passive: false })로 등록
-- React의 onTouchMove JSX prop은 passive: true라서 preventDefault() 불가 → 반드시 addEventListener 사용
+**body 스크롤 차단** (열릴 때 scrollY 저장 → body position:fixed + top:-scrollY + overflow:hidden, 닫힐 때 스타일 원복 → window.scrollTo(0, scrollY))
+- 드래그 핸들이 있으면 touchmove 차단은 `addEventListener('touchmove', fn, { passive: false })`로 등록 (JSX onTouchMove는 passive:true라 preventDefault 불가)
 
-```typescript
-useEffect(() => {
-  const scrollY = window.scrollY;
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${scrollY}px`;
-  document.body.style.left = "0";
-  document.body.style.right = "0";
-  document.body.style.overflow = "hidden";
-  const prevent = (e: TouchEvent) => e.preventDefault();
-  document.addEventListener("touchmove", prevent, { passive: false });
-  return () => {
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.overflow = "";
-    document.removeEventListener("touchmove", prevent);
-    window.scrollTo(0, scrollY);
-  };
-}, []);
-```
-
-이 규칙이 적용되어야 하는 컴포넌트 목록:
-- FilterBottomSheet (필터)
-- CommentBottomSheet (댓글)
-- MilestoneDetailModal (이정표 상세)
-- MilestoneRecordSheet (이정표 기록하기)
-- DatePickerBottomSheet (날짜 선택)
-- 앞으로 새로 만드는 모든 바텀시트/모달
+적용 컴포넌트: FilterBottomSheet, CommentBottomSheet, MilestoneDetailModal, MilestoneRecordSheet, DatePickerBottomSheet, **앞으로 새로 만드는 모든 바텀시트/모달**
 
 ### 바텀시트 내 텍스트 입력 + 키보드 대응
 
-바텀시트 안에 textarea/input이 있을 때, 포커스 시 키보드가 올라오면서 입력란이 잘리는 현상을 방지하려면 **두 가지를 함께** 적용할 것:
+바텀시트 안에 textarea/input이 있을 때 두 가지를 함께 적용할 것:
 
-**① visualViewport 기반 시트 높이·위치 조정**
-```typescript
-const [keyboardHeight, setKeyboardHeight] = useState(0);
-const [sheetMaxHeight, setSheetMaxHeight] = useState<number | null>(null);
+**① visualViewport 기반 시트 높이·위치 조정** — `window.visualViewport`의 resize/scroll 이벤트로 keyboardHeight(= innerHeight - vv.height - vv.offsetTop)와 sheetMaxHeight(= vv.height * 0.96)를 계산해 시트 motion.div의 `bottom`과 `maxHeight`에 적용
 
-useEffect(() => {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const handle = () => {
-    const kbh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    setKeyboardHeight(kbh);
-    setSheetMaxHeight(Math.floor(vv.height * 0.96));
-  };
-  handle();
-  vv.addEventListener("resize", handle);
-  vv.addEventListener("scroll", handle);
-  return () => { vv.removeEventListener("resize", handle); vv.removeEventListener("scroll", handle); };
-}, []);
-
-// 시트 motion.div style에 적용:
-// style={{ bottom: keyboardHeight, maxHeight: sheetMaxHeight ?? "92vh" }}
-```
-
-**② 입력란 포커스 시 scrollIntoView 자동 스크롤**
-
-시트 스크롤 영역(`overflow-y-auto`)이 있더라도 포커스 시 자동으로 해당 입력란이 보이는 영역으로 이동하지 않으므로, 반드시 `onFocus`에 아래를 추가:
-
-```typescript
-const inputRef = useRef<HTMLTextAreaElement>(null); // 또는 HTMLInputElement
-
-// JSX:
-<textarea
-  ref={inputRef}
-  onFocus={() => {
-    setTimeout(() => {
-      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 320); // 키보드 애니메이션 대기
-  }}
-/>
-```
-
-- 딜레이 320ms: 키보드 올라오는 애니메이션이 끝난 뒤 scrollIntoView 호출
-- `block: "center"`: 입력란을 시트 스크롤 영역의 가운데로 위치
-- body가 `position: fixed`인 상태에서도 시트 내부 `overflow-y-auto` 컨테이너 스크롤은 정상 작동함
+**② 입력란 포커스 시 scrollIntoView** — `onFocus`에서 320ms 딜레이 후 `inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })` 호출 (키보드 애니메이션 대기, body fixed 상태에서도 시트 내부 overflow-y-auto 스크롤은 정상 작동)
 
 ## 주의사항 (Claude 필독)
 

@@ -322,8 +322,11 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showPhotoSourceSheet, setShowPhotoSourceSheet] = useState(false);
+  const [isMemoFocused, setIsMemoFocused]   = useState(false);
 
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef  = useRef<HTMLInputElement>(null);
   const memoRef         = useRef<HTMLTextAreaElement>(null);
   const handleAreaRef   = useRef<HTMLDivElement>(null);
   const previewUrlsRef = useRef<Set<string>>(new Set());
@@ -434,6 +437,16 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     e.target.value = "";
   };
 
+  const openPhotoSourceSheet = () => {
+    if (saving || !canAddMore) return;
+    setShowPhotoSourceSheet(true);
+  };
+
+  const openCameraPicker = () => {
+    setShowPhotoSourceSheet(false);
+    cameraInputRef.current?.click();
+  };
+
   const handleRemovePhoto = (photo: PhotoItem) => {
     if (photo.kind === "existing") {
       setExistingPhotos((prev) => prev.filter((item) => item.id !== photo.id));
@@ -487,12 +500,15 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
         initial={{ y: "100%" }}
         animate={{ y: 0, transition: { type: "spring", stiffness: 400, damping: 40 } }}
         exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
-        className={`fixed left-0 right-0 mx-auto w-full max-w-lg rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)]
-          flex flex-col overflow-hidden box-border border-t ${isDark ? "border-slate-800" : "border-gray-100"} ${bg}`}
+        className={`fixed left-0 right-0 mx-auto w-full max-w-lg shadow-[0_-4px_24px_rgba(0,0,0,0.12)]
+          flex flex-col overflow-hidden box-border border-t
+          ${isMemoFocused && keyboardHeight > 0 ? "" : "rounded-t-3xl"}
+          ${isDark ? "border-slate-800" : "border-gray-100"} ${bg}`}
         style={{
-          y: dismissY,
+          y: isMemoFocused && keyboardHeight > 0 ? 0 : dismissY,
+          top: isMemoFocused && keyboardHeight > 0 ? 0 : undefined,
           bottom: keyboardHeight,
-          maxHeight: sheetMaxHeight ?? "92vh",
+          maxHeight: isMemoFocused && keyboardHeight > 0 ? undefined : (sheetMaxHeight ?? "92vh"),
           zIndex: 111,
         }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -554,10 +570,12 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 onFocus={() => {
+                  setIsMemoFocused(true);
                   setTimeout(() => {
                     memoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                   }, 320);
                 }}
+                onBlur={() => setIsMemoFocused(false)}
                 placeholder="이 순간을 기록해주세요"
                 rows={4}
                 className={textareaFieldCls}
@@ -603,9 +621,10 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                   </div>
                 ))}
                 {canAddMore && (
-                  <label
-                    htmlFor="milestone-gallery-input"
-                    className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors cursor-pointer
+                  <button
+                    type="button"
+                    onClick={openPhotoSourceSheet}
+                    className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors
                       ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[168px] gap-2.5"}
                       ${isDark ? "border-slate-700 hover:border-primary-500 text-slate-500" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
                   >
@@ -628,7 +647,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                         </span>
                       </>
                     )}
-                  </label>
+                  </button>
                 )}
               </div>
               <input
@@ -637,6 +656,14 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 type="file"
                 accept="image/*"
                 multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -660,6 +687,61 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
           </button>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showPhotoSourceSheet && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 bg-black/45"
+              style={{ zIndex: 112 }}
+              onClick={() => setShowPhotoSourceSheet(false)}
+            />
+            <motion.div
+              initial={{ y: 48, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 48, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+              className="fixed inset-x-0 mx-auto w-full max-w-lg px-3"
+              style={{
+                zIndex: 113,
+                bottom: 0,
+                paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.25rem))",
+              }}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <div className={`overflow-hidden rounded-[28px] border shadow-[0_-12px_36px_rgba(0,0,0,0.18)] ${isDark ? "border-slate-800 bg-slate-900" : "border-gray-100 bg-white"}`}>
+                <div className="space-y-2 px-3 pt-3 pb-3">
+                  <label
+                    htmlFor="milestone-gallery-input"
+                    onClick={() => setShowPhotoSourceSheet(false)}
+                    className={`flex min-h-[54px] w-full cursor-pointer items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  >
+                    사진 보관함
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openCameraPicker}
+                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  >
+                    사진 찍기
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPhotoSourceSheet(false)}
+                className={`mt-2 flex min-h-[54px] w-full items-center justify-center rounded-2xl border text-[15px] font-semibold transition-colors ${isDark ? "border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                취소
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {showDatePicker && (
         <DatePickerSheet
