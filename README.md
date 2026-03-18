@@ -6,9 +6,9 @@
 
 ## 📸 서비스 화면
 
-| 홈 | 일기 피드 | 일기 작성 |
-|:---:|:---:|:---:|
-| <img src="screenshots/home.png" width="200"/> | <img src="screenshots/diary.png" width="200"/> | <img src="screenshots/write.png" width="200"/> |
+| 홈 | 글자 확대 모드 | 일기 피드 | 일기 작성 |
+|:---:|:---:|:---:|:---:|
+| <img src="screenshots/Yulmudiary_01.png" width="180"/> | <img src="screenshots/Yulmudiary_02.png" width="180"/> | <img src="screenshots/Yulmudiary_03.png" width="180"/> | <img src="screenshots/Yulmudiary_04.png" width="180"/> |
 
 > 📱 [체험판 바로가기](https://yulmu-diary.vercel.app/) — 로그인 없이 둘러보실 수 있습니다.
 ---
