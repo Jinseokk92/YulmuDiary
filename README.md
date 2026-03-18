@@ -11,6 +11,8 @@
 | <img src="screenshots/Yulmudiary_00.png" width="160"/> | <img src="screenshots/Yulmudiary_01.png" width="160"/> | <img src="screenshots/Yulmudiary_02.png" width="160"/> | <img src="screenshots/Yulmudiary_03.png" width="160"/> | <img src="screenshots/Yulmudiary_04.png" width="160"/> |
 
 > 📱 [체험판 바로가기](https://yulmu-diary.vercel.app/) — 로그인 없이 둘러보실 수 있습니다.
+>
+> 체험판은 세션 기반 가상 데이터로 동작합니다. 작성한 일기·댓글·리액션은 브라우저 세션에만 저장되며, 새로고침 시 이미지가 사라질 수 있습니다. SideDrawer의 "체험판 초기화" 버튼으로 데이터를 다시 생성할 수 있습니다.
 ---
 
 ## 💡 기획 의도
@@ -29,11 +31,16 @@
 
 ## ✨ 주요 기능
 
-- 육아 일기 작성: 텍스트, 이미지, 영상 업로드
+- 육아 일기 작성: 텍스트, 이미지 업로드
 - 가족 그룹 관리: 부모 / 친척 역할 기반 접근 제어
 - 소셜 기능: 댓글, 이모지 리액션
 - 소셜 로그인: Google / Kakao OAuth2 로그인
 - 일정 관리: 월별 캘린더, 카카오 장소 검색 연동
+- 앨범: 성장 단계별 사진 모아보기, 즐겨찾기
+- 성장 이정표: 지하철 노선도 스타일 달성 기록
+- 알림: 댓글/리액션 알림, 무한스크롤, 시간 그룹화
+- 관리자 기능: 초대 코드 재발급, 멤버 관리, 앱 설정
+- 다크모드: 시스템과 독립된 수동 전환, 전체 화면 일관 적용
 - PWA 지원: 홈 화면 추가, 모바일 사용성 최적화
 - 접근성 확대 모드: 헤더 돋보기 버튼으로 글자 확대
 - 배경음악 플레이어:
@@ -91,17 +98,24 @@
 YulmuDiary/
 ├── backend/
 │   ├── build.gradle
+│   ├── Dockerfile
 │   └── src/main/java/com/yulmudiary/
 │       ├── domain/
+│       │   ├── album/
 │       │   ├── baby/
 │       │   ├── diary/
 │       │   ├── family/
+│       │   ├── health/
 │       │   ├── media/
+│       │   ├── milestone/
+│       │   ├── notification/
 │       │   ├── schedule/
 │       │   └── user/
 │       └── global/
+│           ├── admin/
 │           ├── auth/
 │           ├── config/
+│           ├── entity/
 │           ├── exception/
 │           └── response/
 ├── frontend/
@@ -109,23 +123,36 @@ YulmuDiary/
 │   │   └── bgms/
 │   └── src/
 │       ├── app/
+│       │   ├── (main)/
+│       │   │   ├── album/ + favorites/ + [id]/
+│       │   │   ├── diary/
+│       │   │   ├── family-manage/
+│       │   │   ├── milestones/
+│       │   │   ├── my-posts/ + my-comments/ + my-reactions/
+│       │   │   ├── notifications/
+│       │   │   ├── schedule/
+│       │   │   ├── settings/notifications/
+│       │   │   └── join/
+│       │   ├── auth/ (callback/ + success/)
+│       │   ├── login/
+│       │   ├── new/
+│       │   └── onboarding/
 │       ├── components/
-│       │   ├── BgmPlayer.tsx
-│       │   ├── BgmMiniPlayer.tsx
-│       │   ├── BgmFloatingPlayer.tsx
-│       │   ├── BgmPlayerUI.tsx
-│       │   └── layout/
-│       ├── contexts/
-│       │   └── FontSizeContext.tsx
-│       ├── lib/
-│       │   ├── api.ts
-│       │   ├── bgmAudio.ts
-│       │   └── kakao.ts
-│       └── stores/
-│           ├── authStore.ts
-│           ├── bgmStore.ts
-│           └── uiStore.ts
-├── AGENTS.md
+│       │   ├── layout/   (Header, BottomNav, SideDrawer)
+│       │   ├── diary/    (DiaryFeed, DiaryCard, FilterBar, ImageCarousel, ImageViewer,
+│       │   │              CommentBottomSheet, ReactionBar, ReactionUsersSheet 등)
+│       │   ├── album/    (AlbumGrid)
+│       │   ├── activity/ (PostDetailModal, SquareThumbnailCell)
+│       │   ├── ui/       (Skeleton, EmptyState, ConfirmModal, UserAvatar, DatePickerSheet 등)
+│       │   └── BgmPlayer, BgmMiniPlayer, BgmFloatingPlayer, BgmPlayerUI, Providers 등
+│       ├── contexts/     (FontSizeContext, UserContext)
+│       ├── hooks/        (useAuth, usePullToRefresh)
+│       ├── lib/          (api, bgmAudio, utils, kakao, demoData)
+│       ├── middleware.ts
+│       ├── stores/       (authStore, bgmStore, uiStore)
+│       └── types/        (index.ts)
+├── docker-compose.yml
+├── deploy.ps1
 ├── CLAUDE.md
 └── README.md
 ```
@@ -224,12 +251,15 @@ npm run dev
 
 ## 👨‍👩‍👧 가족 권한 구조
 
-| 역할 | 일기 조회 | 일기 작성/수정/삭제 | 댓글/리액션 |
-| --- | --- | --- | --- |
-| 부모 (PARENT) | ✅ | ✅ | ✅ |
-| 친척 (RELATIVE) | ✅ | ❌ | ✅ |
+| 역할 | 일기 조회 | 일기 작성/수정/삭제 | 댓글/리액션 | 관리자 기능 |
+| --- | --- | --- | --- | --- |
+| 부모 (PARENT) | ✅ | ✅ | ✅ | ❌ |
+| 친척 (RELATIVE) | ✅ | ❌ | ✅ | ❌ |
+| 관리자 (isAdmin) | ✅ | ✅ (전체) | ✅ | ✅ |
 
-백엔드에서는 AOP 기반으로 가족 그룹 접근 제어와 역할 권한 검증을 처리합니다.
+- PARENT / RELATIVE는 가족 그룹 내 역할로, 초대 코드 종류에 따라 결정됩니다.
+- 관리자(`isAdmin`)는 역할과 독립된 플래그로, 초대 코드 재발급·멤버 강제 퇴출·앱 설정 변경이 가능합니다.
+- 백엔드에서는 AOP 기반(`@CheckFamilyAuth`, `@RequireRole`, `@RequireAdmin`)으로 권한을 검증합니다.
 
 ---
 
