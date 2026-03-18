@@ -92,6 +92,31 @@
 
 ---
 
+## 🏗 시스템 아키텍처
+```mermaid
+graph TD
+    Browser["🌐 브라우저 / PWA"]
+    Browser -->|"HTTPS 페이지 요청"| Vercel
+    Browser -->|"REST API 호출"| CloudRun
+    subgraph Vercel["▲ Vercel"]
+        FE["Next.js 15 · App Router\nReact 19 · TypeScript\nZustand · Tailwind · PWA"]
+        BGM["🎵 public/bgms/ 음원 서빙"]
+    end
+    subgraph CloudRun["☁ Google Cloud Run"]
+        BE["Spring Boot 3.4 · Java 17\nJWT 인증 · AOP 권한검증\nOAuth2 · Thumbnailator"]
+        Domains["diary · album · family\nnotification · schedule\nmilestone · user · media"]
+    end
+    CloudRun -->|"JPA / JDBC"| NeonDB
+    CloudRun -->|"GCS SDK"| GCS
+    NeonDB[("🗄 Neon DB\nPostgreSQL 16\n서버리스")]
+    GCS[("🪣 Google Cloud Storage\n사진 · 영상\n5GB 무료")]
+    style Vercel fill:#0d2b1e,stroke:#38d9a9,color:#38d9a9
+    style CloudRun fill:#1a1040,stroke:#a78bfa,color:#a78bfa
+    style NeonDB fill:#0d1f3c,stroke:#60a5fa,color:#60a5fa
+    style GCS fill:#2b1f00,stroke:#fbbf24,color:#fbbf24
+```
+---
+
 ## 📁 프로젝트 구조
 
 ```text
