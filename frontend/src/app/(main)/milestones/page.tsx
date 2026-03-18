@@ -442,6 +442,11 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     setShowPhotoSourceSheet(true);
   };
 
+  const openGalleryPicker = () => {
+    setShowPhotoSourceSheet(false);
+    galleryInputRef.current?.click();
+  };
+
   const openCameraPicker = () => {
     setShowPhotoSourceSheet(false);
     cameraInputRef.current?.click();
@@ -651,7 +656,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 )}
               </div>
               <input
-                id="milestone-gallery-input"
                 ref={galleryInputRef}
                 type="file"
                 accept="image/*"
@@ -715,13 +719,13 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
             >
               <div className={`overflow-hidden rounded-[28px] border shadow-[0_-12px_36px_rgba(0,0,0,0.18)] ${isDark ? "border-slate-800 bg-slate-900" : "border-gray-100 bg-white"}`}>
                 <div className="space-y-2 px-3 pt-3 pb-3">
-                  <label
-                    htmlFor="milestone-gallery-input"
-                    onClick={() => setShowPhotoSourceSheet(false)}
-                    className={`flex min-h-[54px] w-full cursor-pointer items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  <button
+                    type="button"
+                    onClick={openGalleryPicker}
+                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
                   >
                     사진 보관함
-                  </label>
+                  </button>
                   <button
                     type="button"
                     onClick={openCameraPicker}
