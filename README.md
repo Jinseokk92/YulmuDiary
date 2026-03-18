@@ -6,7 +6,7 @@
 
 ## 📸 서비스 화면
 
-| 홈 | 글자 확대 모드 | 일기 피드 | 일기 작성 |
+| 로그인 | 홈 | 글자 확대 모드 | 일기 피드 | 일기 작성 |
 |:---:|:---:|:---:|:---:|
 |<img src="screenshots/Yulmudiary_00.png" width="180"/> | <img src="screenshots/Yulmudiary_01.png" width="180"/> | <img src="screenshots/Yulmudiary_02.png" width="180"/> | <img src="screenshots/Yulmudiary_03.png" width="180"/> | <img src="screenshots/Yulmudiary_04.png" width="180"/> | 
 
