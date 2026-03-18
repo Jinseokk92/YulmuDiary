@@ -165,6 +165,46 @@ src/
 - **관리자**: `useRequireAdmin()` → 비관리자면 즉시 "/" 리다이렉트
 - **알림**: `/notifications` 무한스크롤(IntersectionObserver), 시간 그룹화, 탭 시 `/diary?highlightId=` 이동
 
+## 바텀시트/모달 필수 규칙
+
+모든 바텀시트, 모달, 오버레이 컴포넌트를 새로 만들거나 수정할 때
+반드시 아래 body 스크롤 차단 로직을 포함할 것:
+
+- 열릴 때: scrollY 저장 → body position: fixed, top: -scrollY, width: 100%
+- 닫힐 때: body 스타일 원복 → window.scrollTo(0, scrollY)
+- 드래그 핸들이 있는 경우: addEventListener('touchmove', handler, { passive: false })로 등록
+- React의 onTouchMove JSX prop은 passive: true라서 preventDefault() 불가 → 반드시 addEventListener 사용
+
+```typescript
+useEffect(() => {
+  const scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.overflow = "hidden";
+  const prevent = (e: TouchEvent) => e.preventDefault();
+  document.addEventListener("touchmove", prevent, { passive: false });
+  return () => {
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.overflow = "";
+    document.removeEventListener("touchmove", prevent);
+    window.scrollTo(0, scrollY);
+  };
+}, []);
+```
+
+이 규칙이 적용되어야 하는 컴포넌트 목록:
+- FilterBottomSheet (필터)
+- CommentBottomSheet (댓글)
+- MilestoneDetailModal (이정표 상세)
+- MilestoneRecordSheet (이정표 기록하기)
+- DatePickerBottomSheet (날짜 선택)
+- 앞으로 새로 만드는 모든 바텀시트/모달
+
 ## 주의사항 (Claude 필독)
 
 - `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.

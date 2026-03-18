@@ -112,6 +112,27 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
   const [isDeleting, setIsDeleting]   = useState(false);
   const [photoIdx, setPhotoIdx]       = useState(0);
 
+  // 배경 스크롤 차단
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.overflow = "hidden";
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", prevent, { passive: false });
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      document.removeEventListener("touchmove", prevent);
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   const bg      = isDark ? "bg-slate-900 text-slate-100" : "bg-white text-gray-900";
   const sub     = isDark ? "text-slate-400" : "text-gray-500";
   const divider = isDark ? "border-slate-700" : "border-gray-100";
@@ -450,11 +471,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     setShowPhotoSourceSheet(true);
   };
 
-  const openPhotoLibraryPicker = () => {
-    setShowPhotoSourceSheet(false);
-    galleryInputRef.current?.click();
-  };
-
   const openCameraPicker = () => {
     setShowPhotoSourceSheet(false);
     cameraInputRef.current?.click();
@@ -642,6 +658,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 )}
               </div>
               <input
+                id="milestone-gallery-input"
                 ref={galleryInputRef}
                 type="file"
                 accept="image/*"
@@ -711,13 +728,13 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                   </p>
                 </div>
                 <div className="space-y-2 px-3 pb-3">
-                  <button
-                    type="button"
-                    onClick={openPhotoLibraryPicker}
-                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
+                  <label
+                    htmlFor="milestone-gallery-input"
+                    onClick={() => setShowPhotoSourceSheet(false)}
+                    className={`flex min-h-[54px] w-full cursor-pointer items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
                   >
                     사진 보관함
-                  </button>
+                  </label>
                   <button
                     type="button"
                     onClick={openCameraPicker}

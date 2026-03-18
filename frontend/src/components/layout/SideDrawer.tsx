@@ -670,23 +670,22 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
         </div>
       )}
     </AnimatePresence>
-    {/* 체험판 초기화 확인 모달 — z-[1200]으로 드로어(z-[1100]) 위에 렌더 */}
-    <div className="relative z-[1200]">
-      <ConfirmModal
-        open={resetConfirmOpen}
-        title="체험판 데이터를 모두 초기화할까요?"
-        description="작성한 글과 일정이 모두 사라져요."
-        confirmLabel="초기화"
-        onConfirm={() => {
-          resetDemoData();
-          setDemoGuideStep(0);
-          setResetConfirmOpen(false);
-          onClose();
-          router.push("/");
-        }}
-        onCancel={() => setResetConfirmOpen(false)}
-      />
-    </div>
+    {/* 체험판 초기화 확인 모달 — 드로어(z-[1100]) 위에 렌더 */}
+    <ConfirmModal
+      open={resetConfirmOpen}
+      title="체험판 데이터를 모두 초기화할까요?"
+      description="작성한 글과 일정이 모두 사라져요."
+      confirmLabel="초기화"
+      zIndex={1200}
+      onConfirm={() => {
+        resetDemoData();
+        setDemoGuideStep(0);
+        setResetConfirmOpen(false);
+        onClose();
+        router.push("/");
+      }}
+      onCancel={() => setResetConfirmOpen(false)}
+    />
     </>
   );
 
