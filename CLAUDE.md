@@ -205,6 +205,55 @@ useEffect(() => {
 - DatePickerBottomSheet (날짜 선택)
 - 앞으로 새로 만드는 모든 바텀시트/모달
 
+### 바텀시트 내 텍스트 입력 + 키보드 대응
+
+바텀시트 안에 textarea/input이 있을 때, 포커스 시 키보드가 올라오면서 입력란이 잘리는 현상을 방지하려면 **두 가지를 함께** 적용할 것:
+
+**① visualViewport 기반 시트 높이·위치 조정**
+```typescript
+const [keyboardHeight, setKeyboardHeight] = useState(0);
+const [sheetMaxHeight, setSheetMaxHeight] = useState<number | null>(null);
+
+useEffect(() => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const handle = () => {
+    const kbh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    setKeyboardHeight(kbh);
+    setSheetMaxHeight(Math.floor(vv.height * 0.96));
+  };
+  handle();
+  vv.addEventListener("resize", handle);
+  vv.addEventListener("scroll", handle);
+  return () => { vv.removeEventListener("resize", handle); vv.removeEventListener("scroll", handle); };
+}, []);
+
+// 시트 motion.div style에 적용:
+// style={{ bottom: keyboardHeight, maxHeight: sheetMaxHeight ?? "92vh" }}
+```
+
+**② 입력란 포커스 시 scrollIntoView 자동 스크롤**
+
+시트 스크롤 영역(`overflow-y-auto`)이 있더라도 포커스 시 자동으로 해당 입력란이 보이는 영역으로 이동하지 않으므로, 반드시 `onFocus`에 아래를 추가:
+
+```typescript
+const inputRef = useRef<HTMLTextAreaElement>(null); // 또는 HTMLInputElement
+
+// JSX:
+<textarea
+  ref={inputRef}
+  onFocus={() => {
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 320); // 키보드 애니메이션 대기
+  }}
+/>
+```
+
+- 딜레이 320ms: 키보드 올라오는 애니메이션이 끝난 뒤 scrollIntoView 호출
+- `block: "center"`: 입력란을 시트 스크롤 영역의 가운데로 위치
+- body가 `position: fixed`인 상태에서도 시트 내부 `overflow-y-auto` 컨테이너 스크롤은 정상 작동함
+
 ## 주의사항 (Claude 필독)
 
 - `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.

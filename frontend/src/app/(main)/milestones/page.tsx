@@ -322,11 +322,10 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showPhotoSourceSheet, setShowPhotoSourceSheet] = useState(false);
 
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const handleAreaRef = useRef<HTMLDivElement>(null);
+  const memoRef         = useRef<HTMLTextAreaElement>(null);
+  const handleAreaRef   = useRef<HTMLDivElement>(null);
   const previewUrlsRef = useRef<Set<string>>(new Set());
   const dismissY      = useMotionValue(0);
 
@@ -420,20 +419,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     };
   }, [onClose, dismissY]);
 
-  // 파일 추가
-  const appendPhotos = useCallback((files: File[]) => {
-    if (!files.length) return;
-    const remaining = MAX_PHOTOS - totalPhotoCount;
-    const toAdd = files.slice(0, remaining);
-    if (!toAdd.length) return;
-    const nextPhotos = toAdd.map((file) => {
-      const preview = URL.createObjectURL(file);
-      previewUrlsRef.current.add(preview);
-      return createNewPhoto(file, preview);
-    });
-    setNewPhotos((prev) => [...prev, ...nextPhotos]);
-  }, [totalPhotoCount]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -449,12 +434,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     e.target.value = "";
   };
 
-  // 사진 삭제
-  const handleCameraFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    appendPhotos(Array.from(e.target.files ?? []));
-    e.target.value = "";
-  };
-
   const handleRemovePhoto = (photo: PhotoItem) => {
     if (photo.kind === "existing") {
       setExistingPhotos((prev) => prev.filter((item) => item.id !== photo.id));
@@ -464,16 +443,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
     previewUrlsRef.current.delete(photo.preview);
     URL.revokeObjectURL(photo.preview);
     setNewPhotos((prev) => prev.filter((item) => item.id !== photo.id));
-  };
-
-  const openPhotoSourceSheet = () => {
-    if (saving || !canAddMore) return;
-    setShowPhotoSourceSheet(true);
-  };
-
-  const openCameraPicker = () => {
-    setShowPhotoSourceSheet(false);
-    cameraInputRef.current?.click();
   };
 
   const handleSubmit = useCallback(async () => {
@@ -581,8 +550,14 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
             <div>
               <label className={`block text-xs font-semibold mb-1.5 ${labelCls}`}>감상 (선택)</label>
               <textarea
+                ref={memoRef}
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
+                onFocus={() => {
+                  setTimeout(() => {
+                    memoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 320);
+                }}
                 placeholder="이 순간을 기록해주세요"
                 rows={4}
                 className={textareaFieldCls}
@@ -628,10 +603,9 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                   </div>
                 ))}
                 {canAddMore && (
-                  <button
-                    type="button"
-                    onClick={openPhotoSourceSheet}
-                    className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors
+                  <label
+                    htmlFor="milestone-gallery-input"
+                    className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors cursor-pointer
                       ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[168px] gap-2.5"}
                       ${isDark ? "border-slate-700 hover:border-primary-500 text-slate-500" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
                   >
@@ -654,7 +628,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                         </span>
                       </>
                     )}
-                  </button>
+                  </label>
                 )}
               </div>
               <input
@@ -665,14 +639,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleCameraFileChange}
               />
             </div>
 
@@ -694,67 +660,6 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
           </button>
         </div>
       </motion.div>
-
-      <AnimatePresence>
-        {showPhotoSourceSheet && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="fixed inset-0 bg-black/45"
-              style={{ zIndex: 112 }}
-              onClick={() => setShowPhotoSourceSheet(false)}
-            />
-            <motion.div
-              initial={{ y: 48, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 48, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 34 }}
-              className="fixed inset-x-0 mx-auto w-full max-w-lg px-3"
-              style={{
-                zIndex: 113,
-                bottom: 0,
-                paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.25rem))",
-              }}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            >
-              <div className={`overflow-hidden rounded-[28px] border shadow-[0_-12px_36px_rgba(0,0,0,0.18)] ${isDark ? "border-slate-800 bg-slate-900" : "border-gray-100 bg-white"}`}>
-                <div className="px-5 pt-5 pb-3">
-                  <p className="text-sm font-semibold">사진 추가</p>
-                  <p className={`mt-1 text-xs leading-5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                    사진 보관함 또는 카메라에서 바로 추가할 수 있어요.
-                  </p>
-                </div>
-                <div className="space-y-2 px-3 pb-3">
-                  <label
-                    htmlFor="milestone-gallery-input"
-                    onClick={() => setShowPhotoSourceSheet(false)}
-                    className={`flex min-h-[54px] w-full cursor-pointer items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
-                  >
-                    사진 보관함
-                  </label>
-                  <button
-                    type="button"
-                    onClick={openCameraPicker}
-                    className={`flex min-h-[54px] w-full items-center justify-center rounded-2xl px-4 text-[15px] font-semibold transition-colors ${isDark ? "bg-slate-800 text-slate-100 hover:bg-slate-700" : "bg-gray-50 text-gray-900 hover:bg-gray-100"}`}
-                  >
-                    사진 찍기
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPhotoSourceSheet(false)}
-                className={`mt-2 flex min-h-[54px] w-full items-center justify-center rounded-2xl border text-[15px] font-semibold transition-colors ${isDark ? "border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}
-              >
-                취소
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {showDatePicker && (
         <DatePickerSheet
