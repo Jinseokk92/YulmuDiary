@@ -13,6 +13,6 @@ public class YulmuDiaryApplication {
         // Cloud Run 인스턴스 기본 TZ=UTC이므로, TZ 환경변수 설정보다 먼저 강제로 지정.
         // @CreatedDate(LocalDateTime.now())·Jackson 직렬화·Hibernate JDBC 모두 이 타임존을 따른다.
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
-        SpringApplication.run(YulmuDiaryApplication.class, args); 
+        SpringApplication.run(YulmuDiaryApplication.class, args);
     }
 }
