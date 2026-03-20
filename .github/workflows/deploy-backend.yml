@@ -14,7 +14,7 @@ env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast3
   SERVICE_NAME: backend-api
-  REGISTRY: asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo
+  REGISTRY: asia-northeast3-docker.pkg.dev/yulmu-project/docker-repo
 
 jobs:
   deploy:
