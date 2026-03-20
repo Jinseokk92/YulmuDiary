@@ -89,7 +89,6 @@ export default function Home() {
         >
           <div
             id={HOME_BGM_ANCHOR_ID}
-            aria-hidden="true"
             className="absolute z-[60] h-0 w-0 overflow-visible"
             style={{ left: HERO_ANCHOR_OFFSET_X, top: HERO_ANCHOR_OFFSET_Y }}
           />

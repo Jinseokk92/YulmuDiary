@@ -62,15 +62,15 @@ public class DiaryPostService {
         return DiaryPostResponse.from(post, mediaUrlResolver);
     }
 
-    public DiaryPostResponse getById(Long id) {
+    public DiaryPostResponse getById(Long id, Long currentUserId) {
         DiaryPost post = diaryPostRepository.findByIdWithMedia(id)
                 .orElseThrow(() -> new EntityNotFoundException("일기를 찾을 수 없습니다. id=" + id));
-        return DiaryPostResponse.from(post, mediaUrlResolver);
+        return DiaryPostResponse.from(post, mediaUrlResolver, currentUserId);
     }
 
     // ── 커서 기반 (기존 유지) ─────────────────────────────────────────
 
-    public DiaryPostPageResponse getByBaby(Long babyId, Long cursor, int size) {
+    public DiaryPostPageResponse getByBaby(Long babyId, Long cursor, int size, Long currentUserId) {
         List<DiaryPost> posts;
         if (cursor == null) {
             posts = diaryPostRepository.findByBabyIdLatest(babyId, PageRequest.of(0, size + 1));
@@ -82,7 +82,7 @@ public class DiaryPostService {
         List<DiaryPost> content = hasNext ? posts.subList(0, size) : posts;
 
         List<DiaryPostResponse> items = content.stream()
-                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver, currentUserId))
                 .toList();
 
         Long nextCursor = hasNext ? content.get(content.size() - 1).getId() : null;
@@ -108,7 +108,7 @@ public class DiaryPostService {
         List<DiaryPost> content = hasNext ? posts.subList(0, size) : posts;
 
         List<DiaryPostResponse> items = content.stream()
-                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver, authorId))
                 .toList();
 
         Long nextCursor = hasNext ? content.get(content.size() - 1).getId() : null;
@@ -124,7 +124,7 @@ public class DiaryPostService {
 
     public DiaryPostPaginatedResponse getByBabyPaged(
             Long babyId, int page, int size,
-            DiaryPostSortType sort, LocalDate startDate, LocalDate endDate, Long userId) {
+            DiaryPostSortType sort, LocalDate startDate, LocalDate endDate, Long userId, Long currentUserId) {
 
         Specification<DiaryPost> spec = Specification.where(DiaryPostSpec.forBaby(babyId));
         if (userId != null) spec = spec.and(DiaryPostSpec.forAuthor(userId));
@@ -138,7 +138,7 @@ public class DiaryPostService {
         Page<DiaryPost> postPage = diaryPostRepository.findAll(spec, PageRequest.of(page, size, sortOrder));
 
         List<DiaryPostResponse> content = postPage.getContent().stream()
-                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver))
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver, currentUserId))
                 .toList();
 
         int totalPages = postPage.getTotalPages() == 0 ? 1 : postPage.getTotalPages();

@@ -170,6 +170,8 @@ export interface DiaryPostResponse {
   commentCount: number;
   reactions: ReactionResponse[];
   createdAt: string;
+  /** 현재 로그인 사용자가 해당 게시글에 단 가장 최근 댓글 내용. 없으면 null. */
+  myLatestComment?: string | null;
 }
 
 export interface DiaryPostRequest {

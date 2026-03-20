@@ -66,20 +66,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: () => {
-    // 체험판 모드 확인
+    // 체험판 모드 확인: 쿠키와 sessionStorage 모두 있어야 유효한 세션
+    // (브라우저 세션 복원으로 쿠키만 남고 sessionStorage는 비워진 경우 stale 처리)
     if (Cookies.get(DEMO_MODE_KEY) === "true") {
-      ensureDemoDataInitialized();
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("demoMode", "true");
+      const inSession =
+        typeof window !== "undefined" &&
+        sessionStorage.getItem("demoMode") === "true";
+      if (!inSession) {
+        // stale 쿠키 제거 후 일반 인증 흐름으로
+        Cookies.remove(DEMO_MODE_KEY);
+      } else {
+        ensureDemoDataInitialized();
+        set({
+          isDemoMode: true,
+          isAuthenticated: true,
+          isLoading: false,
+          familyGroupId: 99999,
+          user: DEMO_USER,
+        });
+        return;
       }
-      set({
-        isDemoMode: true,
-        isAuthenticated: true,
-        isLoading: false,
-        familyGroupId: 99999,
-        user: DEMO_USER,
-      });
-      return;
     }
 
     const token = Cookies.get(TOKEN_KEY);

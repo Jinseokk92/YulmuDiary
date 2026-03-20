@@ -43,27 +43,33 @@ public class DiaryPostController {
     @Operation(summary = "일기 단건 조회")
     @CheckFamilyAuth(AuthTarget.POST_ID)
     @GetMapping("/{id}")
-    public ApiResponse<DiaryPostResponse> getById(@PathVariable Long id) {
-        return ApiResponse.success(diaryPostService.getById(id));
+    public ApiResponse<DiaryPostResponse> getById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getById(id, userId));
     }
 
     @Operation(summary = "일기 목록 조회 (Cursor 페이징)")
     @CheckFamilyAuth(AuthTarget.BABY_ID)
     @GetMapping
     public ApiResponse<DiaryPostPageResponse> getByBaby(
+            Authentication authentication,
             @Parameter(description = "아기 ID", required = true)
             @RequestParam Long babyId,
             @Parameter(description = "커서 (이전 페이지 마지막 ID)")
             @RequestParam(required = false) Long cursor,
             @Parameter(description = "페이지 크기")
             @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.success(diaryPostService.getByBaby(babyId, cursor, size));
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getByBaby(babyId, cursor, size, currentUserId));
     }
 
     @Operation(summary = "일기 목록 조회 (페이지 번호 기반)")
     @CheckFamilyAuth(AuthTarget.BABY_ID)
     @GetMapping("/pages")
     public ApiResponse<DiaryPostPaginatedResponse> getByBabyPaged(
+            Authentication authentication,
             @Parameter(description = "아기 ID", required = true)
             @RequestParam Long babyId,
             @Parameter(description = "페이지 번호 (1부터 시작)")
@@ -78,7 +84,8 @@ public class DiaryPostController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @Parameter(description = "사용자 ID 필터")
             @RequestParam(required = false) Long userId) {
-        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size, sort, startDate, endDate, userId));
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size, sort, startDate, endDate, userId, currentUserId));
     }
 
     @Operation(summary = "내 게시글 목록 조회 (Cursor 페이징)")

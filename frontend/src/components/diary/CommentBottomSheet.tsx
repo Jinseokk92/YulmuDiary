@@ -25,6 +25,7 @@ interface CommentBottomSheetProps {
   onClose: () => void;
   postId: number;
   initialCommentCount: number;
+  onCommentCountChange?: (delta: number) => void;
 }
 
 export interface CommentBottomSheetHandle {
@@ -32,7 +33,7 @@ export interface CommentBottomSheetHandle {
 }
 
 const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomSheetProps>(
-  ({ onClose, postId, initialCommentCount }, ref) => {
+  ({ onClose, postId, initialCommentCount, onCommentCountChange }, ref) => {
     const { currentUser } = useUser();
 
     // ─── 댓글 데이터 상태 ───────────────────────────────────────────
@@ -319,6 +320,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           setComments((prev) =>
             prev.map((c) => (c.id === tempId ? created : c))
           );
+          onCommentCountChange?.(1);
         } catch {
           setComments(prevComments);
           alert("댓글 저장에 실패했습니다.");
@@ -326,7 +328,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           setIsSubmitting(false);
         }
       },
-      [input, currentUser, isSubmitting, postId, scrollToBottom]
+      [input, currentUser, isSubmitting, postId, scrollToBottom, onCommentCountChange]
     );
 
     // ─── admin 타인 댓글 삭제 확인 ─────────────────────────────────
@@ -342,12 +344,13 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
         try {
           await api.delete(`/api/diary-posts/${postId}/comments/${commentId}`);
+          onCommentCountChange?.(-1);
         } catch {
           setComments(prevComments);
           alert("댓글 삭제에 실패했습니다.");
         }
       },
-      [postId, currentUser]
+      [postId, currentUser, onCommentCountChange]
     );
 
     const handleDelete = useCallback(

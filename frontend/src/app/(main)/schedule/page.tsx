@@ -1093,8 +1093,21 @@ export default function SchedulePage() {
   const isDrawerOpen = useUiStore((state) => state.isDrawerOpen);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState<boolean>(false);
+  useEffect(() => {
+    setMounted(true);
+    try {
+      if (localStorage.getItem("calendarExpanded") === "true") setIsCalendarExpanded(true);
+    } catch {}
+  }, []);
   const isDark = mounted && resolvedTheme === "dark";
+  const [collapsedWeekSunday, setCollapsedWeekSunday] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const calendarTouchStartX = useRef<number | null>(null);
 
   const fetchSchedules = useCallback(async (y: number, m: number) => {
     setLoading(true);
@@ -1122,13 +1135,55 @@ export default function SchedulePage() {
   });
 
   const prevMonth = () => {
-    if (month === 1) { setYear((y) => y - 1); setMonth(12); }
-    else { setMonth((m) => m - 1); }
+    const newYear = month === 1 ? year - 1 : year;
+    const newMonth = month === 1 ? 12 : month - 1;
+    setYear(newYear);
+    setMonth(newMonth);
+    const firstDay = new Date(newYear, newMonth - 1, 1);
+    firstDay.setDate(firstDay.getDate() - firstDay.getDay());
+    firstDay.setHours(0, 0, 0, 0);
+    setCollapsedWeekSunday(firstDay);
   };
   const nextMonth = () => {
-    if (month === 12) { setYear((y) => y + 1); setMonth(1); }
-    else { setMonth((m) => m + 1); }
+    const newYear = month === 12 ? year + 1 : year;
+    const newMonth = month === 12 ? 1 : month + 1;
+    setYear(newYear);
+    setMonth(newMonth);
+    const firstDay = new Date(newYear, newMonth - 1, 1);
+    firstDay.setDate(firstDay.getDate() - firstDay.getDay());
+    firstDay.setHours(0, 0, 0, 0);
+    setCollapsedWeekSunday(firstDay);
   };
+  const prevWeek = () => {
+    const d = new Date(collapsedWeekSunday);
+    d.setDate(d.getDate() - 7);
+    setCollapsedWeekSunday(d);
+    const mid = new Date(d);
+    mid.setDate(mid.getDate() + 3);
+    const ny = mid.getFullYear();
+    const nm = mid.getMonth() + 1;
+    if (ny !== year || nm !== month) { setYear(ny); setMonth(nm); }
+  };
+  const nextWeek = () => {
+    const d = new Date(collapsedWeekSunday);
+    d.setDate(d.getDate() + 7);
+    setCollapsedWeekSunday(d);
+    const mid = new Date(d);
+    mid.setDate(mid.getDate() + 3);
+    const ny = mid.getFullYear();
+    const nm = mid.getMonth() + 1;
+    if (ny !== year || nm !== month) { setYear(ny); setMonth(nm); }
+  };
+  const toggleCalendar = () => {
+    const next = !isCalendarExpanded;
+    setIsCalendarExpanded(next);
+    try { localStorage.setItem("calendarExpanded", String(next)); } catch {}
+  };
+  const collapsedWeekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(collapsedWeekSunday);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
 
   const scheduleMap = schedules.reduce<Record<string, ScheduleResponse[]>>((acc, s) => {
     (acc[s.eventDate] ||= []).push(s);
@@ -1209,65 +1264,153 @@ export default function SchedulePage() {
         ))}
       </div>
 
-      {/* 날짜 그리드 */}
-      {loading ? (
-        <div className="grid grid-cols-7 gap-0.5">
-          {Array.from({ length: 35 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-7 gap-0.5">
-          {Array.from({ length: totalCells }).map((_, i) => {
-            const day = i - firstDow + 1;
-            const isValid = day >= 1 && day <= daysInMonth;
-            const dateStr = isValid ? toDateStr(year, month, day) : "";
-            const isToday = dateStr === todayStr;
-            const isSelected = sheet.selectedDate === dateStr && sheet.isOpen;
-            const hasDot = isValid && (scheduleMap[dateStr]?.length ?? 0) > 0;
-            const dow = i % 7;
-            return (
-              <button
-                key={i}
-                disabled={!isValid}
-                onClick={() => isValid && handleDayClick(day)}
-                className={`relative flex flex-col items-center justify-start pt-1.5 aspect-square rounded-xl
-                  text-sm transition-colors ${
-                    !isValid ? "cursor-default"
-                    : isSelected ? "bg-primary-500 text-white"
-                    : isToday ? "bg-orange-100 text-primary-500 font-semibold"
-                    : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100 text-gray-700"
-                  } ${!isValid ? "" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : ""} ${
-                    isSelected ? "!text-white" : ""
-                  }`}
-                style={
-                  !isValid || isSelected ? {} :
-                  isDark ? (
-                    isToday
-                      // 오늘: 주황 은은한 배경 + 주황 텍스트
-                      ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
-                      // 일반: 요일별 색 분기
-                      : { color: dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1" }
-                  ) : {}
-                }
-              >
-                {isValid && (
-                  <>
-                    <span className="text-xs leading-tight font-medium">{day}</span>
-                    {hasDot && (
-                      <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
-                        {(scheduleMap[dateStr] ?? []).slice(0, 3).map((s) => (
-                          <span key={s.id} className={`block w-1 h-1 rounded-full ${isSelected ? "bg-white/80" : "bg-primary-500"}`} />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* 날짜 그리드 (접이식) */}
+      <div
+        style={{
+          overflow: "hidden",
+          maxHeight: isCalendarExpanded ? "420px" : "72px",
+          transition: "max-height 300ms ease-in-out",
+        }}
+      >
+        {loading ? (
+          <div className="grid grid-cols-7 gap-0.5">
+            {Array.from({ length: isCalendarExpanded ? 35 : 7 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : isCalendarExpanded ? (
+          /* 전체 월 그리드 */
+          <div className="grid grid-cols-7 gap-0.5">
+            {Array.from({ length: totalCells }).map((_, i) => {
+              const day = i - firstDow + 1;
+              const isValid = day >= 1 && day <= daysInMonth;
+              const dateStr = isValid ? toDateStr(year, month, day) : "";
+              const isToday = dateStr === todayStr;
+              const isSelected = sheet.selectedDate === dateStr && sheet.isOpen;
+              const hasDot = isValid && (scheduleMap[dateStr]?.length ?? 0) > 0;
+              const dow = i % 7;
+              return (
+                <button
+                  key={i}
+                  disabled={!isValid}
+                  onClick={() => isValid && handleDayClick(day)}
+                  className={`relative flex flex-col items-center justify-start pt-1.5 aspect-square rounded-xl
+                    text-sm transition-colors ${
+                      !isValid ? "cursor-default"
+                      : isSelected ? "bg-primary-500 text-white"
+                      : isToday ? "bg-orange-100 text-primary-500 font-semibold"
+                      : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100 text-gray-700"
+                    } ${!isValid ? "" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : ""} ${
+                      isSelected ? "!text-white" : ""
+                    }`}
+                  style={
+                    !isValid || isSelected ? {} :
+                    isDark ? (
+                      isToday
+                        ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
+                        : { color: dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1" }
+                    ) : {}
+                  }
+                >
+                  {isValid && (
+                    <>
+                      <span className="text-xs leading-tight font-medium">{day}</span>
+                      {hasDot && (
+                        <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
+                          {(scheduleMap[dateStr] ?? []).slice(0, 3).map((s) => (
+                            <span key={s.id} className={`block w-1 h-1 rounded-full ${isSelected ? "bg-white/80" : "bg-primary-500"}`} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* 접힌 상태: 현재 주 1줄 (좌우 스와이프로 주 이동) */
+          <div
+            className="grid grid-cols-7 gap-0.5"
+            onTouchStart={(e) => { calendarTouchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (calendarTouchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - calendarTouchStartX.current;
+              if (Math.abs(dx) > 40) { dx < 0 ? nextWeek() : prevWeek(); }
+              calendarTouchStartX.current = null;
+            }}
+          >
+            {collapsedWeekDays.map((d, i) => {
+              const dateStr = toDateStr(d.getFullYear(), d.getMonth() + 1, d.getDate());
+              const isToday = dateStr === todayStr;
+              const isSelected = sheet.selectedDate === dateStr && sheet.isOpen;
+              const hasDot = (scheduleMap[dateStr]?.length ?? 0) > 0;
+              const dow = i;
+              const isSameMonth = d.getMonth() + 1 === month && d.getFullYear() === year;
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => setSheet({ isOpen: true, selectedDate: dateStr })}
+                  className={`relative flex flex-col items-center justify-start pt-1.5 aspect-square rounded-xl
+                    text-sm transition-colors ${
+                      isSelected ? "bg-primary-500 text-white"
+                      : isToday ? "bg-orange-100 font-semibold"
+                      : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"
+                    } ${isSelected ? "!text-white" : ""}`}
+                  style={
+                    isSelected ? {} :
+                    isDark ? (
+                      isToday
+                        ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
+                        : { color: isSameMonth ? (dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1") : "#475569" }
+                    ) : {
+                      color: isToday ? "#e4701e" : isSameMonth ? (dow === 0 ? "#f87171" : dow === 6 ? "#60a5fa" : "#374151") : "#d1d5db",
+                    }
+                  }
+                >
+                  <span className="text-xs leading-tight font-medium">{d.getDate()}</span>
+                  {hasDot && (
+                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
+                      {(scheduleMap[dateStr] ?? []).slice(0, 3).map((s) => (
+                        <span key={s.id} className={`block w-1 h-1 rounded-full ${isSelected ? "bg-white/80" : "bg-primary-500"}`} />
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 달력 펼치기/접기 버튼 */}
+      <button
+        onClick={toggleCalendar}
+        className="w-full flex items-center justify-center gap-1.5 mt-2 rounded-2xl"
+        style={{
+          color: "#e4701e",
+          fontSize: "15px",
+          fontWeight: 600,
+          minHeight: "44px",
+          background: isDark ? "rgba(228,112,30,0.08)" : "#FFF8F0",
+        }}
+      >
+        {isCalendarExpanded ? (
+          <>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+            달력 접기
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            달력 펼치기
+          </>
+        )}
+      </button>
 
       {/* 이번 달 일정 요약 */}
       {!loading && schedules.length > 0 && (

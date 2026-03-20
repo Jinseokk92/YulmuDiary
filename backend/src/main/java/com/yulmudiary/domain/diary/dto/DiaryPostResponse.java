@@ -1,5 +1,6 @@
 package com.yulmudiary.domain.diary.dto;
 
+import com.yulmudiary.domain.diary.entity.Comment;
 import com.yulmudiary.domain.diary.entity.DiaryPost;
 import com.yulmudiary.domain.diary.entity.Media;
 import com.yulmudiary.domain.media.service.MediaUrlResolver;
@@ -7,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -24,6 +26,8 @@ public class DiaryPostResponse {
     private int commentCount;
     private List<ReactionResponse> reactions;
     private LocalDateTime createdAt;
+    /** 현재 로그인 사용자가 해당 게시글에 단 가장 최근 댓글 내용. 없으면 null. */
+    private String myLatestComment;
 
     @Getter
     @Builder
@@ -45,7 +49,15 @@ public class DiaryPostResponse {
         }
     }
 
-    public static DiaryPostResponse from(DiaryPost post, MediaUrlResolver resolver) {
+    public static DiaryPostResponse from(DiaryPost post, MediaUrlResolver resolver, Long currentUserId) {
+        String myLatestComment = null;
+        if (currentUserId != null) {
+            myLatestComment = post.getComments().stream()
+                    .filter(c -> c.getAuthor().getId().equals(currentUserId))
+                    .max(Comparator.comparing(Comment::getId))
+                    .map(Comment::getContent)
+                    .orElse(null);
+        }
         return DiaryPostResponse.builder()
                 .id(post.getId())
                 .babyId(post.getBaby().getId())
@@ -62,6 +74,11 @@ public class DiaryPostResponse {
                         .map(ReactionResponse::from)
                         .toList())
                 .createdAt(post.getCreatedAt())
+                .myLatestComment(myLatestComment)
                 .build();
+    }
+
+    public static DiaryPostResponse from(DiaryPost post, MediaUrlResolver resolver) {
+        return from(post, resolver, null);
     }
 }

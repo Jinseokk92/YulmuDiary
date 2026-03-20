@@ -20,7 +20,7 @@ export default function MainLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user, familyGroupId, setUser, setFamilyGroup } = useAuthStore();
+  const { isAuthenticated, user, familyGroupId, setUser, setFamilyGroup, isLoading, isDemoMode } = useAuthStore();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -28,10 +28,15 @@ export default function MainLayout({
     setMounted(true);
   }, []);
 
-  // 낙관적 UI: 스토어의 familyGroupId(쿠키 복원값)가 있으면 즉시 렌더링
-  const [checking, setChecking] = useState(familyGroupId == null);
+  // initialize() 완료 전까지 항상 스피너 표시
+  const [checking, setChecking] = useState(true);
 
   const fetchLatestStatus = useCallback(async () => {
+    // 데모 모드는 실제 API 호출 없이 바로 렌더
+    if (isDemoMode) {
+      setChecking(false);
+      return;
+    }
     try {
       const me = await api.get<UserResponse>("/api/auth/me");
       console.log("📋 [Layout] /api/auth/me →", { id: me.id, familyGroupId: me.familyGroupId, pathname });
@@ -48,9 +53,12 @@ export default function MainLayout({
       console.error("❌ [Layout] /api/auth/me 실패 → /login 리다이렉트", error);
       router.replace("/login");
     }
-  }, [pathname, router, setUser, setFamilyGroup]);
+  }, [isDemoMode, pathname, router, setUser, setFamilyGroup]);
 
   useEffect(() => {
+    // initialize() 완료 전에는 실행하지 않음 (isAuthenticated 초기값 false를 잘못 참조 방지)
+    if (isLoading) return;
+
     if (!isAuthenticated) {
       router.replace("/login");
       return;
@@ -63,13 +71,13 @@ export default function MainLayout({
     } else {
       fetchLatestStatus();
     }
-  }, [isAuthenticated, familyGroupId, fetchLatestStatus, router]);
+  }, [isAuthenticated, isLoading, familyGroupId, fetchLatestStatus, router]);
 
   // 마운트 전에는 테마를 알 수 없으므로 기본값 사용
   const isDark = mounted && resolvedTheme === "dark";
 
-  // 가드: 그룹 정보가 아예 없고 체크 중일 때만 스피너 노출
-  if (checking && familyGroupId == null) {
+  // 가드: initialize() 실행 중이거나 인증 확인 중일 때 스피너 노출
+  if (isLoading || (checking && familyGroupId == null)) {
     return (
       <>
         <MainBackground />
