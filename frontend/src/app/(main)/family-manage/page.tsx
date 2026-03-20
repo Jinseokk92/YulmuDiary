@@ -284,68 +284,105 @@ export default function FamilyManagePage() {
           </div>
         ) : members.length === 0 ? (
           <p className="text-sm text-center py-3" style={{ color: subText }}>멤버가 없습니다.</p>
-        ) : (
-          <div className="space-y-2">
-            {members.map((member) => {
-              const isMe = member.userId === user?.id;
-              return (
-                <div
-                  key={member.userId}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: isDark ? "rgba(255,255,255,0.04)" : "#f9fafb" }}
-                >
-                  <UserAvatar
-                    nickname={member.name}
-                    profileImageUrl={member.profileImageUrl}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold truncate" style={{ color: text }}>
-                        {member.name}
-                      </span>
-                      {isMe && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ background: "#fff7ed", color: "#ea580c" }}>
-                          나
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{
-                          background: member.role === "PARENT"
-                            ? (isDark ? "rgba(234,88,12,0.2)" : "#fff7ed")
-                            : (isDark ? "rgba(100,116,139,0.2)" : "#f1f5f9"),
-                          color: member.role === "PARENT" ? "#ea580c" : (isDark ? "#94a3b8" : "#64748b"),
-                        }}>
-                        {member.role === "PARENT" ? "부모" : "가족"}
-                      </span>
-                      <span className="text-[10px]" style={{ color: subText }}>
-                        {formatDate(member.joinedAt)}
-                      </span>
-                    </div>
-                  </div>
+        ) : (() => {
+          const sorted = (role: string) =>
+            members
+              .filter((m) => m.role === role)
+              .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+          const parents   = sorted("PARENT");
+          const relatives = sorted("RELATIVE");
 
-                  {/* 내보내기 — 본인 제외 */}
-                  {!isMe && (
-                    <button
-                      onClick={() => setKickTarget(member)}
-                      className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
-                      style={{
-                        color: "#ef4444",
-                        background: isDark ? "rgba(239,68,68,0.1)" : "#fff1f2",
-                        border: "1px solid #fecaca",
-                      }}
-                    >
-                      내보내기
-                    </button>
-                  )}
+          const MemberRow = ({ member }: { member: AdminMemberResponse }) => {
+            const isMe = member.userId === user?.id;
+            return (
+              <div
+                key={member.userId}
+                className="flex items-center gap-3 px-3 py-2.5"
+                style={{ borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}` }}
+              >
+                <UserAvatar
+                  nickname={member.name}
+                  profileImageUrl={member.profileImageUrl}
+                  size="sm"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold truncate" style={{ color: text }}>
+                      {member.name}
+                    </span>
+                    {isMe && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                        style={{ background: "#fff7ed", color: "#ea580c" }}>
+                        나
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px]" style={{ color: subText }}>
+                    {formatDate(member.joinedAt)}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {!isMe && (
+                  <button
+                    onClick={() => setKickTarget(member)}
+                    className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
+                    style={{
+                      color: "#ef4444",
+                      background: isDark ? "rgba(239,68,68,0.1)" : "#fff1f2",
+                      border: "1px solid #fecaca",
+                    }}
+                  >
+                    내보내기
+                  </button>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div className="space-y-4">
+              {/* 부모 섹션 */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-bold" style={{ color: text }}>부모</span>
+                </div>
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    border: `2px solid ${isDark ? "#c2410c" : "#f97316"}`,
+                  }}
+                >
+                  {parents.length === 0
+                    ? <p className="text-xs text-center py-3" style={{ color: subText }}>부모 멤버 없음</p>
+                    : parents.map((m) => <MemberRow key={m.userId} member={m} />)
+                  }
+                </div>
+              </div>
+
+              {/* 가족 섹션 */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-bold" style={{ color: text }}>가족</span>
+                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: isDark ? "rgba(100,116,139,0.2)" : "#f1f5f9",
+                      color: isDark ? "#94a3b8" : "#64748b",
+                    }}>
+                    {relatives.length}명
+                  </span>
+                </div>
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{ border: `1px solid ${isDark ? "#334155" : "#e5e7eb"}` }}
+                >
+                  {relatives.length === 0
+                    ? <p className="text-xs text-center py-3" style={{ color: subText }}>가족 멤버 없음</p>
+                    : relatives.map((m) => <MemberRow key={m.userId} member={m} />)
+                  }
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* ── C. 전체 게시글 관리 ── */}
