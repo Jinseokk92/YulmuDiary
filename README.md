@@ -231,6 +231,39 @@ npm run dev
 
 ---
 
+## 🚀 배포 자동화 (GitHub Actions)
+
+`backend/**` 경로에 변경이 있을 때 `main` 브랜치에 푸시하면 자동으로 빌드·배포됩니다.
+
+```text
+main 브랜치 push (backend/** 변경)
+  → Docker 이미지 빌드
+  → Artifact Registry 푸시
+  → Cloud Run 배포
+```
+
+### 인프라 정보
+
+| 항목 | 값 |
+|------|-----|
+| Registry | `asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo` |
+| Cloud Run 서비스명 | `backend-api` |
+| 리전 | `asia-northeast3` |
+
+### GitHub Secrets
+
+| 키 | 설명 |
+|----|------|
+| `GCP_PROJECT_ID` | `project-e40f8456-38b6-457a-97a` |
+| `GCP_SA_KEY` | 서비스 계정 JSON |
+
+### 서비스 계정
+
+- `github-actions-deploy-311@yulmu-project.iam.gserviceaccount.com`
+- 필요 권한: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(`iam.serviceAccountUser`)
+
+---
+
 ## 🔐 인증 흐름
 
 ```text

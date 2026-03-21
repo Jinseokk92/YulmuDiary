@@ -195,6 +195,23 @@ src/
 - **[MED]** 파일 업로드 검증: `getContentType()`은 위조 가능 → 바이트 매직 넘버 검증 미구현
 - **[INFO]** 운영 초대 코드: data.sql 운영 미실행 → 직접 INSERT 필요
 
+## GitHub Actions CI/CD
+
+- 워크플로우: `backend/**` 변경 시 main 브랜치 푸시 → 자동 배포
+- Registry: `asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo`
+- Cloud Run 서비스명: `backend-api`
+- 리전: `asia-northeast3`
+
+### GitHub Secrets
+| 키 | 설명 |
+|----|------|
+| `GCP_PROJECT_ID` | `project-e40f8456-38b6-457a-97a` |
+| `GCP_SA_KEY` | 서비스 계정 JSON |
+
+### 서비스 계정
+- `github-actions-deploy-311@yulmu-project.iam.gserviceaccount.com`
+- 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)
+
 ## 향후 구현 예정
 
 | 항목 | 설명 |

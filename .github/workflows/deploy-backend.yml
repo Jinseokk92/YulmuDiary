@@ -14,7 +14,8 @@ env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast3
   SERVICE_NAME: backend-api
-  REGISTRY: asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo
+  REGISTRY: asia-northeast3-docker.pkg.dev/yulmu-project/docker-repo
+  # asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo
 
 jobs:
   deploy:
@@ -39,7 +40,7 @@ jobs:
       - name: GCP 인증
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: gcloud 설정
@@ -66,4 +67,3 @@ jobs:
             --region ${{ env.REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --quiet
-
