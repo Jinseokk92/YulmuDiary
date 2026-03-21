@@ -21,17 +21,17 @@
 
 ## 환경 변수
 
-| 변수명 | 설명 |
-|--------|------|
-| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | Neon PostgreSQL |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth2 |
-| `KAKAO_CLIENT_ID` | 카카오 REST API 키 |
-| `JWT_SECRET_KEY` | HS256 시크릿 (256비트 이상) |
-| `GCS_BUCKET_NAME` | `yulmudiary-media` |
-| `FRONTEND_URL` | CORS, OAuth2 리다이렉트용 |
-| `NEXT_PUBLIC_API_URL` | 백엔드 API URL |
-| `NEXT_PUBLIC_KAKAO_JS_KEY` | 카카오 지도 SDK JS 키 |
-| `NEXT_PUBLIC_KAKAO_APP_KEY` | 카카오 장소 검색 REST API 키 |
+| 변수명                                      | 설명                         |
+| ------------------------------------------- | ---------------------------- |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`    | Neon PostgreSQL              |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth2                |
+| `KAKAO_CLIENT_ID`                           | 카카오 REST API 키           |
+| `JWT_SECRET_KEY`                            | HS256 시크릿 (256비트 이상)  |
+| `GCS_BUCKET_NAME`                           | `yulmudiary-media`           |
+| `FRONTEND_URL`                              | CORS, OAuth2 리다이렉트용    |
+| `NEXT_PUBLIC_API_URL`                       | 백엔드 API URL               |
+| `NEXT_PUBLIC_KAKAO_JS_KEY`                  | 카카오 지도 SDK JS 키        |
+| `NEXT_PUBLIC_KAKAO_APP_KEY`                 | 카카오 장소 검색 REST API 키 |
 
 ## 백엔드 구조
 
@@ -126,20 +126,20 @@ src/
 
 ## API 구현 상태
 
-| 도메인 | 엔드포인트 | 비고 |
-|--------|-----------|------|
-| Auth | `GET /api/auth/me`, `POST /api/auth/refresh` | |
-| FamilyGroup | `POST /api/family-group/join` | |
-| DiaryPost | CRUD `/api/diary-posts`, `/api/diary-posts/{id}` | Cursor 페이징. `DiaryPostResponse`에 `myLatestComment`(현재 사용자 최근 댓글 내용) 포함. `from(post, resolver, currentUserId)` 오버로드 사용 |
-| Comment | GET/POST/DELETE `/api/diary-posts/{postId}/comments/{commentId?}` | |
-| Reaction | `POST /api/diary-posts/{postId}/reactions` | 토글 |
-| Notification | `GET /api/notifications`, `PATCH .../read-all`, `PATCH .../{id}/read` | Cursor 무한스크롤 |
-| Milestone | `GET /api/milestones`, `PATCH .../{id}/achieve`, `DELETE .../{id}/achieve` | |
-| Album | `GET/POST /api/album/photos`, `GET .../favorites`, `PATCH .../{id}/favorite` | |
-| Schedule | GET(월별)/POST/PUT/DELETE `/api/schedules` | |
-| User | GET(목록)/PUT(정보·프로필사진)/GET(stats·comments·reactions) `/api/users/me/...` | |
-| Media | `POST /api/media/upload`, `GET /api/media/files/...` | |
-| Admin | `GET/POST /api/admin/invite-codes`, `GET/DELETE .../members`, `DELETE .../diary-posts/{id}`, `GET/PATCH .../app-settings` | `@RequireAdmin` |
+| 도메인       | 엔드포인트                                                                                                                | 비고                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth         | `GET /api/auth/me`, `POST /api/auth/refresh`                                                                              |                                                                                                                                              |
+| FamilyGroup  | `POST /api/family-group/join`                                                                                             |                                                                                                                                              |
+| DiaryPost    | CRUD `/api/diary-posts`, `/api/diary-posts/{id}`                                                                          | Cursor 페이징. `DiaryPostResponse`에 `myLatestComment`(현재 사용자 최근 댓글 내용) 포함. `from(post, resolver, currentUserId)` 오버로드 사용 |
+| Comment      | GET/POST/DELETE `/api/diary-posts/{postId}/comments/{commentId?}`                                                         |                                                                                                                                              |
+| Reaction     | `POST /api/diary-posts/{postId}/reactions`                                                                                | 토글                                                                                                                                         |
+| Notification | `GET /api/notifications`, `PATCH .../read-all`, `PATCH .../{id}/read`                                                     | Cursor 무한스크롤                                                                                                                            |
+| Milestone    | `GET /api/milestones`, `PATCH .../{id}/achieve`, `DELETE .../{id}/achieve`                                                |                                                                                                                                              |
+| Album        | `GET/POST /api/album/photos`, `GET .../favorites`, `PATCH .../{id}/favorite`                                              |                                                                                                                                              |
+| Schedule     | GET(월별)/POST/PUT/DELETE `/api/schedules`                                                                                |                                                                                                                                              |
+| User         | GET(목록)/PUT(정보·프로필사진)/GET(stats·comments·reactions) `/api/users/me/...`                                          |                                                                                                                                              |
+| Media        | `POST /api/media/upload`, `GET /api/media/files/...`                                                                      |                                                                                                                                              |
+| Admin        | `GET/POST /api/admin/invite-codes`, `GET/DELETE .../members`, `DELETE .../diary-posts/{id}`, `GET/PATCH .../app-settings` | `@RequireAdmin`                                                                                                                              |
 
 ## 설계 원칙
 
@@ -170,6 +170,7 @@ src/
 모든 바텀시트/모달/오버레이 컴포넌트를 새로 만들거나 수정할 때 반드시 적용할 것.
 
 **body 스크롤 차단** (열릴 때 scrollY 저장 → body position:fixed + top:-scrollY + overflow:hidden, 닫힐 때 스타일 원복 → window.scrollTo(0, scrollY))
+
 - 드래그 핸들이 있으면 touchmove 차단은 `addEventListener('touchmove', fn, { passive: false })`로 등록 (JSX onTouchMove는 passive:true라 preventDefault 불가)
 
 적용 컴포넌트: FilterBottomSheet, CommentBottomSheet, MilestoneDetailModal, MilestoneRecordSheet, DatePickerBottomSheet, **앞으로 새로 만드는 모든 바텀시트/모달**
@@ -178,7 +179,7 @@ src/
 
 바텀시트 안에 textarea/input이 있을 때 두 가지를 함께 적용할 것:
 
-**① visualViewport 기반 시트 높이·위치 조정** — `window.visualViewport`의 resize/scroll 이벤트로 keyboardHeight(= innerHeight - vv.height - vv.offsetTop)와 sheetMaxHeight(= vv.height * 0.96)를 계산해 시트 motion.div의 `bottom`과 `maxHeight`에 적용
+**① visualViewport 기반 시트 높이·위치 조정** — `window.visualViewport`의 resize/scroll 이벤트로 keyboardHeight(= innerHeight - vv.height - vv.offsetTop)와 sheetMaxHeight(= vv.height \* 0.96)를 계산해 시트 motion.div의 `bottom`과 `maxHeight`에 적용
 
 **② 입력란 포커스 시 scrollIntoView** — `onFocus`에서 320ms 딜레이 후 `inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })` 호출 (키보드 애니메이션 대기, body fixed 상태에서도 시트 내부 overflow-y-auto 스크롤은 정상 작동)
 
@@ -198,23 +199,25 @@ src/
 ## GitHub Actions CI/CD
 
 - 워크플로우: `backend/**` 변경 시 main 브랜치 푸시 → 자동 배포
-- Registry: `asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo`
+- Registry: `asia-northeast3-docker.pkg.dev/yulmu-project/docker-repo`
 - Cloud Run 서비스명: `backend-api`
 - 리전: `asia-northeast3`
 
 ### GitHub Secrets
-| 키 | 설명 |
-|----|------|
-| `GCP_PROJECT_ID` | `project-e40f8456-38b6-457a-97a` |
-| `GCP_SA_KEY` | 서비스 계정 JSON |
+
+| 키               | 설명             |
+| ---------------- | ---------------- |
+| `GCP_PROJECT_ID` | `yulmu-project`  |
+| `GCP_SA_KEY`     | 서비스 계정 JSON |
 
 ### 서비스 계정
+
 - `github-actions-deploy-311@yulmu-project.iam.gserviceaccount.com`
 - 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)
 
 ## 향후 구현 예정
 
-| 항목 | 설명 |
-|------|------|
-| FCM 기기 푸시 알림 | 인앱 알림은 구현됨. 기기 푸시는 미구현 (Firebase SDK, 디바이스 토큰 등록 필요) |
-| 파일 업로드 매직 넘버 검증 | 이미지 바이트 검증 로직 추가 필요 |
+| 항목                       | 설명                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| FCM 기기 푸시 알림         | 인앱 알림은 구현됨. 기기 푸시는 미구현 (Firebase SDK, 디바이스 토큰 등록 필요) |
+| 파일 업로드 매직 넘버 검증 | 이미지 바이트 검증 로직 추가 필요                                              |

@@ -246,7 +246,7 @@ main 브랜치 push (backend/** 변경)
 
 | 항목 | 값 |
 |------|-----|
-| Registry | `asia-northeast3-docker.pkg.dev/project-e40f8456-38b6-457a-97a/docker-repo` |
+| Registry | `asia-northeast3-docker.pkg.dev/yulmu-project/docker-repo` |
 | Cloud Run 서비스명 | `backend-api` |
 | 리전 | `asia-northeast3` |
 
@@ -254,7 +254,7 @@ main 브랜치 push (backend/** 변경)
 
 | 키 | 설명 |
 |----|------|
-| `GCP_PROJECT_ID` | `project-e40f8456-38b6-457a-97a` |
+| `GCP_PROJECT_ID` | `yulmu-project` |
 | `GCP_SA_KEY` | 서비스 계정 JSON |
 
 ### 서비스 계정
