@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>오프라인 - 율무일기</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #e4701e;
+      --primary-dark: #c05621;
+      --bg: #fffbf7;
+      --text-main: #1c1917;
+      --text-sub: #78716c;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --text-main: #f1f5f9;
+        --text-sub: #94a3b8;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI",
+                   "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 배경 그라디언트 */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 15% 15%, rgba(255, 195, 113, 0.20) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 85%, rgba(228, 112, 30, 0.13) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(255, 165, 80, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+    }
+
+    /* 율무 캐릭터 */
+    .yulmu-wrap {
+      margin-bottom: 1.75rem;
+    }
+
+    .yulmu-img {
+      width: 140px;
+      height: auto;
+      margin: 0 auto;
+      display: block;
+      animation: float 3.5s ease-in-out infinite alternate;
+      filter: drop-shadow(0 8px 20px rgba(228, 112, 30, 0.20));
+    }
+
+    @keyframes float {
+      0%   { transform: translateY(0)   rotate(-3deg); }
+      100% { transform: translateY(-14px) rotate(3deg); }
+    }
+
+    /* 와이파이 아이콘 (이미지 로드 실패 시 대체) */
+    .wifi-icon {
+      display: none;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 0.25rem;
+      color: var(--primary);
+    }
+
+    .yulmu-img.hidden + .wifi-icon { display: block; }
+
+    /* 텍스트 */
+    .title {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.625rem;
+      letter-spacing: -0.01em;
+    }
+
+    .desc {
+      font-size: 0.875rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+      margin-bottom: 2rem;
+    }
+
+    /* 버튼 */
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.875rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 0.875rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: -0.01em;
+      transition: opacity 0.15s ease, transform 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 16px rgba(228, 112, 30, 0.30);
+    }
+
+    .retry-btn:hover  { opacity: 0.90; }
+    .retry-btn:active { transform: scale(0.96); }
+
+    /* 앱 이름 */
+    .app-name {
+      margin-top: 2.25rem;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      opacity: 0.55;
+      letter-spacing: 0.02em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .yulmu-img { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-layer"></div>
+
+  <div class="container">
+    <div class="yulmu-wrap">
+      <img
+        src="/icons/Smiling_Yulmu.png"
+        alt="율무"
+        class="yulmu-img"
+        onerror="this.classList.add('hidden')"
+      >
+      <!-- 이미지 로드 실패 시 와이파이 아이콘 대체 -->
+      <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <line x1="12" y1="20" x2="12.01" y2="20"/>
+      </svg>
+    </div>
+
+    <p class="title">오프라인 상태예요</p>
+    <p class="desc">
+      인터넷에 연결하면<br>
+      율무일기를 이용할 수 있어요
+    </p>
+
+    <button class="retry-btn" onclick="window.location.reload()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8
+                 c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6
+                 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+      </svg>
+      다시 시도
+    </button>
+
+    <p class="app-name">율무일기</p>
+  </div>
+</body>
+</html>
