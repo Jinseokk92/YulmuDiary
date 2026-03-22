@@ -91,6 +91,14 @@ function GoogleIcon() {
 export default function LoginPage() {
   const router = useRouter();
   const { activateDemo } = useAuthStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === "dark";
 
   const handleKakaoLogin = () => {
     window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao`;
@@ -122,8 +130,16 @@ export default function LoginPage() {
 
         {/* 타이틀 */}
         <div className="mt-2 mb-8 text-center">
-          <h1 className="text-4xl font-bold text-primary-600 mb-2">율무일기</h1>
-          <p className="text-gray-500 text-sm">
+          <h1
+            className="text-4xl font-bold mb-2"
+            style={{ color: isDark ? "#fb923c" : "#e4701e" }}
+          >
+            율무일기
+          </h1>
+          <p
+            className="text-sm"
+            style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+          >
             우리 아이의 소중한 순간을 가족과 함께
           </p>
         </div>
@@ -143,9 +159,16 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                       bg-white text-gray-700 font-medium text-sm
-                       border border-gray-300
-                       hover:bg-gray-50 transition-all active:scale-[0.98]"
+                       font-medium text-sm transition-all active:scale-[0.98]"
+            style={isDark ? {
+              backgroundColor: "#1e293b",
+              color: "#e2e8f0",
+              border: "1px solid #334155",
+            } : {
+              backgroundColor: "#ffffff",
+              color: "#374151",
+              border: "1px solid #d1d5db",
+            }}
           >
             <GoogleIcon />
             Google로 시작하기
@@ -154,9 +177,12 @@ export default function LoginPage() {
           <button
             onClick={handleDemo}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                       font-medium text-sm
-                       transition-all active:scale-[0.98]"
-            style={{
+                       font-medium text-sm transition-all active:scale-[0.98]"
+            style={isDark ? {
+              backgroundColor: "#1c1208",
+              border: "1px dashed #92400e",
+              color: "#fb923c",
+            } : {
               backgroundColor: "#FFF3E8",
               border: "1px dashed #F0C8A0",
               color: "#C2601A",
@@ -166,7 +192,10 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <p className="mt-8 text-xs text-gray-400">
+        <p
+          className="mt-8 text-xs"
+          style={{ color: isDark ? "#475569" : "#9ca3af" }}
+        >
           로그인 시 서비스 이용약관에 동의하게 됩니다.
         </p>
       </div>

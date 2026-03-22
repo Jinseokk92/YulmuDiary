@@ -151,7 +151,9 @@ export default function LoginBackground() {
   return (
     // AnimatePresence mode="wait": 기존 배경 fade-out 후 새 배경 fade-in
     <AnimatePresence mode="wait">
-      {resolvedTheme === "dark" ? <DarkBackground /> : <LightBackground />}
+      {resolvedTheme === "dark"
+        ? <DarkBackground key="dark" />
+        : <LightBackground key="light" />}
     </AnimatePresence>
   );
 }
