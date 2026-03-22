@@ -75,7 +75,7 @@ src/
 ├── types/index.ts         — 전체 API 타입 정의
 ├── stores/
 │   ├── authStore.ts       — token/user/familyGroupId (js-cookie 기반)
-│   ├── bgmStore.ts        — BGM 재생상태, anchorPos
+│   ├── bgmStore.ts        — BGM 재생상태 (isPlaying, isMuted, volume, currentTime, duration)
 │   └── uiStore.ts         — SideDrawer / 댓글시트 / 이미지뷰어 / demoGuideStep
 ├── contexts/
 │   ├── UserContext.tsx    — (레거시, Providers에서 유지)
@@ -160,7 +160,7 @@ src/
 - **이미지**: `next/image` + `remotePatterns`(GCS + localhost:8080). `getMediaUrl()`로 상대→절대 변환
 - **Optimistic UI**: 리액션 토글, 댓글 작성/삭제 (실패 시 롤백)
 - **카카오맵**: `useEffect`에서 `window.kakao?.maps` 존재 확인 (SPA 재방문 시 onLoad 미재실행 대응)
-- **BGM**: `BgmPlayer.tsx`(전역 오디오, UI 없음) + `BgmMiniPlayer`(홈, hero anchor 기반 위치) + `BgmFloatingPlayer`(비홈 우하단). 스크롤 중 좌표 재계산 금지
+- **BGM**: `BgmPlayer.tsx`(전역 오디오, UI 없음) + `BgmMiniPlayer`(홈, hero anchor 기반 위치) + `BgmFloatingPlayer`(비홈 우하단). 스크롤 중 좌표 재계산 금지. **재생은 유저가 음표 토큰을 직접 터치해야만 시작** (`bgmStore.toggle → audio.play()`). 자동재생·unlock 리스너 없음 — OAuth 리다이렉트 중 제스처 소비로 인한 재생 버그 방지
 - **체험판**: sessionStorage 기반 가상 데이터. blob URL 무효화 → native Image probe로 감지 → 가이드 흐름(demoGuideStep 0→1→2). `demo_mode` 쿠키 유효성은 `sessionStorage.demoMode === "true"`와 교차 검증 필수 (브라우저 세션 복원으로 쿠키만 남고 sessionStorage는 비워지면 stale 처리 → 쿠키 제거 후 일반 인증 흐름)
 - **관리자**: `useRequireAdmin()` → 비관리자면 즉시 "/" 리다이렉트
 - **알림**: `/notifications` 무한스크롤(IntersectionObserver), 시간 그룹화, 탭 시 `/diary?highlightId=` 이동
