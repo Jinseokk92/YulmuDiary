@@ -21,6 +21,7 @@ const withPWA = withPWAInit({
       urlPattern: ({ request }: { request: Request }) =>
         request.mode === "navigate",
       handler: "NetworkOnly",
+      options: {},
     },
     // _next/static은 CacheFirst: 콘텐츠 해시가 포함된 파일이므로 장기 캐시 안전
     // defaultCache의 static-js-assets/static-style-assets보다 앞에 위치해 우선 적용
