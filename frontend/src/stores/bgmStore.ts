@@ -48,15 +48,19 @@ export const useBgmStore = create<BgmState>((set, get) => ({
   play: async () => {
     const audio = getBgmAudio();
     if (!audio) return;
-    await audio.play();
-    set({ isPlaying: true });
+    try {
+      await audio.play();
+      // isPlaying은 DOM 'play' 이벤트 → BgmPlayer가 관리
+    } catch {
+      // 재생 실패 — isPlaying false 유지
+    }
   },
 
   pause: () => {
     const audio = getBgmAudio();
     if (!audio) return;
     audio.pause();
-    set({ isPlaying: false });
+    // isPlaying은 DOM 'pause' 이벤트 → BgmPlayer가 관리
   },
 
   toggle: () => {
@@ -64,7 +68,7 @@ export const useBgmStore = create<BgmState>((set, get) => ({
     if (isPlaying) {
       pause();
     } else {
-      play().catch(() => set({ isPlaying: false }));
+      play(); // 에러는 play() 내부 try/catch가 처리
     }
   },
 

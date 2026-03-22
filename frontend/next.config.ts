@@ -36,8 +36,21 @@ const withPWA = withPWAInit({
         },
       },
     },
-    // 이미지·폰트·오디오(BGM)·API 등 나머지는 next-pwa 기본값 유지
-    ...defaultCache,
+    // "others"(동일 출처 비-API 경로)는 navigate를 제외하고 적용.
+    // defaultCache의 "others"는 navigate 요청도 매칭하여 위 NetworkOnly 규칙과
+    // 캐시 버킷이 겹칠 수 있으므로 해당 항목을 제거하고 직접 등록한다.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...defaultCache.filter((e: any) => e.options?.cacheName !== "others"),
+    {
+      urlPattern: ({ url, request }: { url: URL; request: Request }) => {
+        if (self.origin !== url.origin) return false;
+        if (url.pathname.startsWith("/api/")) return false;
+        if (request.mode === "navigate") return false;
+        return true;
+      },
+      handler: "NetworkFirst" as const,
+      options: { cacheName: "others" },
+    },
   ],
 });
 

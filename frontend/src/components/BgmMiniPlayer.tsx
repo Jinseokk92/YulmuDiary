@@ -23,6 +23,8 @@ export default function BgmMiniPlayer() {
   const [mounted, setMounted] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [anchorNode, setAnchorNode] = useState<HTMLElement | null>(null);
+  /** RAF 완료 후 anchor 탐색을 1회 시도했는지 여부 */
+  const [anchorSearched, setAnchorSearched] = useState(false);
 
   const isPlaying   = useBgmStore((s) => s.isPlaying);
   const isMuted     = useBgmStore((s) => s.isMuted);
@@ -44,11 +46,13 @@ export default function BgmMiniPlayer() {
   useEffect(() => {
     if (!mounted || pathname !== "/") {
       setAnchorNode(null);
+      setAnchorSearched(false);
       return;
     }
 
     const rafId = window.requestAnimationFrame(() => {
       setAnchorNode(document.getElementById(HOME_BGM_ANCHOR_ID));
+      setAnchorSearched(true);
     });
 
     return () => window.cancelAnimationFrame(rafId);
@@ -62,26 +66,47 @@ export default function BgmMiniPlayer() {
 
   return (
     <>
-      {anchorNode &&
-        createPortal(
-          <CollapsedMusicToken
-            ariaLabel="배경음악 플레이어 열기"
-            isDark={isDark}
-            isPlaying={isPlaying}
-            onClick={() => setExpanded(true)}
-            position="absolute"
-            style={{
-              top: -BGM_COLLAPSED_TOKEN_SIZE / 2,
-              left: -BGM_COLLAPSED_TOKEN_SIZE / 2,
-              opacity: expanded ? 0 : 1,
-              pointerEvents: expanded ? "none" : "auto",
-              transform: expanded
-                ? `scale(0.82) rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`
-                : `rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`,
-            }}
-          />,
-          anchorNode
-        )}
+      {anchorNode
+        ? createPortal(
+            <CollapsedMusicToken
+              ariaLabel="배경음악 플레이어 열기"
+              isDark={isDark}
+              isPlaying={isPlaying}
+              onClick={() => setExpanded(true)}
+              position="absolute"
+              style={{
+                top: -BGM_COLLAPSED_TOKEN_SIZE / 2,
+                left: -BGM_COLLAPSED_TOKEN_SIZE / 2,
+                opacity: expanded ? 0 : 1,
+                pointerEvents: expanded ? "none" : "auto",
+                transform: expanded
+                  ? `scale(0.82) rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`
+                  : `rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`,
+              }}
+            />,
+            anchorNode
+          )
+        : anchorSearched &&
+          createPortal(
+            // anchor 요소를 찾지 못한 경우 우하단 고정 위치로 폴백
+            <CollapsedMusicToken
+              ariaLabel="배경음악 플레이어 열기"
+              isDark={isDark}
+              isPlaying={isPlaying}
+              onClick={() => setExpanded(true)}
+              position="fixed"
+              style={{
+                right: "1rem",
+                bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 0.75rem)",
+                opacity: expanded ? 0 : 1,
+                pointerEvents: expanded ? "none" : "auto",
+                transform: expanded
+                  ? `scale(0.82) rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`
+                  : `rotate(${BGM_COLLAPSED_TOKEN_ROTATION}deg)`,
+              }}
+            />,
+            document.body
+          )}
 
       {createPortal(
         <div

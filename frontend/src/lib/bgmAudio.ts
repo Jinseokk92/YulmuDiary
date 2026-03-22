@@ -23,6 +23,8 @@ let _instance: HTMLAudioElement | null = null;
 /**
  * 앱 전체에서 하나의 Audio 인스턴스를 공유하는 싱글톤 접근자.
  * 서버(SSR)에서는 window가 없으므로 null을 반환한다.
+ * 처음 호출 시 Audio 엘리먼트를 생성하고 BGM 파일 로딩이 시작된다.
+ * 인증 전에는 호출을 피하려면 getExistingBgmAudio()를 사용할 것.
  */
 export function getBgmAudio(): HTMLAudioElement | null {
   if (typeof window === "undefined") return null;
@@ -31,6 +33,14 @@ export function getBgmAudio(): HTMLAudioElement | null {
     _instance.loop = true;
     _instance.volume = BGM_TRACK.volume;
   }
+  return _instance;
+}
+
+/**
+ * Audio 인스턴스가 이미 생성되어 있으면 반환하고, 없으면 null을 반환한다.
+ * 인스턴스를 새로 생성하지 않으므로 비인증 상태에서 안전하게 호출할 수 있다.
+ */
+export function getExistingBgmAudio(): HTMLAudioElement | null {
   return _instance;
 }
 

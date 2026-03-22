@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getBgmAudio } from "@/lib/bgmAudio";
+import { getBgmAudio, getExistingBgmAudio } from "@/lib/bgmAudio";
 import { useBgmStore } from "@/stores/bgmStore";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -22,18 +22,21 @@ export default function BgmPlayer() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // ── 1. 비인증 시 오디오 정지 ─────────────────────────────────────────────
+  // getExistingBgmAudio()를 사용해 싱글톤이 없으면 생성하지 않는다.
   useEffect(() => {
     if (isAuthenticated) return;
-    const audio = getBgmAudio();
+    const audio = getExistingBgmAudio();
     if (audio && !audio.paused) audio.pause();
   }, [isAuthenticated]);
 
   // ── 2. DOM 이벤트 → Zustand 상태 동기화 ──────────────────────────────────
   //
+  // 인증 상태에서만 오디오 싱글톤을 생성하고 이벤트 리스너를 등록한다.
   // play / pause 이벤트로 isPlaying을 실제 audio 상태와 일치시킨다.
   // 브라우저가 백그라운드 탭에서 오디오를 일시정지하거나 iOS 인터럽션이 발생해도
   // UI 상태가 audio.paused와 어긋나지 않는다.
   useEffect(() => {
+    if (!isAuthenticated) return; // 비인증 시 싱글톤 생성 방지
     const audio = getBgmAudio();
     if (!audio) return;
 
@@ -67,7 +70,7 @@ export default function BgmPlayer() {
       audio.removeEventListener("timeupdate",    onTime);
       audio.removeEventListener("volumechange",  onVolume);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return null;
 }
