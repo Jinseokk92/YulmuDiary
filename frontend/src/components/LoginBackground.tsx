@@ -149,11 +149,13 @@ export default function LoginBackground() {
   if (!mounted) return null;
 
   return (
-    // AnimatePresence mode="wait": 기존 배경 fade-out 후 새 배경 fade-in
-    <AnimatePresence mode="wait">
-      {resolvedTheme === "dark"
-        ? <DarkBackground key="dark" />
-        : <LightBackground key="light" />}
-    </AnimatePresence>
+    // pointer-events-none: 배경 레이어가 버튼/콘텐츠 클릭을 가로막지 않도록 함
+    <div className="absolute inset-0 pointer-events-none">
+      <AnimatePresence mode="wait">
+        {resolvedTheme === "dark"
+          ? <DarkBackground key="dark" />
+          : <LightBackground key="light" />}
+      </AnimatePresence>
+    </div>
   );
 }
