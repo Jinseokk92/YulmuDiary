@@ -52,7 +52,14 @@ export const useBgmStore = create<BgmState>((set, get) => ({
       await audio.play();
       // isPlaying은 DOM 'play' 이벤트 → BgmPlayer가 관리
     } catch {
-      // 재생 실패 — isPlaying false 유지
+      // iOS/Safari: OAuth 리다이렉트 후 오디오 컨텍스트가 잠긴 경우.
+      // load()로 엘리먼트를 초기화하면 같은 유저 제스처 컨텍스트에서 재시도 가능.
+      audio.load();
+      try {
+        await audio.play();
+      } catch {
+        // 재시도도 실패 — isPlaying false 유지
+      }
     }
   },
 
