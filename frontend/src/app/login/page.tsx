@@ -119,7 +119,7 @@ export default function LoginPage() {
       <LoginBackground />
 
       {/* 우측 상단 테마 스위처: 모바일에서 노치/상태바 아래로 배치 */}
-      <div className="absolute top-12 right-4 sm:top-6 sm:right-6 z-10">
+      <div className="absolute top-12 right-4 sm:top-6 sm:right-6 z-20">
         <ThemeSwitcher />
       </div>
 
