@@ -16,6 +16,8 @@ frontend/public/workbox-*.js
 frontend/public/workbox-*.js.map
 frontend/public/worker-*.js
 frontend/public/worker-*.js.map
+frontend/public/fallback-*.js
+frontend/public/fallback-*.js.map
 
 # === IDE / Editor ===
 .idea/
