@@ -124,12 +124,13 @@ public class DiaryPostService {
 
     public DiaryPostPaginatedResponse getByBabyPaged(
             Long babyId, int page, int size,
-            DiaryPostSortType sort, LocalDate startDate, LocalDate endDate, Long userId, Long currentUserId) {
+            DiaryPostSortType sort, LocalDate startDate, LocalDate endDate, Long userId, String keyword, Long currentUserId) {
 
         Specification<DiaryPost> spec = Specification.where(DiaryPostSpec.forBaby(babyId));
         if (userId != null) spec = spec.and(DiaryPostSpec.forAuthor(userId));
         if (startDate != null) spec = spec.and(DiaryPostSpec.fromDate(startDate));
         if (endDate != null) spec = spec.and(DiaryPostSpec.toDate(endDate));
+        if (keyword != null && !keyword.isBlank()) spec = spec.and(DiaryPostSpec.containsKeyword(keyword));
 
         Sort sortOrder = (sort == DiaryPostSortType.OLDEST)
                 ? Sort.by(Sort.Direction.ASC, "createdAt")

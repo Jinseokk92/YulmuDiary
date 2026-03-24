@@ -4,8 +4,10 @@ import { memo, useState, useCallback, useRef, useEffect, type RefObject, type Re
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, getMediaUrl } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { downloadImage } from "@/lib/download";
+import { Download, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useUiStore } from "@/stores/uiStore";
 import ImageCarousel from "./ImageCarousel";
@@ -24,6 +26,7 @@ interface DiaryCardProps {
   onDelete: (postId: number) => void;
   disableNativeDrag?: boolean;
   highlight?: boolean;
+  onTagClick?: (tag: string) => void;
 }
 
 interface ActionIconButtonProps {
@@ -59,7 +62,7 @@ function ActionIconButton({
   );
 }
 
-function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight = false }: DiaryCardProps) {
+function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight = false, onTagClick }: DiaryCardProps) {
   const { currentUser } = useUser();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -241,6 +244,24 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
       setConfirmOpen(false);
     }
   }, [post.id, onDelete, currentUser]);
+
+  // ─── 다운로드 상태 ─────────────────────────────────────────────────
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleDownloadAll = useCallback(async () => {
+    if (!displayMedia || displayMedia.length === 0 || downloadState === "loading") return;
+    setDownloadState("loading");
+    try {
+      for (let i = 0; i < displayMedia.length; i++) {
+        await downloadImage(getMediaUrl(displayMedia[i].url), i);
+      }
+      setDownloadState("success");
+      setTimeout(() => setDownloadState("idle"), 1500);
+    } catch {
+      setDownloadState("error");
+      setTimeout(() => setDownloadState("idle"), 2000);
+    }
+  }, [displayMedia, downloadState]);
 
   // ─── 이미지 뷰어 상태 ──────────────────────────────────────────────
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -588,6 +609,31 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   </button>
                 )}
               </div>
+
+              {/* 다운로드: 이미지가 있는 게시글에만, 맨 우측 */}
+              {displayMedia && displayMedia.length > 0 && (
+                <ActionIconButton
+                  onClick={handleDownloadAll}
+                  disabled={downloadState === "loading"}
+                  ariaLabel="이미지 저장"
+                  disableNativeDrag={disableNativeDrag}
+                  onPreventDrag={handlePreventDrag}
+                  className={`ml-auto transition-colors disabled:opacity-40 ${
+                    downloadState === "success"
+                      ? "text-emerald-500"
+                      : downloadState === "error"
+                      ? "text-red-500"
+                      : isDark
+                      ? "text-slate-400 hover:text-emerald-400"
+                      : "text-gray-400 hover:text-emerald-500"
+                  }`}
+                >
+                  {downloadState === "loading" && <Loader2 className="w-6 h-6 animate-spin" />}
+                  {downloadState === "success"  && <Check className="w-6 h-6" />}
+                  {downloadState === "error"    && <AlertCircle className="w-6 h-6" />}
+                  {downloadState === "idle"     && <Download className="w-6 h-6" />}
+                </ActionIconButton>
+              )}
             </div>
           )}
 
@@ -720,7 +766,8 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   {displayTag.split(/\s+/).map((tag, i) => (
                     <span
                       key={i}
-                      className="text-sm text-primary-600 font-medium hover:underline cursor-pointer"
+                      onClick={() => onTagClick?.(tag)}
+                      className={`text-sm text-primary-600 font-medium hover:underline ${onTagClick ? "cursor-pointer active:opacity-60" : "cursor-default"}`}
                     >
                       {tag.startsWith("#") ? tag : `#${tag}`}
                     </span>

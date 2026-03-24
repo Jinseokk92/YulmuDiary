@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Search, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import type { DiaryPostPaginatedResponse } from "@/types";
 import DiaryFeed from "@/components/diary/DiaryFeed";
@@ -22,16 +24,31 @@ export default function DiaryPage() {
   const highlightParam = searchParams.get("highlightId");
   const highlightId = highlightParam ? parseInt(highlightParam, 10) : null;
 
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
+
   const [filters, setFilters] = useState<DiaryFilters>(DEFAULT_DIARY_FILTERS);
+  const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [data, setData] = useState<DiaryPostPaginatedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // debounce 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keyword]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    // mode, userName은 UI 전용이므로 API 파라미터에 포함하지 않음
     const params = new URLSearchParams({
       babyId: String(BABY_ID),
       page: String(currentPage),
@@ -41,6 +58,7 @@ export default function DiaryPage() {
     if (filters.startDate) params.set("startDate", filters.startDate);
     if (filters.endDate) params.set("endDate", filters.endDate);
     if (filters.userId) params.set("userId", String(filters.userId));
+    if (debouncedKeyword.trim()) params.set("keyword", debouncedKeyword.trim());
 
     api
       .get<DiaryPostPaginatedResponse>(`/api/diary-posts/pages?${params}`)
@@ -58,12 +76,38 @@ export default function DiaryPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, refreshKey, filters]);
+  }, [currentPage, refreshKey, filters, debouncedKeyword]);
 
   const handleFiltersChange = useCallback(
     (newFilters: DiaryFilters) => {
       setFilters(newFilters);
       router.push("/diary?page=1");
+    },
+    [router]
+  );
+
+  const handleKeywordChange = useCallback(
+    (value: string) => {
+      setKeyword(value);
+      // 키워드 바뀌면 1페이지로
+      if (currentPage !== 1) {
+        router.push("/diary?page=1");
+      }
+    },
+    [currentPage, router]
+  );
+
+  const handleTagClick = useCallback(
+    (tag: string) => {
+      // #을 제거한 순수 태그명으로 검색
+      const plain = tag.startsWith("#") ? tag.slice(1) : tag;
+      setKeyword(plain);
+      router.push("/diary?page=1");
+      // 검색바로 스크롤
+      setTimeout(() => {
+        searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        searchInputRef.current?.focus();
+      }, 100);
     },
     [router]
   );
@@ -83,6 +127,48 @@ export default function DiaryPage() {
         <FilterBar filters={filters} onChange={handleFiltersChange} />
       </div>
 
+      {/* 검색바 */}
+      <div className="px-4 pt-2 pb-1">
+        <div
+          className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-colors
+            ${isDark
+              ? "bg-slate-800 border border-slate-700"
+              : "bg-gray-50 border border-gray-200"
+            }`}
+        >
+          <Search
+            size={16}
+            className={`shrink-0 ${isDark ? "text-slate-500" : "text-gray-400"}`}
+          />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={keyword}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            placeholder="내용, 해시태그, 작성자 검색"
+            className={`flex-1 min-w-0 bg-transparent text-sm outline-none
+              ${isDark
+                ? "text-slate-200 placeholder:text-slate-600"
+                : "text-gray-800 placeholder:text-gray-400"
+              }`}
+          />
+          {keyword && (
+            <button
+              type="button"
+              onClick={() => handleKeywordChange("")}
+              aria-label="검색어 지우기"
+              className={`shrink-0 p-0.5 rounded-full transition-colors
+                ${isDark
+                  ? "text-slate-500 hover:text-slate-300"
+                  : "text-gray-400 hover:text-gray-600"
+                }`}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {loading ? (
         <div>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -96,6 +182,7 @@ export default function DiaryPage() {
           onRefresh={handleRefresh}
           onDelete={handleDelete}
           highlightId={highlightId}
+          onTagClick={handleTagClick}
         />
       )}
     </div>

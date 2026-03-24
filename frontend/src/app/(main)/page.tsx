@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { HOME_BGM_ANCHOR_ID } from "@/components/BgmPlayerUI";
 import FloatingYulmu from "@/components/FloatingYulmu";
@@ -22,6 +23,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [dday, setDday]                         = useState<string | null>(null);
   const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
+  const [pregnancyProgress, setPregnancyProgress] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -43,8 +45,11 @@ export default function Home() {
         const pregnancyStr = pregnancyDays === 0
           ? `${pregnancyWeeks}주`
           : `${pregnancyWeeks}주 ${pregnancyDays}일`;
+        const elapsedDays = baby.pregnancyWeeks * 7 + baby.pregnancyDays;
+        const progressPct = Math.min(100, Math.round((elapsedDays / 280) * 100));
         setDday(ddayStr);
         setPregnancyDisplay(pregnancyStr);
+        setPregnancyProgress(progressPct);
         localStorage.setItem(LS_DDAY, ddayStr);
         localStorage.setItem(LS_PREGNANCY, pregnancyStr);
       })
@@ -79,6 +84,67 @@ export default function Home() {
             ? dday
             : <span className={`${skelCls} w-12 h-5`} />}
         </p>
+
+        {/* 임신 진행률 프로그레스바 */}
+        {pregnancyProgress !== null && (() => {
+          const clampedPct = Math.max(3, Math.min(97, pregnancyProgress));
+          return (
+            <div className="mt-5">
+              {/* 라벨 행 — text-xs(rem)로 font-large 모드 대응 */}
+              <div className="flex justify-between items-center mb-2">
+                <span className={`text-xs ${sub}`}>임신 시작</span>
+                <span className="text-xs font-bold text-primary-500">
+                  {pregnancyProgress}%
+                </span>
+                <span className={`text-xs ${sub}`}>출산 예정</span>
+              </div>
+
+              {/* 아이콘 + 입체 바 */}
+              <div className="relative pt-8">
+                {/* 이모지 아이콘 */}
+                <motion.div
+                  className="absolute top-0 z-10"
+                  initial={{ left: "0%" }}
+                  animate={{ left: `${clampedPct}%` }}
+                  transition={{ duration: 1.3, ease: "easeOut" }}
+                >
+                  {/* translateX(-50%) 는 framer 내부 transform 충돌 방지를 위해 자식 div에서 처리 */}
+                  <div className="-translate-x-1/2 leading-none select-none text-[1.6rem]"
+                       role="img" aria-label="젖병">
+                    🍼
+                  </div>
+                </motion.div>
+
+                {/* 트랙 — inset shadow로 홈파인 느낌 */}
+                <div
+                  className="relative h-4 rounded-full overflow-hidden"
+                  style={{
+                    background: isDark ? "rgba(15,23,42,0.75)" : "#ffedd5",
+                    boxShadow: isDark
+                      ? "inset 0 2px 4px rgba(0,0,0,0.55), inset 0 1px 2px rgba(0,0,0,0.35)"
+                      : "inset 0 2px 3px rgba(0,0,0,0.1), inset 0 1px 2px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  {/* 진행 바 — 상단 하이라이트 + drop glow로 입체감 */}
+                  <motion.div
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      background: isDark
+                        ? "linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 52%), linear-gradient(to right, #fb923c, #c2410c)"
+                        : "linear-gradient(to bottom, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%), linear-gradient(to right, #fdba74, #ea580c)",
+                      boxShadow: isDark
+                        ? "0 2px 8px rgba(249,115,22,0.55), inset 0 1px 0 rgba(255,255,255,0.2)"
+                        : "0 2px 10px rgba(234,88,12,0.3), inset 0 1px 0 rgba(255,255,255,0.55)",
+                    }}
+                    initial={{ width: "0%" }}
+                    animate={{ width: `${pregnancyProgress}%` }}
+                    transition={{ duration: 1.3, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
       {/* 중앙: 율무 캐릭터 */}

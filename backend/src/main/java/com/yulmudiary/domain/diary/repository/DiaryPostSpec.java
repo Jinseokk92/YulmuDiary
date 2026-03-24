@@ -24,4 +24,15 @@ public class DiaryPostSpec {
         return (root, query, cb) ->
                 cb.lessThan(root.get("createdAt"), endDate.plusDays(1).atStartOfDay());
     }
+
+    public static Specification<DiaryPost> containsKeyword(String keyword) {
+        return (root, query, cb) -> {
+            String pattern = "%" + keyword.toLowerCase() + "%";
+            return cb.or(
+                    cb.like(cb.lower(root.get("content")), pattern),
+                    cb.like(cb.lower(root.get("milestoneTag")), pattern),
+                    cb.like(cb.lower(root.get("author").get("name")), pattern)
+            );
+        };
+    }
 }

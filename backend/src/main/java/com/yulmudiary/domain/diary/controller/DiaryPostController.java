@@ -83,9 +83,11 @@ public class DiaryPostController {
             @Parameter(description = "종료 날짜 (YYYY-MM-DD)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @Parameter(description = "사용자 ID 필터")
-            @RequestParam(required = false) Long userId) {
+            @RequestParam(required = false) Long userId,
+            @Parameter(description = "검색 키워드 (내용·해시태그·작성자명)")
+            @RequestParam(required = false) String keyword) {
         Long currentUserId = (Long) authentication.getPrincipal();
-        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size, sort, startDate, endDate, userId, currentUserId));
+        return ApiResponse.success(diaryPostService.getByBabyPaged(babyId, page - 1, size, sort, startDate, endDate, userId, keyword, currentUserId));
     }
 
     @Operation(summary = "내 게시글 목록 조회 (Cursor 페이징)")

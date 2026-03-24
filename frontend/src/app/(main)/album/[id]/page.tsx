@@ -11,8 +11,12 @@ import type {
   GrowthPhaseType,
 } from "@/types";
 import { getMediaUrl } from "@/lib/utils";
+import { downloadImage } from "@/lib/download";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useAuth } from "@/hooks/useAuth";
+import { Download, Check, AlertCircle, Loader2 } from "lucide-react";
+import ImageViewer from "@/components/diary/ImageViewer";
+import type { MediaDto } from "@/types";
 
 function growthLabel(phase: GrowthPhaseType, index: number): string {
   if (phase === "PREGNANCY") return `임신 ${index}주차`;
@@ -92,6 +96,9 @@ export default function AlbumDetailPage() {
   const [favoriteReady, setFavoriteReady] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "ios_open" | "error">("idle");
+  const [viewerOpen, setViewerOpen] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -158,6 +165,19 @@ export default function AlbumDetailPage() {
       setConfirmOpen(false);
     }
   }, [photo, deleting, router]);
+
+  const handleDownload = useCallback(async () => {
+    if (!photo || downloadState === "loading") return;
+    setDownloadState("loading");
+    try {
+      const { iosNewTab } = await downloadImage(getMediaUrl(photo.url), 0);
+      setDownloadState(iosNewTab ? "ios_open" : "success");
+      setTimeout(() => setDownloadState("idle"), iosNewTab ? 4000 : 2000);
+    } catch {
+      setDownloadState("error");
+      setTimeout(() => setDownloadState("idle"), 2500);
+    }
+  }, [photo, downloadState]);
 
   const isDark = mounted && resolvedTheme === "dark";
   const canDelete = !authLoading && isParent && !!photo;
@@ -235,7 +255,12 @@ export default function AlbumDetailPage() {
           </div>
         ) : (
           <>
-            <div className="relative w-full aspect-square bg-black">
+            <div
+              className="relative w-full aspect-square bg-black cursor-pointer"
+              onClick={() => setViewerOpen(true)}
+              role="button"
+              aria-label="사진 확대 보기"
+            >
               {(() => {
                 const src = getMediaUrl(photo.url);
                 return (
@@ -317,10 +342,58 @@ export default function AlbumDetailPage() {
                 </svg>
                 <p className={`text-xs ${sub}`}>{photo.uploaderNickname}</p>
               </div>
+
+              {/* ── 다운로드 버튼 ── */}
+              <button
+                onClick={handleDownload}
+                disabled={downloadState === "loading"}
+                aria-label="사진 저장"
+                className={`w-full py-3.5 rounded-xl flex items-center justify-center gap-2
+                            text-sm font-semibold transition-colors active:opacity-75 disabled:opacity-50
+                            ${downloadState === "success"
+                              ? isDark ? "bg-emerald-900/50 text-emerald-300" : "bg-emerald-50 text-emerald-600"
+                              : downloadState === "ios_open"
+                              ? isDark ? "bg-blue-900/40 text-blue-300" : "bg-blue-50 text-blue-600"
+                              : downloadState === "error"
+                              ? isDark ? "bg-red-900/40 text-red-300" : "bg-red-50 text-red-500"
+                              : isDark ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              >
+                {downloadState === "loading"  && <Loader2 className="w-4 h-4 animate-spin" />}
+                {downloadState === "success"  && <Check className="w-4 h-4" />}
+                {downloadState === "ios_open" && <Check className="w-4 h-4" />}
+                {downloadState === "error"    && <AlertCircle className="w-4 h-4" />}
+                {downloadState === "idle"     && <Download className="w-4 h-4" />}
+                <span>
+                  {downloadState === "idle"     && "사진 저장"}
+                  {downloadState === "loading"  && "저장 중..."}
+                  {downloadState === "success"  && "저장됨"}
+                  {downloadState === "ios_open" && "새 탭에서 이미지를 길게 눌러 저장해 주세요"}
+                  {downloadState === "error"    && "저장 실패 — 다시 시도해 주세요"}
+                </span>
+              </button>
             </div>
           </>
         )}
       </div>
+
+      {/* 이미지 확대 뷰어 */}
+      {viewerOpen && photo && (() => {
+        const viewerMedia: MediaDto[] = [{
+          id: photo.id,
+          url: photo.url,
+          thumbnailUrl: photo.thumbnailUrl,
+          type: "PHOTO",
+          displayOrder: 0,
+        }];
+        return (
+          <ImageViewer
+            media={viewerMedia}
+            initialIndex={0}
+            onClose={() => setViewerOpen(false)}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={confirmOpen}

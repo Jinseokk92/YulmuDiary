@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight, Images } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Images, Download, Check, AlertCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MediaDto } from "@/types";
 import { getMediaUrl } from "@/lib/utils";
+import { downloadImage } from "@/lib/download";
 
 interface ImageViewerProps {
   media: MediaDto[];
@@ -30,6 +31,7 @@ export default function ImageViewer({
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "ios_open" | "error">("idle");
 
   // ── 하트 애니메이션 ──────────────────────────────────────────────────────
   const [heartVisible, setHeartVisible] = useState(false);
@@ -91,6 +93,20 @@ export default function ImageViewer({
     },
     [media.length]
   );
+
+  // ── 이미지 다운로드 ────────────────────────────────────────────────────
+  const handleDownload = useCallback(async () => {
+    if (downloadState === "loading") return;
+    setDownloadState("loading");
+    try {
+      const { iosNewTab } = await downloadImage(getMediaUrl(media[index].url), index);
+      setDownloadState(iosNewTab ? "ios_open" : "success");
+      setTimeout(() => setDownloadState("idle"), iosNewTab ? 3500 : 1500);
+    } catch {
+      setDownloadState("error");
+      setTimeout(() => setDownloadState("idle"), 2000);
+    }
+  }, [downloadState, index, media]);
 
   // ── 키보드 ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -300,6 +316,22 @@ export default function ImageViewer({
       className="fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none"
       style={{ touchAction: "none" }}
     >
+      {/* ── 다운로드 버튼 ── */}
+      <button
+        onClick={handleDownload}
+        disabled={downloadState === "loading"}
+        className="absolute top-4 right-16 z-20 w-10 h-10 flex items-center justify-center
+                   text-white bg-black/50 rounded-full backdrop-blur-sm
+                   hover:bg-black/70 transition-colors disabled:opacity-50"
+        aria-label="이미지 저장"
+      >
+        {downloadState === "loading" && <Loader2 className="w-5 h-5 animate-spin" />}
+        {downloadState === "success" && <Check className="w-5 h-5 text-green-400" />}
+        {downloadState === "ios_open" && <Check className="w-5 h-5 text-blue-300" />}
+        {downloadState === "error" && <AlertCircle className="w-5 h-5 text-red-400" />}
+        {downloadState === "idle" && <Download className="w-5 h-5" />}
+      </button>
+
       {/* ── 닫기 버튼 ── */}
       <button
         onClick={onClose}
@@ -453,6 +485,26 @@ export default function ImageViewer({
           <ChevronRight className="w-5 h-5" />
         </button>
       )}
+
+      {/* ── 다운로드 피드백 메시지 ── */}
+      <AnimatePresence>
+        {downloadState !== "idle" && (
+          <motion.div
+            className="absolute bottom-20 left-0 right-0 flex justify-center z-20 pointer-events-none"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <span className="bg-black/70 text-white text-sm px-4 py-2 rounded-full backdrop-blur-sm">
+              {downloadState === "loading" && "저장 중..."}
+              {downloadState === "success" && "저장됨"}
+              {downloadState === "ios_open" && "새 탭에서 이미지를 길게 눌러 저장해 주세요"}
+              {downloadState === "error" && "저장 실패. 다시 시도해 주세요."}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── 도트 인디케이터 ── */}
       {media.length > 1 && (
