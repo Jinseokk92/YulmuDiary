@@ -44,6 +44,17 @@ public class DiaryPostController {
         return ApiResponse.success(diaryPostService.create(userId, request));
     }
 
+    @Operation(summary = "고정된 일기 목록 조회")
+    @CheckFamilyAuth(AuthTarget.BABY_ID)
+    @GetMapping("/pinned")
+    public ApiResponse<List<DiaryPostResponse>> getPinned(
+            @Parameter(description = "아기 ID", required = true)
+            @RequestParam Long babyId,
+            Authentication authentication) {
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getPinned(babyId, currentUserId));
+    }
+
     @Operation(summary = "일기 단건 조회")
     @CheckFamilyAuth(AuthTarget.POST_ID)
     @GetMapping("/{id}")
@@ -115,17 +126,6 @@ public class DiaryPostController {
             Authentication authentication) {
         Long currentUserId = (Long) authentication.getPrincipal();
         return ApiResponse.success(diaryPostService.togglePin(id, currentUserId));
-    }
-
-    @Operation(summary = "고정된 일기 목록 조회")
-    @CheckFamilyAuth(AuthTarget.BABY_ID)
-    @GetMapping("/pinned")
-    public ApiResponse<List<DiaryPostResponse>> getPinned(
-            @Parameter(description = "아기 ID", required = true)
-            @RequestParam Long babyId,
-            Authentication authentication) {
-        Long currentUserId = (Long) authentication.getPrincipal();
-        return ApiResponse.success(diaryPostService.getPinned(babyId, currentUserId));
     }
 
     @Operation(summary = "일기 수정")
