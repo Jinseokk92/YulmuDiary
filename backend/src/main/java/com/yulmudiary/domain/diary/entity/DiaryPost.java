@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,12 @@ public class DiaryPost extends BaseTimeEntity {
 
     @Column(length = 50)
     private String milestoneTag;
+
+    @Column(name = "is_pinned", nullable = false, columnDefinition = "boolean default false")
+    private boolean pinned = false;
+
+    @Column(name = "pinned_at")
+    private LocalDateTime pinnedAt;
 
     @OneToMany(mappedBy = "diaryPost", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Media> mediaList = new ArrayList<>();
@@ -64,5 +71,15 @@ public class DiaryPost extends BaseTimeEntity {
 
     public void clearMedia() {
         this.mediaList.clear();
+    }
+
+    public void pin() {
+        this.pinned = true;
+        this.pinnedAt = LocalDateTime.now();
+    }
+
+    public void unpin() {
+        this.pinned = false;
+        this.pinnedAt = null;
     }
 }

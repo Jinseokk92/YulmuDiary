@@ -172,6 +172,8 @@ export interface DiaryPostResponse {
   createdAt: string;
   /** 현재 로그인 사용자가 해당 게시글에 단 가장 최근 댓글 내용. 없으면 null. */
   myLatestComment?: string | null;
+  pinned?: boolean;
+  pinnedAt?: string | null;
 }
 
 export interface DiaryPostRequest {
@@ -291,6 +293,37 @@ export interface MilestoneResponse {
   memo: string | null;
   displayOrder: number;
   achieved: boolean;
+}
+
+// --- BestPhoto ---
+
+export interface BestPhotoNominationResponse {
+  id: number;
+  albumPhotoId: number;
+  albumPhotoUrl: string;
+  albumPhotoThumbnailUrl: string | null;
+  nominatorUserId: number;
+  nominatorName: string;
+  voteCount: number;
+  myNomination: boolean;
+}
+
+export interface BestPhotoStatusResponse {
+  status: "NOMINATING" | "VOTING" | "RESULT" | "NONE";
+  roundId: number | null;
+  myNominationCount: number;
+  totalNominations: number;
+  hasVoted: boolean;
+  votedNominationId: number | null;
+  myNominations: BestPhotoNominationResponse[];
+  nominations: BestPhotoNominationResponse[];
+  result: {
+    winnerAlbumPhotoId: number;
+    winnerAlbumPhotoUrl: string;
+    winnerAlbumPhotoThumbnailUrl: string | null;
+    winnerVoteCount: number;
+    topNominations: BestPhotoNominationResponse[];
+  } | null;
 }
 
 // --- Schedule ---

@@ -8,15 +8,18 @@ import { api } from "@/lib/api";
 import type {
   AlbumPhotoFavoriteResponse,
   AlbumPhotoResponse,
+  BestPhotoStatusResponse,
   GrowthPhaseType,
+  MediaDto,
 } from "@/types";
 import { getMediaUrl } from "@/lib/utils";
 import { downloadImage } from "@/lib/download";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useAuth } from "@/hooks/useAuth";
-import { Download, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Check, AlertCircle, Loader2, Trophy, Star } from "lucide-react";
 import ImageViewer from "@/components/diary/ImageViewer";
-import type { MediaDto } from "@/types";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/ui/Toast";
 
 function growthLabel(phase: GrowthPhaseType, index: number): string {
   if (phase === "PREGNANCY") return `임신 ${index}주차`;
@@ -99,6 +102,11 @@ export default function AlbumDetailPage() {
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "ios_open" | "error">("idle");
   const [viewerOpen, setViewerOpen] = useState(false);
 
+  const [nominationId, setNominationId] = useState<number | null>(null);
+  const [nominateState, setNominateState] = useState<"idle" | "loading">("idle");
+  const [isNominating, setIsNominating] = useState(false);
+  const { toast, showToast } = useToast();
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -109,6 +117,16 @@ export default function AlbumDetailPage() {
       .get<AlbumPhotoResponse>(`/api/album-photos/${id}`)
       .then(setPhoto)
       .catch(() => setNotFound(true));
+
+    api.get<BestPhotoStatusResponse>("/api/best-photo/status")
+      .then((s) => {
+        if (s?.status === "NOMINATING") {
+          setIsNominating(true);
+          const myNom = s.myNominations?.find((n) => n.albumPhotoId === Number(id));
+          if (myNom) setNominationId(myNom.id);
+        }
+      })
+      .catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -165,6 +183,27 @@ export default function AlbumDetailPage() {
       setConfirmOpen(false);
     }
   }, [photo, deleting, router]);
+
+  const handleNominate = useCallback(async () => {
+    if (!photo || nominateState === "loading") return;
+    setNominateState("loading");
+    try {
+      if (nominationId !== null) {
+        await api.delete<void>(`/api/best-photo/nominate/${nominationId}`);
+        setNominationId(null);
+        showToast("추천을 취소했어요");
+      } else {
+        const res = await api.post<{ id: number }>("/api/best-photo/nominate", { albumPhotoId: photo.id });
+        setNominationId(res.id);
+        showToast("베스트 포토로 추천했어요 ⭐");
+      }
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message ?? "";
+      showToast(msg.includes("이미") ? "이미 추천한 사진이에요" : "처리에 실패했어요");
+    } finally {
+      setNominateState("idle");
+    }
+  }, [photo, nominationId, nominateState, showToast]);
 
   const handleDownload = useCallback(async () => {
     if (!photo || downloadState === "loading") return;
@@ -372,6 +411,35 @@ export default function AlbumDetailPage() {
                   {downloadState === "error"    && "저장 실패 — 다시 시도해 주세요"}
                 </span>
               </button>
+
+              {/* ── 베스트 포토 추천 버튼 (NOMINATING 단계에만 표시) ── */}
+              {isNominating && (
+                <button
+                  onClick={handleNominate}
+                  disabled={nominateState === "loading"}
+                  aria-label={nominationId !== null ? "추천 취소" : "베스트 포토 추천"}
+                  className={`w-full py-3.5 rounded-xl flex items-center justify-center gap-2
+                              text-sm font-semibold transition-colors active:opacity-75 disabled:opacity-50
+                              ${nominationId !== null
+                                ? isDark ? "bg-amber-900/30 text-amber-300 ring-1 ring-amber-700/50"
+                                         : "bg-amber-50 text-amber-600 ring-1 ring-amber-200"
+                                : isDark ? "bg-slate-800 text-slate-200"
+                                         : "bg-gray-100 text-gray-700"}`}
+                >
+                  {nominateState === "loading"
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : nominationId !== null
+                    ? <Star className="w-4 h-4" fill="currentColor" />
+                    : <Trophy className="w-4 h-4" />}
+                  <span>
+                    {nominateState === "loading"
+                      ? "처리 중..."
+                      : nominationId !== null
+                      ? "추천됨 · 취소하기"
+                      : "베스트 포토 추천"}
+                  </span>
+                </button>
+              )}
             </div>
           </>
         )}
@@ -404,6 +472,8 @@ export default function AlbumDetailPage() {
         onCancel={() => setConfirmOpen(false)}
         loading={deleting}
       />
+
+      <Toast message={toast} />
     </>
   );
 }

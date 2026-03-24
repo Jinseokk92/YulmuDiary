@@ -153,6 +153,30 @@ public class DiaryPostService {
     }
 
     @Transactional
+    public DiaryPostResponse togglePin(Long postId, Long currentUserId) {
+        DiaryPost post = diaryPostRepository.findByIdWithMedia(postId)
+                .orElseThrow(() -> new EntityNotFoundException("일기를 찾을 수 없습니다. id=" + postId));
+
+        if (post.isPinned()) {
+            post.unpin();
+        } else {
+            long pinnedCount = diaryPostRepository.countPinnedByBabyId(post.getBaby().getId());
+            if (pinnedCount >= 3) {
+                throw new IllegalArgumentException("최대 3개까지만 고정할 수 있습니다.");
+            }
+            post.pin();
+        }
+
+        return DiaryPostResponse.from(post, mediaUrlResolver, currentUserId);
+    }
+
+    public List<DiaryPostResponse> getPinned(Long babyId, Long currentUserId) {
+        return diaryPostRepository.findPinnedByBabyId(babyId).stream()
+                .map(p -> DiaryPostResponse.from(p, mediaUrlResolver, currentUserId))
+                .toList();
+    }
+
+    @Transactional
     public DiaryPostResponse update(Long id, Long authorId, DiaryPostRequest request) {
         DiaryPost post = diaryPostRepository.findByIdWithMedia(id)
                 .orElseThrow(() -> new EntityNotFoundException("일기를 찾을 수 없습니다. id=" + id));

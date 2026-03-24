@@ -3,14 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays, Trophy } from "lucide-react";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import { useAuthStore } from "@/stores/authStore";
 import { useRequireAdmin } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
-import type { AdminInviteCodesResponse, AdminMemberResponse, AdminAppSettingsResponse } from "@/types";
+import type { AdminInviteCodesResponse, AdminMemberResponse, AdminAppSettingsResponse, BestPhotoStatusResponse } from "@/types";
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
 const maskCode = (code: string) => code.slice(0, 3) + "***";
@@ -69,6 +69,11 @@ export default function FamilyManagePage() {
   const [kickTarget, setKickTarget] = useState<AdminMemberResponse | null>(null);
   const [kicking, setKicking] = useState(false);
 
+  // ── E. 베스트 포토 관리 ──────────────────────────────────────────────
+  const [bestPhotoStatus, setBestPhotoStatus] = useState<BestPhotoStatusResponse | null>(null);
+  const [bestPhotoLoading, setBestPhotoLoading] = useState(true);
+  const [bestPhotoActing, setBestPhotoActing] = useState(false);
+
   // ── D. 앱 설정 ──────────────────────────────────────────────────────
   const [settings, setSettings] = useState<{ babyName: string; dueDate: string } | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -93,6 +98,11 @@ export default function FamilyManagePage() {
       .then((s) => setSettings({ babyName: s.babyName, dueDate: s.dueDate }))
       .catch(() => {})
       .finally(() => setSettingsLoading(false));
+
+    api.get<BestPhotoStatusResponse>("/api/best-photo/status")
+      .then(setBestPhotoStatus)
+      .catch(() => {})
+      .finally(() => setBestPhotoLoading(false));
   }, [isAdmin]);
 
   // ── 코드 복사 ──────────────────────────────────────────────────────
@@ -147,6 +157,26 @@ export default function FamilyManagePage() {
       setKickTarget(null);
     }
   }, [kickTarget]);
+
+  // ── 베스트 포토 단계 제어 ──────────────────────────────────────────
+  const handleBestPhotoAction = useCallback(async (action: "start" | "start-vote" | "end-vote") => {
+    if (bestPhotoActing) return;
+    setBestPhotoActing(true);
+    const endpoints: Record<string, string> = {
+      "start": "/api/best-photo/rounds",
+      "start-vote": "/api/best-photo/rounds/start-vote",
+      "end-vote": "/api/best-photo/rounds/end-vote",
+    };
+    try {
+      await api.post<void>(endpoints[action], {});
+      const updated = await api.get<BestPhotoStatusResponse>("/api/best-photo/status");
+      setBestPhotoStatus(updated);
+    } catch {
+      alert("베스트 포토 작업에 실패했습니다.");
+    } finally {
+      setBestPhotoActing(false);
+    }
+  }, [bestPhotoActing]);
 
   // ── 앱 설정 저장 ───────────────────────────────────────────────────
   const handleSaveSettings = useCallback(async () => {
@@ -397,6 +427,103 @@ export default function FamilyManagePage() {
             관리자는 일기 피드에서 모든 게시글을 삭제할 수 있어요.
           </p>
         </div>
+      </Card>
+
+      {/* ── E. 베스트 포토 관리 ── */}
+      <Card isDark={isDark}>
+        <SectionTitle title="베스트 포토 관리" isDark={isDark} />
+
+        {bestPhotoLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* 현재 상태 배지 */}
+            <div className="flex items-center gap-2">
+              <Trophy size={15} className="text-amber-500" />
+              <span className="text-sm font-semibold" style={{ color: text }}>
+                현재 상태:
+              </span>
+              <span className="text-sm px-2 py-0.5 rounded-full font-medium"
+                style={{
+                  background: bestPhotoStatus?.status === "NONE" || !bestPhotoStatus
+                    ? (isDark ? "rgba(100,116,139,0.2)" : "#f1f5f9")
+                    : bestPhotoStatus.status === "NOMINATING"
+                    ? (isDark ? "rgba(245,158,11,0.15)" : "#fef3c7")
+                    : bestPhotoStatus.status === "VOTING"
+                    ? (isDark ? "rgba(59,130,246,0.15)" : "#eff6ff")
+                    : (isDark ? "rgba(34,197,94,0.15)" : "#f0fdf4"),
+                  color: bestPhotoStatus?.status === "NONE" || !bestPhotoStatus
+                    ? (isDark ? "#94a3b8" : "#64748b")
+                    : bestPhotoStatus.status === "NOMINATING"
+                    ? (isDark ? "#fbbf24" : "#d97706")
+                    : bestPhotoStatus.status === "VOTING"
+                    ? (isDark ? "#60a5fa" : "#2563eb")
+                    : (isDark ? "#4ade80" : "#16a34a"),
+                }}>
+                {!bestPhotoStatus || bestPhotoStatus.status === "NONE"
+                  ? "비활성"
+                  : bestPhotoStatus.status === "NOMINATING"
+                  ? `추천 중 (${bestPhotoStatus.totalNominations}장)`
+                  : bestPhotoStatus.status === "VOTING"
+                  ? "투표 중"
+                  : "결과 공개"}
+              </span>
+            </div>
+
+            {/* 액션 버튼들 */}
+            <div className="flex flex-col gap-2">
+              {(!bestPhotoStatus || bestPhotoStatus.status === "NONE") && (
+                <button
+                  onClick={() => handleBestPhotoAction("start")}
+                  disabled={bestPhotoActing}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  style={{ background: "#e4701e", color: "#ffffff" }}
+                >
+                  {bestPhotoActing ? "처리 중..." : "새 라운드 시작 (추천 단계)"}
+                </button>
+              )}
+
+              {bestPhotoStatus?.status === "NOMINATING" && (
+                <button
+                  onClick={() => handleBestPhotoAction("start-vote")}
+                  disabled={bestPhotoActing}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  style={{ background: "#2563eb", color: "#ffffff" }}
+                >
+                  {bestPhotoActing ? "처리 중..." : "투표 단계 시작"}
+                </button>
+              )}
+
+              {bestPhotoStatus?.status === "VOTING" && (
+                <button
+                  onClick={() => handleBestPhotoAction("end-vote")}
+                  disabled={bestPhotoActing}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  style={{ background: "#16a34a", color: "#ffffff" }}
+                >
+                  {bestPhotoActing ? "처리 중..." : "투표 종료 & 결과 확정"}
+                </button>
+              )}
+
+              {bestPhotoStatus?.status === "RESULT" && (
+                <button
+                  onClick={() => handleBestPhotoAction("start")}
+                  disabled={bestPhotoActing}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  style={{ background: "#e4701e", color: "#ffffff" }}
+                >
+                  {bestPhotoActing ? "처리 중..." : "다음 라운드 시작"}
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs leading-relaxed" style={{ color: subText }}>
+              추천 단계 → 투표 단계 → 결과 확정 순으로 진행돼요. 결과 확정 후 다음 라운드를 시작할 수 있어요.
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* ── D. 앱 설정 ── */}

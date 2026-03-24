@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Pin, Trophy } from "lucide-react";
+import Image from "next/image";
 import { api } from "@/lib/api";
 import { HOME_BGM_ANCHOR_ID } from "@/components/BgmPlayerUI";
 import FloatingYulmu from "@/components/FloatingYulmu";
-import type { BabyResponse } from "@/types";
+import PinnedPostsModal from "@/components/diary/PinnedPostsModal";
+import VotingModal from "@/components/bestphoto/VotingModal";
+import ResultModal from "@/components/bestphoto/ResultModal";
+import { getMediaUrl } from "@/lib/utils";
+import type { BabyResponse, DiaryPostResponse, BestPhotoStatusResponse } from "@/types";
 
 const BABY_ID = 1;
 const LS_DDAY = "home_dday";
@@ -24,6 +30,10 @@ export default function Home() {
   const [dday, setDday]                         = useState<string | null>(null);
   const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
   const [pregnancyProgress, setPregnancyProgress] = useState<number | null>(null);
+  const [pinnedPosts, setPinnedPosts] = useState<DiaryPostResponse[]>([]);
+  const [pinnedModalOpen, setPinnedModalOpen] = useState(false);
+  const [bestPhotoStatus, setBestPhotoStatus] = useState<BestPhotoStatusResponse | null>(null);
+  const [bestPhotoModalOpen, setBestPhotoModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -34,11 +44,10 @@ export default function Home() {
     if (cachedDday) setDday(cachedDday);
     if (cachedPregnancy) setPregnancyDisplay(cachedPregnancy);
 
-    // API 호출 후 최신값으로 갱신 + 캐시 업데이트
+    // 아기 정보 + 고정 글 동시 요청
     api.get<BabyResponse>(`/api/babies/${BABY_ID}`)
       .then((baby) => {
         const { dDayCount, pregnancyWeeks, pregnancyDays } = baby;
-        // D-day 표시: 양수=D-N(미래), 0=D-Day, 음수=D+N(과거)
         const ddayStr = dDayCount === 0 ? "D-Day"
           : dDayCount > 0 ? `D-${dDayCount}`
           : `D+${Math.abs(dDayCount)}`;
@@ -53,6 +62,14 @@ export default function Home() {
         localStorage.setItem(LS_DDAY, ddayStr);
         localStorage.setItem(LS_PREGNANCY, pregnancyStr);
       })
+      .catch(() => {});
+
+    api.get<DiaryPostResponse[]>(`/api/diary-posts/pinned?babyId=${BABY_ID}`)
+      .then((posts) => { if (Array.isArray(posts)) setPinnedPosts(posts); })
+      .catch(() => {});
+
+    api.get<BestPhotoStatusResponse>("/api/best-photo/status")
+      .then((s) => { if (s?.status && s.status !== "NONE") setBestPhotoStatus(s); })
       .catch(() => {});
   }, []);
 
@@ -147,7 +164,7 @@ export default function Home() {
         })()}
       </section>
 
-      {/* 중앙: 율무 캐릭터 */}
+      {/* 중앙: 율무 캐릭터 + 핀 아이콘 */}
       <section className="flex justify-center">
         <div
           className="relative overflow-visible"
@@ -158,6 +175,36 @@ export default function Home() {
             className="absolute z-[60] h-0 w-0 overflow-visible"
             style={{ left: HERO_ANCHOR_OFFSET_X, top: HERO_ANCHOR_OFFSET_Y }}
           />
+
+          {/* 핀 아이콘 — BGM 토큰 반대편(우측), 고정 글 없으면 숨김 */}
+          <AnimatePresence>
+            {pinnedPosts.length > 0 && (
+              <motion.button
+                className="absolute z-[60]"
+                style={{ right: HERO_ANCHOR_OFFSET_X, top: HERO_ANCHOR_OFFSET_Y - 6 }}
+                onClick={() => setPinnedModalOpen(true)}
+                aria-label="고정된 일기 보기"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 22 }}
+              >
+                <div className={`relative flex items-center justify-center w-9 h-9 rounded-full shadow-md
+                  ${isDark
+                    ? "bg-slate-800 border border-slate-700"
+                    : "bg-white border border-primary-100"}`}
+                >
+                  <Pin size={17} className="text-primary-500" fill="currentColor" />
+                  {/* 개수 배지 */}
+                  <span className="absolute -top-1 -right-1 w-[18px] h-[18px] bg-primary-500 text-white
+                    text-[10px] rounded-full flex items-center justify-center font-bold leading-none">
+                    {pinnedPosts.length}
+                  </span>
+                </div>
+              </motion.button>
+            )}
+          </AnimatePresence>
+
           {/* 살구색 원형 발판 배경 */}
           <div
             className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full border-4 shadow-lg
@@ -239,6 +286,53 @@ export default function Home() {
           </svg>
         </Link>
 
+        {/* 베스트 포토 카드 (진행 중일 때만) */}
+        {bestPhotoStatus && (
+          <button
+            onClick={() => setBestPhotoModalOpen(true)}
+            className={`col-span-2 flex items-center gap-4 rounded-2xl px-5 py-4 shadow-sm
+                       hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm text-left
+                       ${isDark
+                         ? "bg-amber-900/20 border border-amber-800/40"
+                         : "bg-amber-50/90 border border-amber-200/60"}`}
+          >
+            {/* 우승/진행 사진 미리보기 */}
+            {bestPhotoStatus.status === "RESULT" && bestPhotoStatus.result ? (
+              <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 ring-2 ring-amber-400">
+                <Image
+                  src={getMediaUrl(bestPhotoStatus.result.winnerAlbumPhotoThumbnailUrl ?? bestPhotoStatus.result.winnerAlbumPhotoUrl)}
+                  alt="베스트 포토"
+                  fill
+                  className="object-cover"
+                  sizes="48px"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0
+                              ${isDark ? "bg-amber-900/40" : "bg-amber-100"}`}>
+                <Trophy size={22} className="text-amber-500" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold ${label}`}>
+                {bestPhotoStatus.status === "NOMINATING" && "베스트 포토 추천 중"}
+                {bestPhotoStatus.status === "VOTING" && "베스트 포토 투표 중 🗳️"}
+                {bestPhotoStatus.status === "RESULT" && "이달의 베스트 포토 🏆"}
+              </p>
+              <p className={`text-xs ${desc} mt-0.5`}>
+                {bestPhotoStatus.status === "NOMINATING" && `${bestPhotoStatus.totalNominations}장 추천됨 · 앨범에서 추천하기`}
+                {bestPhotoStatus.status === "VOTING" && (bestPhotoStatus.hasVoted ? "투표 완료 · 결과 기다리는 중" : `${bestPhotoStatus.nominations.length}장 중 투표하기`)}
+                {bestPhotoStatus.status === "RESULT" && `${bestPhotoStatus.result?.winnerVoteCount ?? 0}표로 선정!`}
+              </p>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              strokeWidth={2} stroke="currentColor" className={`w-4 h-4 shrink-0 ${sub}`}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        )}
+
         <Link
           href="/milestones"
           className={`col-span-2 flex items-center gap-4 ${card} rounded-2xl px-5 py-4 shadow-sm
@@ -262,6 +356,43 @@ export default function Home() {
           </svg>
         </Link>
       </section>
+
+      {/* 고정 일기 모달 */}
+      <AnimatePresence>
+        {pinnedModalOpen && (
+          <PinnedPostsModal
+            posts={pinnedPosts}
+            onClose={() => setPinnedModalOpen(false)}
+            isDark={isDark}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 베스트 포토 투표 모달 */}
+      <AnimatePresence>
+        {bestPhotoModalOpen && bestPhotoStatus?.status === "VOTING" && bestPhotoStatus.roundId && (
+          <VotingModal
+            roundId={bestPhotoStatus.roundId}
+            nominations={bestPhotoStatus.nominations}
+            hasVoted={bestPhotoStatus.hasVoted}
+            votedNominationId={bestPhotoStatus.votedNominationId}
+            isDark={isDark}
+            onClose={() => setBestPhotoModalOpen(false)}
+            onVoted={(id) => setBestPhotoStatus((prev) => prev ? { ...prev, hasVoted: true, votedNominationId: id } : prev)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 베스트 포토 결과 모달 */}
+      <AnimatePresence>
+        {bestPhotoModalOpen && bestPhotoStatus?.status === "RESULT" && bestPhotoStatus.result && (
+          <ResultModal
+            result={bestPhotoStatus.result}
+            isDark={isDark}
+            onClose={() => setBestPhotoModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

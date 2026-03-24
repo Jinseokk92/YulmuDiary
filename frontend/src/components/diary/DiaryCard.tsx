@@ -1,13 +1,14 @@
 "use client";
 
 import { memo, useState, useCallback, useRef, useEffect, type RefObject, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import type { DiaryPostResponse, ReactionResponse } from "@/types";
 import { formatRelativeTime, getMediaUrl } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { downloadImage } from "@/lib/download";
-import { Download, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Check, AlertCircle, Loader2, Pin, PinOff } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useUiStore } from "@/stores/uiStore";
 import ImageCarousel from "./ImageCarousel";
@@ -245,6 +246,40 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
     }
   }, [post.id, onDelete, currentUser]);
 
+  // ─── 핀(고정) 상태 ─────────────────────────────────────────────────
+  const isParent = currentUser?.role === "PARENT";
+  const [isPinned, setIsPinned] = useState(post.pinned ?? false);
+  const [isPinning, setIsPinning] = useState(false);
+  const [pinToast, setPinToast] = useState<string | null>(null);
+  const pinToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showPinToast = useCallback((msg: string) => {
+    if (pinToastTimerRef.current) clearTimeout(pinToastTimerRef.current);
+    setPinToast(msg);
+    pinToastTimerRef.current = setTimeout(() => setPinToast(null), 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (pinToastTimerRef.current) clearTimeout(pinToastTimerRef.current); };
+  }, []);
+
+  const handleTogglePin = useCallback(async () => {
+    if (isPinning) return;
+    setIsPinning(true);
+    const prevPinned = isPinned;
+    setIsPinned(!isPinned);
+    try {
+      const updated = await api.patch<{ pinned: boolean }>(`/api/diary-posts/${post.id}/pin`, {});
+      setIsPinned(updated.pinned);
+    } catch (err: unknown) {
+      setIsPinned(prevPinned);
+      const msg = (err as { message?: string })?.message;
+      showPinToast(msg?.includes("최대") ? "최대 3개까지 고정할 수 있어요" : "고정 처리에 실패했어요");
+    } finally {
+      setIsPinning(false);
+    }
+  }, [isPinning, isPinned, post.id, showPinToast]);
+
   // ─── 다운로드 상태 ─────────────────────────────────────────────────
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -421,9 +456,27 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
             </div>
           </div>
 
-          {/* 작성자 또는 어드민에게 노출, 수정 모드 중엔 숨김 */}
-          {(isAuthor || isAdmin) && !isEditing && (
+          {/* 컨트롤 영역: 수정(작성자)/삭제(작성자·어드민)/핀(PARENT), 수정 모드 중엔 숨김 */}
+          {(isAuthor || isAdmin || isParent) && !isEditing && (
             <div className="flex items-center">
+              {/* 핀 — PARENT만 */}
+              {isParent && (
+                <button
+                  onClick={handleTogglePin}
+                  disabled={isPinning}
+                  className={`p-2 transition-colors disabled:opacity-40 ${
+                    isPinned
+                      ? "text-primary-500"
+                      : "text-gray-300 dark:text-slate-600 hover:text-primary-500"
+                  }`}
+                  aria-label={isPinned ? "고정 해제" : "고정하기"}
+                >
+                  {isPinned
+                    ? <Pin className="w-4 h-4" fill="currentColor" />
+                    : <PinOff className="w-4 h-4" />
+                  }
+                </button>
+              )}
               {/* 수정 — 작성자에게만 */}
               {isAuthor && (
                 <button
@@ -820,6 +873,28 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
         onCancel={() => setConfirmOpen(false)}
         loading={deleting}
       />
+
+      {/* 핀 토스트 */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {pinToast && (
+            <motion.div
+              className="fixed bottom-24 left-1/2 z-[300] pointer-events-none"
+              initial={{ opacity: 0, y: 8, x: "-50%" }}
+              animate={{ opacity: 1, y: 0, x: "-50%" }}
+              exit={{ opacity: 0, y: 8, x: "-50%" }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg
+                bg-slate-800/95 text-white text-sm font-medium whitespace-nowrap">
+                <Pin size={13} fill="currentColor" className="text-primary-400 shrink-0" />
+                {pinToast}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }

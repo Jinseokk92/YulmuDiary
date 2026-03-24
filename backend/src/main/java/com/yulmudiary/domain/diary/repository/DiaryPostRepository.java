@@ -50,4 +50,13 @@ public interface DiaryPostRepository extends JpaRepository<DiaryPost, Long>, org
 
     @Query("SELECT dp FROM DiaryPost dp JOIN FETCH dp.author LEFT JOIN FETCH dp.mediaList WHERE dp.id = :id")
     Optional<DiaryPost> findByIdWithMedia(@Param("id") Long id);
+
+    // ── 고정 글 ────────────────────────────────────────────────────────
+
+    @Query("SELECT dp FROM DiaryPost dp JOIN FETCH dp.author LEFT JOIN FETCH dp.mediaList " +
+            "WHERE dp.baby.id = :babyId AND dp.pinned = true ORDER BY dp.pinnedAt DESC")
+    List<DiaryPost> findPinnedByBabyId(@Param("babyId") Long babyId);
+
+    @Query("SELECT COUNT(dp) FROM DiaryPost dp WHERE dp.baby.id = :babyId AND dp.pinned = true")
+    long countPinnedByBabyId(@Param("babyId") Long babyId);
 }

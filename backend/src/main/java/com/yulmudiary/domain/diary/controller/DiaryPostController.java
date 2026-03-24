@@ -6,9 +6,13 @@ import com.yulmudiary.domain.diary.dto.DiaryPostRequest;
 import com.yulmudiary.domain.diary.dto.DiaryPostResponse;
 import com.yulmudiary.domain.diary.dto.DiaryPostSortType;
 import com.yulmudiary.domain.diary.service.DiaryPostService;
+import com.yulmudiary.domain.family.entity.FamilyRole;
 import com.yulmudiary.global.auth.AuthTarget;
 import com.yulmudiary.global.auth.CheckFamilyAuth;
+import com.yulmudiary.global.auth.annotation.RequireRole;
 import com.yulmudiary.global.response.ApiResponse;
+
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -100,6 +104,28 @@ public class DiaryPostController {
             @RequestParam(defaultValue = "10") int size) {
         Long userId = (Long) authentication.getPrincipal();
         return ApiResponse.success(diaryPostService.getByAuthor(userId, cursor, size));
+    }
+
+    @Operation(summary = "일기 고정/해제 토글 (PARENT 전용)")
+    @CheckFamilyAuth(AuthTarget.POST_ID)
+    @RequireRole(FamilyRole.PARENT)
+    @PatchMapping("/{id}/pin")
+    public ApiResponse<DiaryPostResponse> togglePin(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.togglePin(id, currentUserId));
+    }
+
+    @Operation(summary = "고정된 일기 목록 조회")
+    @CheckFamilyAuth(AuthTarget.BABY_ID)
+    @GetMapping("/pinned")
+    public ApiResponse<List<DiaryPostResponse>> getPinned(
+            @Parameter(description = "아기 ID", required = true)
+            @RequestParam Long babyId,
+            Authentication authentication) {
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(diaryPostService.getPinned(babyId, currentUserId));
     }
 
     @Operation(summary = "일기 수정")
