@@ -1,3 +1,7 @@
+server:
+  forward-headers-strategy: framework   # Cloud Run 프록시가 HTTPS를 벗기고 HTTP로 전달할 때
+                                         # X-Forwarded-Proto 헤더를 읽어 원래 scheme(https)을 인식
+
 spring:
   datasource:
     url: ${DB_URL}
