@@ -12,14 +12,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -93,5 +100,75 @@ public class MediaController {
     @GetMapping("/files/{filename}")
     public ResponseEntity<Resource> serveFileLegacy(@PathVariable String filename) {
         return serveFile("originals", filename);
+    }
+
+    private static final long MAX_PROXY_BYTES = 50L * 1024 * 1024; // 50MB
+
+    @Operation(summary = "GCS 이미지 프록시 다운로드 (Android 인앱 브라우저 대응)")
+    @GetMapping("/download")
+    public ResponseEntity<StreamingResponseBody> downloadProxy(
+            @RequestParam String url,
+            @RequestParam(required = false, defaultValue = "image.jpg") String filename) {
+
+        // GCS 도메인만 허용
+        if (!url.startsWith("https://storage.googleapis.com/")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        HttpURLConnection conn;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(30_000);
+            conn.connect();
+
+            int status = conn.getResponseCode();
+            if (status != 200) {
+                conn.disconnect();
+                return ResponseEntity.status(status).build();
+            }
+
+            // Content-Length 기반 사전 크기 체크
+            long contentLength = conn.getContentLengthLong();
+            if (contentLength > MAX_PROXY_BYTES) {
+                conn.disconnect();
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).build();
+            }
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
+
+        String rawContentType = conn.getContentType();
+        String contentType = (rawContentType != null) ? rawContentType : "application/octet-stream";
+
+        // RFC 5987 파일명 인코딩
+        String safeAscii = filename.replaceAll("[^\\x20-\\x7E]", "_").replace("\"", "");
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        String contentDisposition = "attachment; filename=\"" + safeAscii
+                + "\"; filename*=UTF-8''" + encoded;
+
+        final HttpURLConnection finalConn = conn;
+        StreamingResponseBody body = outputStream -> {
+            try (InputStream in = finalConn.getInputStream()) {
+                byte[] buffer = new byte[8192];
+                long totalRead = 0;
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    totalRead += bytesRead;
+                    if (totalRead > MAX_PROXY_BYTES) {
+                        throw new IOException("파일 크기 초과 (50MB)");
+                    }
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+            } finally {
+                finalConn.disconnect();
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .body(body);
     }
 }
