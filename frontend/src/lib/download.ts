@@ -3,7 +3,7 @@
  *
  * Case 1: 데스크톱 — GCS fetch → blob → <a download>
  * Case 2: 모바일 + Web Share API 지원 (일반 브라우저) — GCS fetch → blob → navigator.share
- * Case 3: 모바일 + 인앱 브라우저 (Web Share 불가) — 백엔드 프록시 → blob → <a download>
+ * Case 3: 모바일 + 인앱 브라우저 (Web Share 불가) — window.location.href → 백엔드 프록시 (Content-Disposition: attachment)
  *
  * GCS CORS 설정(origin: 프론트엔드 도메인, method: GET)이 Case 1/2에서 필수.
  */
@@ -118,7 +118,9 @@ export async function downloadImage(
     }
   }
 
-  // ── Case 3: 인앱 브라우저 또는 Web Share 미지원 — 백엔드 프록시 ─────────────
+  // ── Case 3: 인앱 브라우저 또는 Web Share 미지원 — 백엔드 프록시 직접 이동 ──
+  // 브라우저가 URL을 직접 탐색하면 WebView가 Content-Disposition: attachment를 인식하여 다운로드 처리.
+  // fetch + blob은 인앱 브라우저에서 동작하지 않으므로 사용하지 않음.
   const estimatedMime = resolveMimeType("", url);
   let finalFilename = filename;
   if (!filename.includes(".")) {
@@ -127,26 +129,13 @@ export async function downloadImage(
   }
 
   const token = getAccessToken();
-  const proxyUrl = `${API_BASE_URL}/api/media/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(finalFilename)}`;
-  console.log("[download] 백엔드 프록시 요청:", proxyUrl.slice(0, 120));
+  const proxyUrl = `${API_BASE_URL}/api/media/download`
+    + `?url=${encodeURIComponent(url)}`
+    + `&filename=${encodeURIComponent(finalFilename)}`
+    + (token ? `&token=${encodeURIComponent(token)}` : "");
 
-  const proxyRes = await fetch(proxyUrl, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: "include",
-  });
-  if (!proxyRes.ok) throw new Error(`프록시 HTTP ${proxyRes.status}`);
-
-  const proxyBlob = await proxyRes.blob();
-  console.log("[download] 프록시 blob 수신, size:", proxyBlob.size);
-
-  try {
-    triggerBlobDownload(proxyBlob, finalFilename);
-    console.log("[download] 프록시 blob download 완료");
-  } catch {
-    // 인앱 브라우저에서 blob URL 미지원 시 새 탭 fallback
-    console.warn("[download] blob download 실패 → window.open fallback");
-    window.open(proxyUrl, "_blank");
-  }
+  console.log("[download] 인앱 브라우저 → window.location.href 이동");
+  window.location.href = proxyUrl;
 
   return { iosNewTab: false };
 }

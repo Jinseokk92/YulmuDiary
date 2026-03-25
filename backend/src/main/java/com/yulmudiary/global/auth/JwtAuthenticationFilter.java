@@ -69,6 +69,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
             return header.substring(BEARER_PREFIX.length());
         }
+        // 브라우저 직접 이동 방식(인앱 브라우저 다운로드)에서는 헤더 설정 불가 → 쿼리 파라미터 fallback
+        // 주의: HTTPS 환경(Cloud Run)에서만 안전. HTTP에서는 토큰 노출 위험.
+        String queryToken = request.getParameter("token");
+        if (StringUtils.hasText(queryToken)) {
+            return queryToken;
+        }
         return null;
     }
 }
