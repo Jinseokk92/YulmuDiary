@@ -1,9 +1,8 @@
 /**
  * 이미지 다운로드 유틸
  *
- * 1순위: navigator.canShare({ files }) → Web Share API 공유 시트 (iOS · Android PWA/Chrome 75+)
- * 2순위: <a download> blob URL (데스크톱, Android 구형)
- * 3순위: window.open(blobUrl) → 새 탭에서 이미지 표시, 길게 눌러 저장 (Android <a> 미동작 대비)
+ * 모바일 (iOS · Android): Web Share API → 공유 시트에서 갤러리 저장
+ * 데스크톱: blob → <a download>
  *
  * GCS CORS 설정(origin: 프론트엔드 도메인, method: GET)이 필수.
  */
@@ -73,22 +72,23 @@ export async function downloadImage(
     finalFilename = `율무일기_${date}_${index + 1}.${ext}`;
   }
 
-  const file = new File([blob], finalFilename, { type: mimeType });
-  console.log("[download] File 생성:", { name: file.name, type: file.type, size: file.size });
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  console.log("[download] isMobile:", isMobile);
 
-  // ── 1순위: Web Share API ────────────────────────────────────────────────────
-  const canShareSupported = typeof navigator.canShare === "function";
-  const canShareResult = canShareSupported && navigator.canShare({ files: [file] });
-  console.log("[download] navigator.canShare 지원:", canShareSupported, "/ 결과:", canShareResult);
+  // ── 모바일: Web Share API ───────────────────────────────────────────────────
+  if (isMobile) {
+    const file = new File([blob], finalFilename, { type: mimeType });
+    const canShare = navigator.canShare?.({ files: [file] }) ?? false;
+    console.log("[download] canShare:", canShare);
 
-  if (canShareResult) {
-    await navigator.share({ files: [file] });
-    console.log("[download] Web Share API 성공");
-    return { iosNewTab: false };
+    if (canShare) {
+      await navigator.share({ files: [file] });
+      console.log("[download] Web Share API 성공");
+      return { iosNewTab: false };
+    }
   }
 
-  // ── 2순위: <a download> blob URL ───────────────────────────────────────────
-  // mimeType이 보정된 새 Blob으로 objectUrl 생성
+  // ── 데스크톱 (또는 모바일 canShare 미지원): blob → <a download> ────────────
   const blobForDownload = mimeType !== blob.type
     ? new Blob([blob], { type: mimeType })
     : blob;
@@ -101,20 +101,7 @@ export async function downloadImage(
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-
-  // ── 3순위: window.open — Android에서 <a download>가 동작하지 않는 경우 대비 ──
-  // <a> click 직후 window.open이 팝업 차단될 수 있으므로 짧게 지연 후 시도
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  if (isAndroid) {
-    console.log("[download] Android 감지 → window.open fallback 예약");
-    setTimeout(() => {
-      console.log("[download] window.open 시도:", objectUrl.slice(0, 60));
-      window.open(objectUrl, "_blank");
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
-    }, 300);
-  } else {
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  }
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 
   return { iosNewTab: false };
 }
