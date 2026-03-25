@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays, Trophy } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays, Trophy, Loader2 } from "lucide-react";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import { useAuthStore } from "@/stores/authStore";
 import { useRequireAdmin } from "@/hooks/useAuth";
@@ -480,9 +480,10 @@ export default function FamilyManagePage() {
                 <button
                   onClick={() => handleBestPhotoAction("start")}
                   disabled={bestPhotoActing}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                   style={{ background: "#e4701e", color: "#ffffff" }}
                 >
+                  {bestPhotoActing && <Loader2 className="w-4 h-4 animate-spin" />}
                   {bestPhotoActing ? "처리 중..." : "새 라운드 시작 (추천 단계)"}
                 </button>
               )}
@@ -491,9 +492,10 @@ export default function FamilyManagePage() {
                 <button
                   onClick={() => handleBestPhotoAction("start-vote")}
                   disabled={bestPhotoActing}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                   style={{ background: "#2563eb", color: "#ffffff" }}
                 >
+                  {bestPhotoActing && <Loader2 className="w-4 h-4 animate-spin" />}
                   {bestPhotoActing ? "처리 중..." : "투표 단계 시작"}
                 </button>
               )}
@@ -502,9 +504,10 @@ export default function FamilyManagePage() {
                 <button
                   onClick={() => handleBestPhotoAction("end-vote")}
                   disabled={bestPhotoActing}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                   style={{ background: "#16a34a", color: "#ffffff" }}
                 >
+                  {bestPhotoActing && <Loader2 className="w-4 h-4 animate-spin" />}
                   {bestPhotoActing ? "처리 중..." : "투표 종료 & 결과 확정"}
                 </button>
               )}
@@ -513,9 +516,10 @@ export default function FamilyManagePage() {
                 <button
                   onClick={() => handleBestPhotoAction("start")}
                   disabled={bestPhotoActing}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                   style={{ background: "#e4701e", color: "#ffffff" }}
                 >
+                  {bestPhotoActing && <Loader2 className="w-4 h-4 animate-spin" />}
                   {bestPhotoActing ? "처리 중..." : "다음 라운드 시작"}
                 </button>
               )}
