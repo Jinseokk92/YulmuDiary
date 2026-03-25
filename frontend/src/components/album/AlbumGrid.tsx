@@ -244,7 +244,8 @@ export default function AlbumGrid({ initialData }: AlbumGridProps) {
                       alt={photo.caption ?? "앨범 사진"}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 640px) 33vw, 200px"
+                      sizes="(max-width: 768px) 33vw, 200px"
+                      quality={60}
                       unoptimized={
                         src.startsWith("http://localhost") ||
                         src.startsWith("data:") ||

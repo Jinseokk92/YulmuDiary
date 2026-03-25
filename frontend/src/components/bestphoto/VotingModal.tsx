@@ -172,8 +172,8 @@ export default function VotingModal({
                       alt={nom.nominatorName}
                       fill
                       className={`object-cover transition-all ${isOther ? "brightness-50" : ""}`}
-                      sizes="(max-width: 768px) 45vw"
-                      unoptimized
+                      sizes="(max-width: 768px) 45vw, 200px"
+                      quality={75}
                     />
 
                     {/* 투표한 사진: 체크 + 이름 */}

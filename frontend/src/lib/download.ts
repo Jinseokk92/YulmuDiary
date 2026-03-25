@@ -1,8 +1,8 @@
 /**
  * 이미지 다운로드 유틸
  *
- * iOS PWA: fetch → blob → File → navigator.share({ files }) → 공유 시트에서 "이미지 저장"
- * Android / 데스크톱: fetch → blob → URL.createObjectURL → <a download>
+ * Web Share API (navigator.canShare) 지원 기기: 공유 시트 → 갤러리/파일 저장 (iOS, Android PWA)
+ * 미지원 기기 (데스크톱 등): blob → <a download>
  *
  * GCS CORS 설정(origin: 프론트엔드 도메인, method: GET)이 필수.
  */
@@ -17,13 +17,6 @@ function extractFilename(url: string, fallbackName: string): string {
     // malformed URL
   }
   return fallbackName;
-}
-
-function isIOS(): boolean {
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
 }
 
 /**
@@ -52,19 +45,15 @@ export async function downloadImage(
     finalFilename = `율무일기_${date}_${index + 1}.${ext}`;
   }
 
-  // iOS: Web Share API로 공유 시트 띄우기 (갤러리 저장 가능)
-  if (isIOS()) {
-    const file = new File([blob], finalFilename, { type: blob.type });
-    if (
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files: [file] })
-    ) {
-      await navigator.share({ files: [file], title: finalFilename });
-      return { iosNewTab: false };
-    }
+  const file = new File([blob], finalFilename, { type: blob.type });
+
+  // Web Share API 지원 여부로 분기 (iOS, Android PWA 모두 포함)
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] });
+    return { iosNewTab: false };
   }
 
-  // Android / 데스크톱: blob → <a download>
+  // 데스크톱 fallback: blob → <a download>
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = objectUrl;
@@ -72,7 +61,6 @@ export async function downloadImage(
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  // 클릭 직후 revoke하면 일부 브라우저에서 다운로드가 취소되므로 짧게 지연
   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 
   return { iosNewTab: false };

@@ -275,6 +275,8 @@ export default function ImageCarousel({
                   unoptimized={isLocal}
                   className="object-cover pointer-events-none select-none"
                   sizes="(max-width: 512px) 100vw, 512px"
+                  quality={75}
+                  priority={activeIndex === 0}
                   onError={() => {
                     console.log("[ImageCarousel] onError 발생:", src);
                     setImgErrors((prev) => ({ ...prev, [activeIndex]: true }));

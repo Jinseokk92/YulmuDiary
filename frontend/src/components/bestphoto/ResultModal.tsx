@@ -105,7 +105,7 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
                 fill
                 className="object-cover"
                 sizes="260px"
-                unoptimized
+                quality={75}
               />
               {/* 왕관 */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2">
@@ -138,7 +138,7 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
                           fill
                           className="object-cover"
                           sizes="48px"
-                          unoptimized
+                          quality={60}
                         />
                       </div>
                       <div className="flex-1 min-w-0">

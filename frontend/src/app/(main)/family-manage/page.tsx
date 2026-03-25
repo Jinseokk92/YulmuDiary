@@ -170,10 +170,12 @@ export default function FamilyManagePage() {
     try {
       await api.post<void>(endpoints[action], {});
       const updated = await api.get<BestPhotoStatusResponse>("/api/best-photo/status");
+      // 두 상태를 동일 렌더 배치에 적용 — 중간 상태(status 갱신됐는데 acting=true)로
+      // 새 버튼에 "처리 중..." 텍스트가 순간 노출되는 현상을 방지한다.
       setBestPhotoStatus(updated);
+      setBestPhotoActing(false);
     } catch {
       alert("베스트 포토 작업에 실패했습니다.");
-    } finally {
       setBestPhotoActing(false);
     }
   }, [bestPhotoActing]);

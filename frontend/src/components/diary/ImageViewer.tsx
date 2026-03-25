@@ -307,6 +307,7 @@ export default function ImageViewer({
   }, []);
 
   if (!mounted) return null;
+  const isDemoMode = sessionStorage.getItem("demoMode") === "true";
 
   return createPortal(
     <div
@@ -316,8 +317,8 @@ export default function ImageViewer({
       className="fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none"
       style={{ touchAction: "none" }}
     >
-      {/* ── 다운로드 버튼 ── */}
-      <button
+      {/* ── 다운로드 버튼 (체험판 제외) ── */}
+      {!isDemoMode && <button
         onClick={handleDownload}
         disabled={downloadState === "loading"}
         className="absolute top-4 right-16 z-20 w-10 h-10 flex items-center justify-center
@@ -330,7 +331,7 @@ export default function ImageViewer({
         {downloadState === "ios_open" && <Check className="w-5 h-5 text-blue-300" />}
         {downloadState === "error" && <AlertCircle className="w-5 h-5 text-red-400" />}
         {downloadState === "idle" && <Download className="w-5 h-5" />}
-      </button>
+      </button>}
 
       {/* ── 닫기 버튼 ── */}
       <button
@@ -381,6 +382,7 @@ export default function ImageViewer({
               className="object-contain pointer-events-none"
               sizes="100vw"
               priority
+              quality={90}
               draggable={false}
               onError={() =>
                 setImgErrors((prev) => ({ ...prev, [index]: true }))

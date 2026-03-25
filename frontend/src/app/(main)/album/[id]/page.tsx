@@ -219,6 +219,7 @@ export default function AlbumDetailPage() {
   }, [photo, downloadState]);
 
   const isDark = mounted && resolvedTheme === "dark";
+  const isDemoMode = mounted && sessionStorage.getItem("demoMode") === "true";
   const canDelete = !authLoading && isParent && !!photo;
 
   const bg = isDark ? "bg-slate-950" : "bg-white";
@@ -310,6 +311,7 @@ export default function AlbumDetailPage() {
                     className="object-contain"
                     sizes="100vw"
                     priority
+                    quality={75}
                     unoptimized={
                       src.startsWith("http://localhost") ||
                       src.startsWith("data:") ||
@@ -382,7 +384,8 @@ export default function AlbumDetailPage() {
                 <p className={`text-xs ${sub}`}>{photo.uploaderNickname}</p>
               </div>
 
-              {/* ── 다운로드 버튼 ── */}
+              {/* ── 다운로드 버튼 (체험판 제외) ── */}
+              {!isDemoMode && (
               <button
                 onClick={handleDownload}
                 disabled={downloadState === "loading"}
@@ -411,6 +414,7 @@ export default function AlbumDetailPage() {
                   {downloadState === "error"    && "저장 실패 — 다시 시도해 주세요"}
                 </span>
               </button>
+              )}
 
               {/* ── 베스트 포토 추천 버튼 (NOMINATING 단계에만 표시) ── */}
               {isNominating && (

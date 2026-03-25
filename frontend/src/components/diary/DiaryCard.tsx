@@ -74,6 +74,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === "dark";
+  const isDemoMode = mounted && sessionStorage.getItem("demoMode") === "true";
 
   // ─── 하이라이트 (알림에서 진입 시) ──────────────────────────────────
   const [isHighlighted, setIsHighlighted] = useState(highlight);
@@ -663,8 +664,8 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                 )}
               </div>
 
-              {/* 다운로드: 이미지가 있는 게시글에만, 맨 우측 */}
-              {displayMedia && displayMedia.length > 0 && (
+              {/* 다운로드: 이미지가 있는 게시글에만, 맨 우측 (체험판 제외) */}
+              {!isDemoMode && displayMedia && displayMedia.length > 0 && (
                 <ActionIconButton
                   onClick={handleDownloadAll}
                   disabled={downloadState === "loading"}

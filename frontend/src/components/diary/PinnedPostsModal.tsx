@@ -123,14 +123,14 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
                 <div className="flex gap-3">
                   {/* 썸네일 */}
                   {thumbnail ? (
-                    <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden">
+                    <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700">
                       <Image
                         src={thumbnail}
                         alt=""
                         fill
                         className="object-cover"
                         sizes="64px"
-                        unoptimized
+                        quality={60}
                       />
                     </div>
                   ) : (
