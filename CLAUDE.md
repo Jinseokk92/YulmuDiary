@@ -138,7 +138,7 @@ src/
 | Album        | `GET/POST /api/album/photos`, `GET .../favorites`, `PATCH .../{id}/favorite`                                              |                                                                                                                                              |
 | Schedule     | GET(월별)/POST/PUT/DELETE `/api/schedules`                                                                                |                                                                                                                                              |
 | User         | GET(목록)/PUT(정보·프로필사진)/GET(stats·comments·reactions) `/api/users/me/...`                                          |                                                                                                                                              |
-| Media        | `POST /api/media/upload`, `GET /api/media/files/...`                                                                      |                                                                                                                                              |
+| Media        | `POST /api/media/upload`, `GET /api/media/files/...`, `GET /api/media/download`                                           | `download`: GCS 프록시 스트리밍, Android 인앱 브라우저 fallback용. `?token=` 쿼리 파라미터로 JWT 인증 지원                                  |
 | Admin        | `GET/POST /api/admin/invite-codes`, `GET/DELETE .../members`, `DELETE .../diary-posts/{id}`, `GET/PATCH .../app-settings` | `@RequireAdmin`                                                                                                                              |
 
 ## 설계 원칙
@@ -162,6 +162,7 @@ src/
 - **카카오맵**: `useEffect`에서 `window.kakao?.maps` 존재 확인 (SPA 재방문 시 onLoad 미재실행 대응)
 - **BGM**: `BgmPlayer.tsx`(전역 오디오, UI 없음) + `BgmMiniPlayer`(홈, hero anchor 기반 위치) + `BgmFloatingPlayer`(비홈 우하단). 스크롤 중 좌표 재계산 금지. **재생은 유저가 음표 토큰을 직접 터치해야만 시작** (`bgmStore.toggle → audio.play()`). 자동재생·unlock 리스너 없음 — OAuth 리다이렉트 중 제스처 소비로 인한 재생 버그 방지
 - **체험판**: sessionStorage 기반 가상 데이터. blob URL 무효화 → native Image probe로 감지 → 가이드 흐름(demoGuideStep 0→1→2). `demo_mode` 쿠키 유효성은 `sessionStorage.demoMode === "true"`와 교차 검증 필수 (브라우저 세션 복원으로 쿠키만 남고 sessionStorage는 비워지면 stale 처리 → 쿠키 제거 후 일반 인증 흐름)
+- **이미지 다운로드**: 3분기 처리. 데스크톱 → blob `<a download>`, 모바일(iOS·Android Chrome/PWA) → Web Share API, Android 인앱(카카오톡 등) → 백엔드 프록시 `Content-Disposition: attachment`. 인앱 감지는 userAgent 기반(`KAKAOTALK|NAVER` 등). 체험판에서는 다운로드 버튼 비활성화
 - **관리자**: `useRequireAdmin()` → 비관리자면 즉시 "/" 리다이렉트
 - **알림**: `/notifications` 무한스크롤(IntersectionObserver), 시간 그룹화, 탭 시 `/diary?highlightId=` 이동
 

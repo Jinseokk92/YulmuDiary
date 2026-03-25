@@ -338,21 +338,40 @@ main 브랜치 push (backend/** 변경)
 
 ## 📱 PWA 구현 노트
 
-### 이미지 저장 — Web Share API 활용
+### 이미지 저장 — 환경별 분기 처리
 
-PWA는 브라우저 샌드박스 안에서 동작하기 때문에 OS의 갤러리(파일 시스템)에 직접 접근할 수 없습니다.
-네이티브 앱은 Android MediaStore · iOS Photos 프레임워크로 즉시 저장이 가능하지만, PWA에서는 우회가 필요합니다.
+PWA는 브라우저 샌드박스 안에서 동작하기 때문에 OS의 갤러리(파일 시스템)에 직접 접근할 수 없습니다. 네이티브 앱은
+Android MediaStore · iOS Photos 프레임워크로 즉시 저장이 가능하지만, PWA에서는 우회가 필요합니다.
 
 | 항목 | 네이티브 앱 | PWA |
-|------|------------|-----|
+|------|-----------|-----|
 | 갤러리 직접 저장 | OS API로 바로 가능 | 불가 (브라우저 샌드박스) |
 | 이미지 다운로드 | 갤러리에 즉시 저장 | blob download → 다운로드 폴더 (갤러리 미노출 가능) |
-| 대안 | — | Web Share API → 공유 시트 → "이미지 저장" 선택 |
+| 대안 | — | Web Share API / HTTP 응답 헤더 (Content-Disposition) |
 
-본 프로젝트에서는 `navigator.canShare({ files })` 지원 여부로 분기합니다.
+### 다운로드 분기 전략
 
-- **지원 기기 (iOS · Android PWA)**: 공유 시트를 띄워 갤러리 앱으로 저장 가능
-- **미지원 기기 (데스크톱 등)**: 기존 blob `<a download>` 방식으로 다운로드 폴더에 저장
+`navigator.canShare({ files })` 지원 여부와 인앱 브라우저 감지를 조합하여 3가지로 분기합니다.
+
+| 환경 | 다운로드 방식 | 설명 |
+|------|------------|------|
+| 데스크톱 | blob `<a download>` | 기존 표준 방식. 다운로드 폴더에 저장 |
+| iOS · Android Chrome/PWA | Web Share API → 공유 시트 | 공유 시트에서 "이미지 저장" 선택으로 갤러리 저장 |
+| Android 인앱 브라우저 (카카오톡 등) | 백엔드 프록시 (Content-Disposition: attachment) | `window.location.href`로 백엔드 URL 직접 이동 → OS 다운로드 매니저 처리 |
+
+### 인앱 브라우저 대응 (카카오톡 등)
+
+카카오톡 등 인앱 브라우저는 Android WebView 기반으로, Web Share API file 공유와 blob download가 정상 동작하지 않습니다.
+[카카오 DevTalk 가이드](https://devtalk.kakao.com/t/topic/146168)에서 권장하는 HTTP 응답 헤더 방식으로 해결했습니다.
+
+**동작 흐름:**
+1. 다운로드 버튼 터치 → 인앱 브라우저 감지 (`KAKAOTALK|NAVER` 등 userAgent 확인)
+2. `window.location.href`로 백엔드 프록시 엔드포인트에 직접 이동
+3. 백엔드가 GCS에서 이미지를 스트리밍으로 가져와 `Content-Disposition: attachment` 헤더와 함께 응답
+4. WebView가 HTTP 표준 헤더를 인식하고 OS 다운로드 매니저에 위임
+5. 다운로드 폴더에 저장 + 상단 알림 표시
+
+**iOS 인앱 브라우저는 영향 없음:** iOS는 모든 브라우저/인앱이 WebKit 엔진을 사용하므로 Web Share API가 동일하게 동작합니다.
 
 ---
 
