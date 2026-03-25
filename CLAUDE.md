@@ -214,7 +214,7 @@ src/
 ### 서비스 계정
 
 - `github-actions-deploy-311@yulmu-project.iam.gserviceaccount.com`
-- 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)
+- 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)  
 
 ## 향후 구현 예정
 
