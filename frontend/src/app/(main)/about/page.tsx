@@ -228,7 +228,7 @@ export default function AboutPage() {
             key={i}
             text={line.text}
             delay={line.delay}
-            color={letterColor} 
+            color={letterColor}
           />
         ))}
 
