@@ -117,8 +117,13 @@ export function formatRelativeTime(dateStr: string): string {
  * 미디어 URL이 상대 경로면 API 서버 URL을 붙여 절대 경로로 변환
  */
 export function getMediaUrl(url: string): string {
+  if (url.startsWith("http://")) {
+    // localhost는 개발 환경이므로 그대로 유지
+    if (url.startsWith("http://localhost")) return url;
+    // 외부 http URL(kakaocdn 등)은 https로 업그레이드
+    return "https://" + url.slice("http://".length);
+  }
   if (
-    url.startsWith("http://") ||
     url.startsWith("https://") ||
     url.startsWith("data:") ||
     url.startsWith("blob:")
