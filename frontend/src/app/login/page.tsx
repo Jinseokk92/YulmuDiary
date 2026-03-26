@@ -114,7 +114,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-screen overflow-hidden">
       {/* 배경 애니메이션 레이어 (z-[-10]) */}
       <LoginBackground />
 
@@ -199,6 +199,6 @@ export default function LoginPage() {
           로그인 시 서비스 이용약관에 동의하게 됩니다.
         </p>
       </div>
-    </div>
+    </main>
   );
 }
