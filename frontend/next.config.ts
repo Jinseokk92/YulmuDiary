@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from '@next/bundle-analyzer';
 // @ts-expect-error next-pwa has no type declarations
 import withPWAInit from "next-pwa";
 // @ts-expect-error next-pwa has no type declarations
@@ -75,4 +76,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+export default withBundleAnalyzer(withPWA(nextConfig));
