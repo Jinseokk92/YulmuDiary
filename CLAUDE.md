@@ -33,169 +33,11 @@
 | `NEXT_PUBLIC_KAKAO_JS_KEY`                  | 카카오 지도 SDK JS 키        |
 | `NEXT_PUBLIC_KAKAO_APP_KEY`                 | 카카오 장소 검색 REST API 키 |
 
-## 백엔드 구조
-
-```
-src/main/java/com/yulmudiary/
-├── domain/
-│   ├── baby/          — Baby, Gender, BabyService, BabyController
-│   ├── diary/         — DiaryPost, Comment, Reaction, Media(MediaType)
-│   │                    DiaryPostService, CommentService, ReactionService + Controllers
-│   ├── family/        — FamilyGroup, FamilyMembership(FamilyRole), FamilyService, FamilyController
-│   ├── health/        — HealthController
-│   ├── media/         — ImageStorageService(인터페이스)
-│   │                    LocalImageStorageServiceImpl(@Profile("local"))
-│   │                    GcsImageStorageServiceImpl(@Profile("prod"))
-│   │                    MediaUrlResolver(환경별 절대 URL 변환)
-│   ├── milestone/     — Milestone, MilestoneService, MilestoneController
-│   ├── notification/  — Notification(COMMENT/REACTION), NotificationService, NotificationController
-│   ├── album/         — AlbumPhoto, AlbumPhotoFavorite, AlbumPhotoService, AlbumPhotoController
-│   ├── schedule/      — Schedule, ScheduleService, ScheduleController
-│   └── user/          — User(isAdmin, commentNotificationEnabled, reactionNotificationEnabled)
-│                        UserController
-└── global/
-    ├── admin/         — AdminController, AdminService (초대코드 재발급, 멤버관리, 앱설정)
-    ├── auth/          — JwtProvider, JwtAuthenticationFilter, CustomOAuth2UserService
-    │                    OAuth2AuthenticationSuccessHandler, AuthController, AuthService
-    │                    CheckFamilyAuth+FamilyAuthAspect (AOP 가족그룹 검증)
-    │                    annotation/RequireRole + aspect/RequireRoleAspect
-    │                    annotation/RequireAdmin + aspect/RequireAdminAspect
-    ├── config/        — CorsConfig, JpaAuditingConfig, SecurityConfig, SwaggerConfig
-    ├── exception/     — GlobalExceptionHandler, NotFoundException, ForbiddenException 등
-    └── response/      — ApiResponse<T>
-```
-
-설정 파일: `application.yml` (공통) / `application-local.yml` (로컬 DB, create-drop) / `application-prod.yml` (Neon DB, GCS)
-
-## 프론트엔드 구조
-
-```
-src/
-├── middleware.ts          — Edge: 쿠키 기반 라우트 가드 (토큰없음→/login, 그룹없음→/onboarding)
-├── types/index.ts         — 전체 API 타입 정의
-├── stores/
-│   ├── authStore.ts       — token/user/familyGroupId (js-cookie 기반)
-│   ├── bgmStore.ts        — BGM 재생상태 (isPlaying, isMuted, volume, currentTime, duration)
-│   └── uiStore.ts         — SideDrawer / 댓글시트 / 이미지뷰어 / demoGuideStep
-├── contexts/
-│   ├── UserContext.tsx    — (레거시, Providers에서 유지)
-│   └── FontSizeContext.tsx — 돋보기 모드 ("normal"|"large"), <html>.font-large 토글
-├── lib/
-│   ├── api.ts             — fetch 래퍼, Authorization 헤더 자동 주입
-│   ├── bgmAudio.ts        — HTMLAudioElement 싱글톤, 트랙 메타데이터
-│   ├── utils.ts           — formatRelativeTime(), getMediaUrl(), calcDday()
-│   ├── kakao.ts           — 카카오맵 SDK 초기화
-│   └── demoData.ts        — 체험판 가상데이터 (sessionStorage 기반)
-├── hooks/
-│   ├── useAuth.ts         — useRequireAdmin() 포함 (비관리자면 "/" 리다이렉트)
-│   └── usePullToRefresh.ts
-├── components/
-│   ├── Providers.tsx / MainBackground.tsx / LoginBackground.tsx / FloatingYulmu.tsx
-│   ├── DemoBanner.tsx
-│   ├── BgmPlayer.tsx      — 전역 오디오 로직 (UI 없음)
-│   ├── BgmPlayerUI.tsx    — CollapsedMusicToken 공용 UI
-│   ├── BgmMiniPlayer.tsx  — 홈 전용 (hero anchor 기반 위치)
-│   ├── BgmFloatingPlayer.tsx — 비홈 우하단 고정
-│   ├── layout/            — Header, BottomNav, SideDrawer
-│   ├── ui/                — Skeleton, EmptyState, ConfirmModal, UserAvatar,
-│   │                        PullToRefreshIndicator, DatePickerSheet
-│   ├── activity/          — PostDetailModal, SquareThumbnailCell
-│   ├── album/             — AlbumGrid
-│   └── diary/             — DiaryFeed, DiaryCard, FilterBar, Pagination
-│                            ImageCarousel, ImageViewer, ImagePreview
-│                            ReactionBar, ReactionUsersSheet, StickerPicker
-│                            CommentBottomSheet, CommentSection
-└── app/
-    ├── layout.tsx / error.tsx
-    ├── login/             — 카카오·Google·체험하기 버튼
-    ├── auth/callback/ + success/
-    ├── onboarding/
-    ├── new/               — 글 작성 (독립 레이아웃)
-    └── (main)/            — Header+BottomNav 포함 Route Group
-        ├── page.tsx       — 홈 (D-day, 퀵메뉴, BGM anchor)
-        ├── diary/         — 일기 피드 (?highlightId= flash 처리)
-        ├── album/ + favorites/ + [id]/
-        ├── milestones/    — 지하철 노선도 스타일 이정표
-        ├── family-manage/ — 관리자 전용 (초대코드·멤버·앱설정)
-        ├── my-posts/ + my-comments/ + my-reactions/
-        ├── notifications/ — 무한스크롤, 시간 그룹화
-        ├── settings/notifications/
-        ├── schedule/      — 캘린더 + 카카오맵
-        └── join/          — 초대코드 입력
-```
-
-## API 구현 상태
-
-| 도메인       | 엔드포인트                                                                                                                | 비고                                                                                                                                         |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth         | `GET /api/auth/me`, `POST /api/auth/refresh`                                                                              |                                                                                                                                              |
-| FamilyGroup  | `POST /api/family-group/join`                                                                                             |                                                                                                                                              |
-| DiaryPost    | CRUD `/api/diary-posts`, `/api/diary-posts/{id}`                                                                          | Cursor 페이징. `DiaryPostResponse`에 `myLatestComment`(현재 사용자 최근 댓글 내용) 포함. `from(post, resolver, currentUserId)` 오버로드 사용 |
-| Comment      | GET/POST/DELETE `/api/diary-posts/{postId}/comments/{commentId?}`                                                         |                                                                                                                                              |
-| Reaction     | `POST /api/diary-posts/{postId}/reactions`                                                                                | 토글                                                                                                                                         |
-| Notification | `GET /api/notifications`, `PATCH .../read-all`, `PATCH .../{id}/read`                                                     | Cursor 무한스크롤                                                                                                                            |
-| Milestone    | `GET /api/milestones`, `PATCH .../{id}/achieve`, `DELETE .../{id}/achieve`                                                |                                                                                                                                              |
-| Album        | `GET/POST /api/album/photos`, `GET .../favorites`, `PATCH .../{id}/favorite`                                              |                                                                                                                                              |
-| Schedule     | GET(월별)/POST/PUT/DELETE `/api/schedules`                                                                                |                                                                                                                                              |
-| User         | GET(목록)/PUT(정보·프로필사진)/GET(stats·comments·reactions) `/api/users/me/...`                                          |                                                                                                                                              |
-| Media        | `POST /api/media/upload`, `GET /api/media/files/...`, `GET /api/media/download`                                           | `download`: GCS 프록시 스트리밍, Android 인앱 브라우저 fallback용. `?token=` 쿼리 파라미터로 JWT 인증 지원                                  |
-| Admin        | `GET/POST /api/admin/invite-codes`, `GET/DELETE .../members`, `DELETE .../diary-posts/{id}`, `GET/PATCH .../app-settings` | `@RequireAdmin`                                                                                                                              |
-
-## 설계 원칙
-
-### 백엔드
-
-- **응답**: `ApiResponse<T>` (`{data, error}`) 래핑. NotFoundException→404, ForbiddenException→403, InvalidTokenException→401
-- **JWT**: Access Token 30분 (Bearer), Refresh Token 7일 (HttpOnly 쿠키 `refresh_token`)
-- **OAuth2 흐름**: 소셜 로그인 → JWT 발급 → `{redirectUri}?token=...` 리다이렉트 → `/auth/callback` → `/auth/success` (2.3초) → `/diary` 또는 `/onboarding`
-- **SecurityConfig**: `STATELESS` + `NullRequestCache` (Cloud Run 경로 유실 방지). 공개: `/api/health`, `/api/media/files/**`, `GET /api/users`, OAuth2 경로, `/api/auth/refresh`, Swagger
-- **미디어**: `ImageStorageService.store()` → 항상 절대 URL 반환. `MediaUrlResolver`로 DB URL 형태 판별 변환
-- **페이징**: Cursor(ID 역순, size+1로 hasNext 판별), N+1 방지(fetch join, `default_batch_fetch_size: 100`)
-- **권한 AOP**: `@CheckFamilyAuth`(가족그룹 소속), `@RequireRole`(FamilyRole), `@RequireAdmin`(isAdmin 검증)
-- **기타**: multipart 10MB/50MB, babyId=1 하드코딩 유지
-
-### 프론트엔드
-
-- **다크모드**: `darkMode: "class"` + next-themes. `dark:` prefix 대신 `isDark = mounted && resolvedTheme === "dark"` 분기 사용 (Tailwind dark: prefix는 dev 재시작 전 미반영)
-- **이미지**: `next/image` + `remotePatterns`(GCS + localhost:8080). `getMediaUrl()`로 상대→절대 변환
-- **Optimistic UI**: 리액션 토글, 댓글 작성/삭제 (실패 시 롤백)
-- **카카오맵**: `useEffect`에서 `window.kakao?.maps` 존재 확인 (SPA 재방문 시 onLoad 미재실행 대응)
-- **BGM**: `BgmPlayer.tsx`(전역 오디오, UI 없음) + `BgmMiniPlayer`(홈, hero anchor 기반 위치) + `BgmFloatingPlayer`(비홈 우하단). 스크롤 중 좌표 재계산 금지. **재생은 유저가 음표 토큰을 직접 터치해야만 시작** (`bgmStore.toggle → audio.play()`). 자동재생·unlock 리스너 없음 — OAuth 리다이렉트 중 제스처 소비로 인한 재생 버그 방지
-- **체험판**: sessionStorage 기반 가상 데이터. blob URL 무효화 → native Image probe로 감지 → 가이드 흐름(demoGuideStep 0→1→2). `demo_mode` 쿠키 유효성은 `sessionStorage.demoMode === "true"`와 교차 검증 필수 (브라우저 세션 복원으로 쿠키만 남고 sessionStorage는 비워지면 stale 처리 → 쿠키 제거 후 일반 인증 흐름)
-- **이미지 다운로드**: 3분기 처리. 데스크톱 → blob `<a download>`, 모바일(iOS·Android Chrome/PWA) → Web Share API, Android 인앱(카카오톡 등) → 백엔드 프록시 `Content-Disposition: attachment`. 인앱 감지는 userAgent 기반(`KAKAOTALK|NAVER` 등). 체험판에서는 다운로드 버튼 비활성화
-- **관리자**: `useRequireAdmin()` → 비관리자면 즉시 "/" 리다이렉트
-- **알림**: `/notifications` 무한스크롤(IntersectionObserver), 시간 그룹화, 탭 시 `/diary?highlightId=` 이동
-
-## 바텀시트/모달 필수 규칙
-
-모든 바텀시트/모달/오버레이 컴포넌트를 새로 만들거나 수정할 때 반드시 적용할 것.
-
-**body 스크롤 차단** (열릴 때 scrollY 저장 → body position:fixed + top:-scrollY + overflow:hidden, 닫힐 때 스타일 원복 → window.scrollTo(0, scrollY))
-
-- 드래그 핸들이 있으면 touchmove 차단은 `addEventListener('touchmove', fn, { passive: false })`로 등록 (JSX onTouchMove는 passive:true라 preventDefault 불가)
-
-적용 컴포넌트: FilterBottomSheet, CommentBottomSheet, MilestoneDetailModal, MilestoneRecordSheet, DatePickerBottomSheet, **앞으로 새로 만드는 모든 바텀시트/모달**
-
-### 바텀시트 내 텍스트 입력 + 키보드 대응
-
-바텀시트 안에 textarea/input이 있을 때 두 가지를 함께 적용할 것:
-
-**① visualViewport 기반 시트 높이·위치 조정** — `window.visualViewport`의 resize/scroll 이벤트로 keyboardHeight(= innerHeight - vv.height - vv.offsetTop)와 sheetMaxHeight(= vv.height \* 0.96)를 계산해 시트 motion.div의 `bottom`과 `maxHeight`에 적용
-
-**② 입력란 포커스 시 scrollIntoView** — `onFocus`에서 320ms 딜레이 후 `inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })` 호출 (키보드 애니메이션 대기, body fixed 상태에서도 시트 내부 overflow-y-auto 스크롤은 정상 작동)
-
 ## 주의사항 (Claude 필독)
 
 - `application-prod.yml`, `application-local.yml`, `application.yml` 등 환경 설정 파일은 절대 자의적으로 삭제하거나 덮어쓰지 말 것.
 - 설정 파일 수정이 필요한 경우 반드시 사용자에게 먼저 확인 후 진행할 것.
 - `.env`, `*.yml`, `*.yaml`, `*.properties` 등 설정/시크릿 관련 파일은 생성·수정·삭제 전 항상 사용자 승인을 받을 것.
-
-## 보안 이슈
-
-- **[DONE]** Cookie Secure: prod 시 자동 true 처리 완료
-- **[MED]** FamilyGroup 접근 제어: `@CheckFamilyAuth` 일부 구현, 전체 엔드포인트 적용 여부 확인 필요
-- **[MED]** 파일 업로드 검증: `getContentType()`은 위조 가능 → 바이트 매직 넘버 검증 미구현
-- **[INFO]** 운영 초대 코드: data.sql 운영 미실행 → 직접 INSERT 필요
 
 ## GitHub Actions CI/CD
 
@@ -214,7 +56,7 @@ src/
 ### 서비스 계정
 
 - `github-actions-deploy-311@yulmu-project.iam.gserviceaccount.com`
-- 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)  
+- 필요 권한 3개: Cloud Run 관리자, Artifact Registry 관리자, 서비스 계정 사용자(iam.serviceAccountUser)
 
 ## 향후 구현 예정
 
@@ -222,4 +64,3 @@ src/
 | -------------------------- | ------------------------------------------------------------------------------ |
 | FCM 기기 푸시 알림         | 인앱 알림은 구현됨. 기기 푸시는 미구현 (Firebase SDK, 디바이스 토큰 등록 필요) |
 | 파일 업로드 매직 넘버 검증 | 이미지 바이트 검증 로직 추가 필요                                              |
-| CI/CD Cloud Build 전환     | 서비스 확장 시 보안 고려할 필요성 UP, GitHub Actions → GCP Cloud Build 마이그레이션. SA 키 외부 노출 제거, IAM 기반 내부 완결 구조로 보안 강화 |
