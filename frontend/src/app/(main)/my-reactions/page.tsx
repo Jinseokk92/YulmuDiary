@@ -11,6 +11,7 @@ import { SquareThumbnailCell, SquareSkeletonCell } from "@/components/activity/S
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useUiStore } from "@/stores/uiStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const PAGE_SIZE = 30;
 
@@ -31,7 +32,7 @@ export default function MyReactionsPage() {
 
   useEffect(() => setMounted(true), []);
   const isDark = mounted && resolvedTheme === "dark";
-  const gridLineColor = isDark ? "#0f172a" : "#e5e7eb";
+  const gridLineColor = isDark ? darkPalette.border : "#e5e7eb";
 
   const fetchReactions = useCallback(async (cursor: number | null, force = false) => {
     if (loadingRef.current) return;
@@ -122,11 +123,11 @@ export default function MyReactionsPage() {
       >
         <div className="mx-auto max-w-lg pb-24">
           <div className="flex items-baseline gap-2 px-4 pb-4 pt-6">
-            <h1 className="text-lg font-bold" style={{ color: isDark ? "#e2e8f0" : "#111827" }}>
+            <h1 className="text-lg font-bold" style={{ color: isDark ? darkPalette.textPrimary : "#111827" }}>
               내 반응
             </h1>
             {initialLoaded && items.length > 0 && (
-              <span className="text-sm tabular-nums" style={{ color: isDark ? "#64748b" : "#9ca3af" }}>
+              <span className="text-sm tabular-nums" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>
                 {items.length}
                 {hasNextRef.current ? "+" : ""}개
               </span>
@@ -170,7 +171,7 @@ export default function MyReactionsPage() {
                       imageUrl={item.postThumbnailUrl}
                       text={item.postContent}
                       isDark={isDark}
-                      emptyFallback={<Images size={16} style={{ color: isDark ? "#475569" : "#d1d5db" }} />}
+                      emptyFallback={<Images size={16} style={{ color: isDark ? darkPalette.textMuted : "#d1d5db" }} />}
                       topLeftOverlay={
                         <span
                           className="select-none text-base leading-none drop-shadow-md"

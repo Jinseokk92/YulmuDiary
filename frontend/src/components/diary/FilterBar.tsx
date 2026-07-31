@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { ArrowRight, CalendarDays, Check, SlidersHorizontal } from "lucide-react";
 import { api } from "@/lib/api";
 import type { UserResponse } from "@/types";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 export type FilterMode = "all" | "latest" | "oldest" | "date" | "user";
 
@@ -36,10 +38,6 @@ interface FilterBarProps {
 type FilterScope = "all" | "date" | "user";
 
 const ORANGE = "#e4701e";
-const TEXT = "#111827";
-const MUTED = "#6b7280";
-const BORDER = "rgba(15, 23, 42, 0.08)";
-const SHEET_BG = "#fffdf9";
 
 const SCOPE_OPTIONS: { key: FilterScope; label: string }[] = [
   { key: "all", label: "전체 일기" },
@@ -133,6 +131,7 @@ const normalizeDateRange = (start: string, end: string) => {
 export default function FilterBar({ filters, onChange }: FilterBarProps) {
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<FilterScope>(getScopeFromFilters(filters));
@@ -148,6 +147,25 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const isDark = mounted && resolvedTheme === "dark";
+
+  // ── 색상 토큰 (다크모드 신규 지원) ────────────────────────────────
+  const TEXT = isDark ? darkPalette.textPrimary : "#111827";
+  const MUTED = isDark ? darkPalette.textSecondary : "#6b7280";
+  const BORDER = isDark ? darkPalette.border : "rgba(15, 23, 42, 0.08)";
+  const SHEET_BG = isDark ? darkPalette.surface : "#fffdf9";
+  const CARD_BG = isDark ? darkPalette.surfaceSecondary : "#ffffff";
+  const CARD_SHADOW = isDark ? "none" : "0 6px 16px rgba(15, 23, 42, 0.04)";
+  const SHEET_BACKDROP = isDark ? darkPalette.overlay : "rgba(15, 23, 42, 0.34)";
+  const HANDLE_BG = isDark ? darkPalette.hover : "rgba(107, 114, 128, 0.28)";
+  const PLACEHOLDER_TEXT = isDark ? darkPalette.textMuted : "#9ca3af";
+  const DATE_INFO_BG = isDark ? darkPalette.surfaceSecondary : "#fff7ed";
+  const DATE_INFO_BORDER = isDark ? "rgba(234, 88, 12, 0.35)" : "rgba(228, 112, 30, 0.12)";
+  const ARROW_CIRCLE_BG = isDark ? darkPalette.surfaceSecondary : "rgba(255, 255, 255, 0.72)";
+  const FOOTER_BG = isDark ? "rgba(18, 18, 18, 0.92)" : "rgba(255, 253, 249, 0.96)";
+  const FOOTER_SHADOW = isDark ? "none" : "0 -8px 20px rgba(15, 23, 42, 0.04)";
+  const DISABLED_APPLY_BG = isDark ? "rgba(228, 112, 30, 0.25)" : "#fed7aa";
 
   useEffect(() => {
     if (!open) return;
@@ -400,7 +418,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                     position: "fixed",
                     inset: 0,
                     border: "none",
-                    background: "rgba(15, 23, 42, 0.34)",
+                    background: SHEET_BACKDROP,
                     padding: 0,
                     zIndex: 90,
                   }}
@@ -425,7 +443,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                     borderTopLeftRadius: 24,
                     borderTopRightRadius: 24,
                     backgroundColor: SHEET_BG,
-                    boxShadow: "0 -8px 32px rgba(15, 23, 42, 0.12)",
+                    boxShadow: isDark ? "none" : "0 -8px 32px rgba(15, 23, 42, 0.12)",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
@@ -445,7 +463,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                         width: 36,
                         height: 4,
                         borderRadius: 999,
-                        backgroundColor: "rgba(107, 114, 128, 0.28)",
+                        backgroundColor: HANDLE_BG,
                       }}
                     />
                   </div>
@@ -549,7 +567,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                 gap: 12,
                                 border: `1px solid ${active ? "rgba(228, 112, 30, 0.22)" : BORDER}`,
                                 borderRadius: 14,
-                                backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : "#ffffff",
+                                backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : CARD_BG,
                                 padding: "0 14px",
                                 cursor: "pointer",
                               }}
@@ -606,7 +624,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                 minHeight: 46,
                                 border: `1px solid ${active ? "rgba(228, 112, 30, 0.22)" : BORDER}`,
                                 borderRadius: 14,
-                                backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : "#ffffff",
+                                backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : CARD_BG,
                                 color: active ? ORANGE : TEXT,
                                 fontSize: 14,
                                 fontWeight: active ? 700 : 600,
@@ -643,9 +661,9 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                             display: "grid",
                             gap: 12,
                             padding: 12,
-                            border: `1px solid rgba(228, 112, 30, 0.12)`,
+                            border: `1px solid ${DATE_INFO_BORDER}`,
                             borderRadius: 18,
-                            backgroundColor: "#fff7ed",
+                            backgroundColor: DATE_INFO_BG,
                           }}
                         >
                           <p
@@ -681,9 +699,9 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                   gap: 12,
                                   border: `1px solid ${BORDER}`,
                                   borderRadius: 16,
-                                  backgroundColor: "#ffffff",
+                                  backgroundColor: CARD_BG,
                                   padding: "0 14px",
-                                  boxShadow: "0 6px 16px rgba(15, 23, 42, 0.04)",
+                                  boxShadow: CARD_SHADOW,
                                   cursor: "pointer",
                                 }}
                               >
@@ -723,7 +741,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                     style={{
                                       fontSize: 15,
                                       fontWeight: pendingStart ? 700 : 600,
-                                      color: pendingStart ? TEXT : "#9ca3af",
+                                      color: pendingStart ? TEXT : PLACEHOLDER_TEXT,
                                       letterSpacing: "-0.02em",
                                     }}
                                   >
@@ -766,7 +784,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                   alignItems: "center",
                                   justifyContent: "center",
                                   borderRadius: 999,
-                                  backgroundColor: "rgba(255, 255, 255, 0.72)",
+                                  backgroundColor: ARROW_CIRCLE_BG,
                                   border: `1px solid rgba(228, 112, 30, 0.12)`,
                                 }}
                               >
@@ -790,9 +808,9 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                   gap: 12,
                                   border: `1px solid ${BORDER}`,
                                   borderRadius: 16,
-                                  backgroundColor: "#ffffff",
+                                  backgroundColor: CARD_BG,
                                   padding: "0 14px",
-                                  boxShadow: "0 6px 16px rgba(15, 23, 42, 0.04)",
+                                  boxShadow: CARD_SHADOW,
                                   cursor: "pointer",
                                 }}
                               >
@@ -832,7 +850,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                     style={{
                                       fontSize: 15,
                                       fontWeight: pendingEnd ? 700 : 600,
-                                      color: pendingEnd ? TEXT : "#9ca3af",
+                                      color: pendingEnd ? TEXT : PLACEHOLDER_TEXT,
                                       letterSpacing: "-0.02em",
                                     }}
                                   >
@@ -897,7 +915,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 borderRadius: 14,
-                                backgroundColor: "#ffffff",
+                                backgroundColor: CARD_BG,
                                 fontSize: 13,
                                 color: MUTED,
                               }}
@@ -912,7 +930,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 borderRadius: 14,
-                                backgroundColor: "#ffffff",
+                                backgroundColor: CARD_BG,
                                 fontSize: 13,
                                 color: MUTED,
                               }}
@@ -936,7 +954,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                                     gap: 12,
                                     border: `1px solid ${active ? "rgba(228, 112, 30, 0.22)" : BORDER}`,
                                     borderRadius: 14,
-                                    backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : "#ffffff",
+                                    backgroundColor: active ? "rgba(228, 112, 30, 0.08)" : CARD_BG,
                                     padding: "0 14px",
                                     cursor: "pointer",
                                   }}
@@ -976,11 +994,11 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                       style={{
                         flexShrink: 0,
                         padding: "12px 16px calc(16px + env(safe-area-inset-bottom))",
-                        backgroundColor: "rgba(255, 253, 249, 0.96)",
+                        backgroundColor: FOOTER_BG,
                         backdropFilter: "blur(12px)",
                         WebkitBackdropFilter: "blur(12px)",
                         borderTop: `1px solid ${BORDER}`,
-                        boxShadow: "0 -8px 20px rgba(15, 23, 42, 0.04)",
+                        boxShadow: FOOTER_SHADOW,
                       }}
                     >
                       <button
@@ -992,7 +1010,7 @@ export default function FilterBar({ filters, onChange }: FilterBarProps) {
                           minHeight: 52,
                           border: "none",
                           borderRadius: 16,
-                          backgroundColor: !pendingStart && !pendingEnd ? "#fed7aa" : ORANGE,
+                          backgroundColor: !pendingStart && !pendingEnd ? DISABLED_APPLY_BG : ORANGE,
                           color: "#ffffff",
                           fontSize: 15,
                           fontWeight: 700,

@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useUiStore } from "@/stores/uiStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { ScheduleRequest, ScheduleResponse } from "@/types";
 
 // ────────────────────────────────────────────────
@@ -108,9 +109,10 @@ interface KakaoMapViewProps {
   lng?: number;
   /** 좌표가 없을 때 Geocoder로 검색할 주소 */
   address?: string;
+  isDark: boolean;
 }
 
-function KakaoMapView({ lat, lng, address }: KakaoMapViewProps) {
+function KakaoMapView({ lat, lng, address, isDark }: KakaoMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 지도 인스턴스를 ref로 관리 → 중복 생성 방지
   const mapRef = useRef<KakaoMapInstance | null>(null);
@@ -180,7 +182,9 @@ function KakaoMapView({ lat, lng, address }: KakaoMapViewProps) {
   return (
     <div
       ref={containerRef}
-      className="mt-2 rounded-xl overflow-hidden border border-gray-100 shadow-sm"
+      className={`mt-2 rounded-xl overflow-hidden border ${
+        isDark ? "border-[#262626]" : "border-gray-100 shadow-sm"
+      }`}
       style={{ height: "200px" }}
     />
   );
@@ -194,9 +198,10 @@ interface PlaceSearchFieldProps {
   value: PlaceInfo | null;
   onChange: (place: PlaceInfo | null) => void;
   readOnly?: boolean;
+  isDark: boolean;
 }
 
-function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFieldProps) {
+function PlaceSearchField({ value, onChange, readOnly = false, isDark }: PlaceSearchFieldProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KakaoPlace[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -251,14 +256,16 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
     if (!value) return null;
     return (
       <div>
-        <div className="flex items-start gap-2 px-3 py-2.5 border border-gray-100 bg-gray-50 rounded-xl">
-          <PinIcon className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+        <div className={`flex items-start gap-2 px-3 py-2.5 border rounded-xl ${
+          isDark ? "border-[#262626] bg-[#1A1A1A]" : "border-gray-100 bg-gray-50"
+        }`}>
+          <PinIcon className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? "text-[#737373]" : "text-gray-400"}`} />
           <div>
-            <p className="text-sm font-medium text-gray-700">{value.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{value.address}</p>
+            <p className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>{value.name}</p>
+            <p className={`text-xs mt-0.5 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{value.address}</p>
           </div>
         </div>
-        <KakaoMapView lat={value.lat} lng={value.lng} address={value.address} />
+        <KakaoMapView lat={value.lat} lng={value.lng} address={value.address} isDark={isDark} />
       </div>
     );
   }
@@ -269,16 +276,20 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
       {value ? (
         /* 선택된 장소 카드 + 지도 */
         <div>
-          <div className="flex items-start gap-2 px-3 py-2.5 border border-primary-200 bg-primary-50/40 rounded-xl">
+          <div className={`flex items-start gap-2 px-3 py-2.5 border rounded-xl ${
+            isDark ? "border-primary-500/25 bg-primary-500/10" : "border-primary-200 bg-primary-50/40"
+          }`}>
             <PinIcon className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800">{value.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{value.address}</p>
+              <p className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}>{value.name}</p>
+              <p className={`text-xs mt-0.5 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{value.address}</p>
             </div>
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded-full shrink-0"
+              className={`p-1 rounded-full shrink-0 ${
+                isDark ? "text-[#737373] hover:text-[#A8A8A8]" : "text-gray-400 hover:text-gray-600"
+              }`}
               aria-label="장소 삭제"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -287,13 +298,13 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
             </button>
           </div>
           {/* 지도 표시 */}
-          <KakaoMapView lat={value.lat} lng={value.lng} address={value.address} />
+          <KakaoMapView lat={value.lat} lng={value.lng} address={value.address} isDark={isDark} />
         </div>
       ) : (
         /* 검색 입력 */
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <PinIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+            <PinIcon className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-[#737373]" : "text-gray-300"}`} />
             <input
               type="text"
               value={query}
@@ -303,17 +314,21 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
               }}
               placeholder={sdkReady ? "장소 검색 (선택)" : "지도 로딩 중..."}
               disabled={!sdkReady}
-              className="w-full pl-8 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm
-                placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40
-                focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
+              className={`w-full pl-8 pr-3 py-2.5 border rounded-xl text-sm
+                focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 ${
+                isDark
+                  ? "border-[#262626] bg-[#1A1A1A] text-[#F5F5F5] placeholder-[#737373] disabled:bg-[#121212] disabled:text-[#737373]"
+                  : "border-gray-200 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-400"
+              }`}
             />
           </div>
           <button
             type="button"
             onClick={handleSearch}
             disabled={!sdkReady || !query.trim() || isSearching}
-            className="px-3 py-2.5 bg-gray-100 rounded-xl text-sm text-gray-600 font-medium
-              hover:bg-gray-200 disabled:opacity-40 shrink-0 transition-colors"
+            className={`px-3 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 shrink-0 transition-colors ${
+              isDark ? "bg-[#1A1A1A] text-[#A8A8A8] hover:bg-[#2A2A2A]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
           >
             {isSearching ? "..." : "검색"}
           </button>
@@ -322,18 +337,22 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
 
       {/* 검색 결과 드롭다운 */}
       {showResults && !value && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <div className={`absolute z-20 left-0 right-0 mt-1 rounded-xl overflow-hidden border ${
+          isDark ? "bg-[#121212] border-[#262626]" : "bg-white border-gray-200 shadow-lg"
+        }`}>
           {results.length > 0 ? (
             <ul>
               {results.map((place) => (
-                <li key={place.id} className="border-b border-gray-100 last:border-0">
+                <li key={place.id} className={`border-b last:border-0 ${isDark ? "border-[#262626]" : "border-gray-100"}`}>
                   <button
                     type="button"
                     onClick={() => handleSelect(place)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    className={`w-full text-left px-4 py-2.5 transition-colors ${
+                      isDark ? "hover:bg-[#1A1A1A]" : "hover:bg-gray-50"
+                    }`}
                   >
-                    <p className="text-sm font-medium text-gray-800">{place.place_name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                    <p className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}>{place.place_name}</p>
+                    <p className={`text-xs mt-0.5 truncate ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                       {place.road_address_name || place.address_name}
                     </p>
                   </button>
@@ -341,7 +360,7 @@ function PlaceSearchField({ value, onChange, readOnly = false }: PlaceSearchFiel
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">검색 결과가 없습니다.</p>
+            <p className={`text-sm text-center py-4 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>검색 결과가 없습니다.</p>
           )}
         </div>
       )}
@@ -368,9 +387,10 @@ interface WheelColumnProps {
   items: readonly string[];
   initialIndex: number;
   onChange: (index: number) => void;
+  isDark: boolean;
 }
 
-function ScrollWheelColumn({ items, initialIndex, onChange }: WheelColumnProps) {
+function ScrollWheelColumn({ items, initialIndex, onChange, isDark }: WheelColumnProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [displayIndex, setDisplayIndex] = useState(initialIndex);
@@ -408,15 +428,25 @@ function ScrollWheelColumn({ items, initialIndex, onChange }: WheelColumnProps) 
         className="absolute left-1 right-1 rounded-xl pointer-events-none z-10"
         style={{ top: PAD * WHEEL_ITEM_H, height: WHEEL_ITEM_H, background: "rgba(228,112,30,0.13)" }}
       />
-      {/* 상단 페이드 마스크 */}
+      {/* 상단 페이드 마스크 — 휠 컨테이너 배경(#FFF8F2/darkPalette.surfaceSecondary)과 맞춰야 이음매가 안 보임 */}
       <div
         className="absolute inset-x-0 top-0 pointer-events-none z-20"
-        style={{ height: PAD * WHEEL_ITEM_H, background: "linear-gradient(to bottom, #FFF8F2 30%, transparent)" }}
+        style={{
+          height: PAD * WHEEL_ITEM_H,
+          background: isDark
+            ? `linear-gradient(to bottom, ${darkPalette.surfaceSecondary} 30%, transparent)`
+            : "linear-gradient(to bottom, #FFF8F2 30%, transparent)",
+        }}
       />
       {/* 하단 페이드 마스크 */}
       <div
         className="absolute inset-x-0 bottom-0 pointer-events-none z-20"
-        style={{ height: PAD * WHEEL_ITEM_H, background: "linear-gradient(to top, #FFF8F2 30%, transparent)" }}
+        style={{
+          height: PAD * WHEEL_ITEM_H,
+          background: isDark
+            ? `linear-gradient(to top, ${darkPalette.surfaceSecondary} 30%, transparent)`
+            : "linear-gradient(to top, #FFF8F2 30%, transparent)",
+        }}
       />
       {/* 스크롤 컨테이너 */}
       <div
@@ -440,7 +470,7 @@ function ScrollWheelColumn({ items, initialIndex, onChange }: WheelColumnProps) 
             className={`flex items-center justify-center select-none cursor-pointer transition-all duration-150 ${
               idx === displayIndex
                 ? "text-[#e4701e] font-bold text-2xl"
-                : "text-gray-400 text-lg font-normal"
+                : isDark ? "text-[#737373] text-lg font-normal" : "text-gray-400 text-lg font-normal"
             }`}
           >
             {item}
@@ -465,9 +495,10 @@ interface TimeWheelPickerProps {
   value: string; // "HH:mm" 또는 ""
   onClose: () => void;
   onConfirm: (time: string) => void;
+  isDark: boolean;
 }
 
-function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheelPickerProps) {
+function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm, isDark }: TimeWheelPickerProps) {
   const parseValue = (v: string) => {
     if (v && v.includes(":")) {
       const [h, m] = v.split(":").map(Number);
@@ -505,9 +536,10 @@ function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheel
     <>
       {/* 딤 오버레이 */}
       <div
-        className={`fixed inset-0 z-[60] bg-black/20 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[60] transition-opacity duration-300 ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.2)" }}
         onClick={onClose}
       />
       {/* 바텀 시트 */}
@@ -516,23 +548,23 @@ function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheel
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#FFF8F2", borderRadius: "24px 24px 0 0" }}
+        style={{ background: isDark ? darkPalette.surface : "#FFF8F2", borderRadius: "24px 24px 0 0" }}
       >
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-orange-200" />
+          <div className={`w-10 h-1 rounded-full ${isDark ? "bg-[#2A2A2A]" : "bg-orange-200"}`} />
         </div>
         {/* 타이틀 */}
-        <p className="text-center text-base font-semibold text-gray-700 pt-2 pb-3">{label}</p>
+        <p className={`text-center text-base font-semibold pt-2 pb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>{label}</p>
 
         {/* 세 개의 휠 */}
         <div
           className="flex mx-4 gap-1 rounded-2xl overflow-hidden"
-          style={{ background: "#FFF8F2" }}
+          style={{ background: isDark ? darkPalette.surfaceSecondary : "#FFF8F2" }}
         >
-          <ScrollWheelColumn key={`ampm-${rev}`} items={AMPM_LIST} initialIndex={ampmIdx} onChange={setAmpmIdx} />
-          <ScrollWheelColumn key={`hour-${rev}`} items={HOUR_LIST} initialIndex={hourIdx} onChange={setHourIdx} />
-          <ScrollWheelColumn key={`min-${rev}`} items={MIN_LIST} initialIndex={minIdx} onChange={setMinIdx} />
+          <ScrollWheelColumn key={`ampm-${rev}`} items={AMPM_LIST} initialIndex={ampmIdx} onChange={setAmpmIdx} isDark={isDark} />
+          <ScrollWheelColumn key={`hour-${rev}`} items={HOUR_LIST} initialIndex={hourIdx} onChange={setHourIdx} isDark={isDark} />
+          <ScrollWheelColumn key={`min-${rev}`} items={MIN_LIST} initialIndex={minIdx} onChange={setMinIdx} isDark={isDark} />
         </div>
 
         {/* 버튼 */}
@@ -540,7 +572,9 @@ function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheel
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3.5 border border-gray-200 rounded-2xl text-gray-600 text-base font-medium bg-white"
+            className={`flex-1 py-3.5 border rounded-2xl text-base font-medium ${
+              isDark ? "border-[#262626] text-[#A8A8A8] bg-[#1A1A1A]" : "border-gray-200 text-gray-600 bg-white"
+            }`}
           >
             취소
           </button>
@@ -562,10 +596,11 @@ function TimeWheelPicker({ isOpen, label, value, onClose, onConfirm }: TimeWheel
 // AllDayToggle — 시니어 친화적 종일 토글
 // ────────────────────────────────────────────────
 
-function AllDayToggle({ value, canEdit, onChange }: {
+function AllDayToggle({ value, canEdit, onChange, isDark }: {
   value: boolean;
   canEdit: boolean;
   onChange: (v: boolean) => void;
+  isDark: boolean;
 }) {
   return (
     <button
@@ -576,12 +611,12 @@ function AllDayToggle({ value, canEdit, onChange }: {
       className={`w-full flex items-center justify-between px-4 rounded-2xl transition-all active:scale-[0.99] ${
         canEdit ? "cursor-pointer" : "cursor-default opacity-70"
       }`}
-      style={{ background: "#FFF3E8", minHeight: "58px" }}
+      style={{ background: isDark ? darkPalette.surfaceSecondary : "#FFF3E8", minHeight: "58px" }}
     >
-      <span className="text-base font-medium text-gray-700">하루 종일</span>
+      <span className={`text-base font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>하루 종일</span>
       <div
         className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200 ${
-          value ? "bg-[#e4701e]" : "bg-gray-300"
+          value ? "bg-[#e4701e]" : isDark ? "bg-[#2A2A2A]" : "bg-gray-300"
         }`}
       >
         <span
@@ -598,16 +633,18 @@ function AllDayToggle({ value, canEdit, onChange }: {
 // TimeRangeRow — 시작/종료 시간 탭 버튼 행
 // ────────────────────────────────────────────────
 
-function TimeRangeRow({ startTime, endTime, canEdit, onStartTap, onEndTap }: {
+function TimeRangeRow({ startTime, endTime, canEdit, onStartTap, onEndTap, isDark }: {
   startTime: string;
   endTime: string;
   canEdit: boolean;
   onStartTap: () => void;
   onEndTap: () => void;
+  isDark: boolean;
 }) {
   const btnBase =
     "flex-1 flex flex-col items-center justify-center rounded-2xl gap-1 transition-all";
   const btnActive = canEdit ? "active:scale-[0.97] cursor-pointer" : "cursor-default";
+  const rowBg = isDark ? darkPalette.surfaceSecondary : "#FFF3E8";
 
   return (
     <div className="flex items-center gap-2">
@@ -615,9 +652,9 @@ function TimeRangeRow({ startTime, endTime, canEdit, onStartTap, onEndTap }: {
         type="button"
         onClick={canEdit ? onStartTap : undefined}
         className={`${btnBase} ${btnActive}`}
-        style={{ background: "#FFF3E8", minHeight: "66px" }}
+        style={{ background: rowBg, minHeight: "66px" }}
       >
-        <span className="text-xs text-gray-400 font-medium">시작</span>
+        <span className={`text-xs font-medium ${isDark ? "text-[#737373]" : "text-gray-400"}`}>시작</span>
         <span className="text-lg font-bold text-[#e4701e] leading-tight">
           {formatDisplayTime(startTime)}
         </span>
@@ -634,9 +671,9 @@ function TimeRangeRow({ startTime, endTime, canEdit, onStartTap, onEndTap }: {
         type="button"
         onClick={canEdit ? onEndTap : undefined}
         className={`${btnBase} ${btnActive}`}
-        style={{ background: "#FFF3E8", minHeight: "66px" }}
+        style={{ background: rowBg, minHeight: "66px" }}
       >
-        <span className="text-xs text-gray-400 font-medium">종료</span>
+        <span className={`text-xs font-medium ${isDark ? "text-[#737373]" : "text-gray-400"}`}>종료</span>
         <span className="text-lg font-bold text-[#e4701e] leading-tight">
           {formatDisplayTime(endTime)}
         </span>
@@ -654,6 +691,7 @@ interface ScheduleSheetProps {
   selectedDate: string | null;
   schedulesOnDate: ScheduleResponse[];
   isParent: boolean;
+  isDark: boolean;
   onClose: () => void;
   onCreated: (schedule: ScheduleResponse) => void;
   onUpdated: (schedule: ScheduleResponse) => void;
@@ -665,6 +703,7 @@ function ScheduleSheet({
   selectedDate,
   schedulesOnDate,
   isParent,
+  isDark,
   onClose,
   onCreated,
   onUpdated,
@@ -813,46 +852,53 @@ function ScheduleSheet({
     : selectedDate ? formatEventDate(selectedDate)
     : "일정";
 
-  const editableInput =
-    "border-gray-200 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500";
-  const readonlyInput =
-    "border-gray-100 bg-gray-50 text-gray-700 cursor-default select-text";
+  const editableInput = isDark
+    ? "border-[#262626] bg-[#1A1A1A] text-[#F5F5F5] placeholder-[#737373] focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
+    : "border-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500";
+  const readonlyInput = isDark
+    ? "border-[#262626] bg-[#1A1A1A] text-[#A8A8A8] cursor-default select-text"
+    : "border-gray-100 bg-gray-50 text-gray-700 cursor-default select-text";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-50 bg-black/30 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.3)" }}
         onClick={onClose}
       />
 
       <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg bg-white
-          rounded-t-3xl shadow-2xl transform transition-transform duration-300 ${
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg
+          rounded-t-3xl transform transition-transform duration-300 ${
             isOpen ? "translate-y-0" : "translate-y-full"
-          }`}
+          } ${isDark ? "bg-[#121212] shadow-none" : "bg-white shadow-2xl"}`}
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: "85vh" }}
       >
         {/* 핸들 바 */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className={`w-10 h-1 rounded-full ${isDark ? "bg-[#2A2A2A]" : "bg-gray-200"}`} />
         </div>
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
+        <div className={`flex items-center justify-between px-5 py-3 border-b shrink-0 ${isDark ? "border-[#262626]" : "border-gray-100"}`}>
           <div className="w-9">
             {view !== "list" && (
-              <button onClick={backToList} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
+              <button onClick={backToList} className={`p-2 rounded-full ${
+                isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5] hover:bg-[#2A2A2A]" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              }`}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
             )}
           </div>
-          <h2 className="text-base font-semibold text-gray-800">{headerTitle}</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
+          <h2 className={`text-base font-semibold ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}>{headerTitle}</h2>
+          <button onClick={onClose} className={`p-2 rounded-full ${
+            isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5] hover:bg-[#2A2A2A]" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+          }`}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -871,32 +917,35 @@ function ScheduleSheet({
                     <li
                       key={s.id}
                       onClick={() => openDetail(s)}
-                      className="flex items-start gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100
-                        cursor-pointer hover:bg-orange-100/70 active:scale-[0.99] transition-all"
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer active:scale-[0.99] transition-all ${
+                        isDark
+                          ? "bg-primary-500/10 border-primary-500/20 hover:bg-primary-500/15"
+                          : "bg-orange-50 border-orange-100 hover:bg-orange-100/70"
+                      }`}
                     >
                       <div className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                        <p className={`text-sm font-medium truncate ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}>{s.title}</p>
                         <p className="text-xs text-primary-500 mt-0.5">
                           {formatTimeInfo(s.isAllDay, s.startTime, s.endTime)}
                         </p>
                         {s.placeName && (
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-0.5">
+                          <p className={`text-xs mt-0.5 flex items-center gap-0.5 ${isDark ? "text-[#A8A8A8]" : "text-gray-500"}`}>
                             <PinIcon className="w-3 h-3 shrink-0" />
                             <span className="truncate">{s.placeName}</span>
                           </p>
                         )}
-                        {s.memo && <p className="text-xs text-gray-400 mt-0.5 truncate">{s.memo}</p>}
-                        <p className="text-xs text-gray-400 mt-0.5">{s.userNickname}</p>
+                        {s.memo && <p className={`text-xs mt-0.5 truncate ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{s.memo}</p>}
+                        <p className={`text-xs mt-0.5 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{s.userNickname}</p>
                       </div>
-                      <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className={`w-4 h-4 shrink-0 mt-1 ${isDark ? "text-[#737373]" : "text-gray-300"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-center text-sm text-gray-400 py-6">이 날의 일정이 없습니다.</p>
+                <p className={`text-center text-sm py-6 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>이 날의 일정이 없습니다.</p>
               )}
             </div>
           )}
@@ -905,16 +954,18 @@ function ScheduleSheet({
           {view === "detail" && selectedItem && (
             <div className="px-5 pt-4 pb-2 space-y-3">
               {!isParent && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
-                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
+                  isDark ? "bg-[#1A1A1A] border-[#262626]" : "bg-gray-50 border-gray-100"
+                }`}>
+                  <svg className={`w-4 h-4 shrink-0 ${isDark ? "text-[#737373]" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-xs text-gray-500">읽기 전용 모드입니다. 텍스트를 선택하여 복사할 수 있습니다.</p>
+                  <p className={`text-xs ${isDark ? "text-[#A8A8A8]" : "text-gray-500"}`}>읽기 전용 모드입니다. 텍스트를 선택하여 복사할 수 있습니다.</p>
                 </div>
               )}
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">작성</span>
-                <span className="text-xs font-medium text-gray-600">{selectedItem.userNickname}</span>
+                <span className={`text-xs ${isDark ? "text-[#737373]" : "text-gray-400"}`}>작성</span>
+                <span className={`text-xs font-medium ${isDark ? "text-[#A8A8A8]" : "text-gray-600"}`}>{selectedItem.userNickname}</span>
               </div>
               <input
                 ref={titleRef}
@@ -940,9 +991,9 @@ function ScheduleSheet({
                 }`}
               />
               {/* 장소 + 지도 (PARENT: 수정 가능 / RELATIVE: 읽기 전용 지도 포함) */}
-              <PlaceSearchField value={place} onChange={setPlace} readOnly={!isParent} />
+              <PlaceSearchField value={place} onChange={setPlace} readOnly={!isParent} isDark={isDark} />
               {/* 종일 토글 */}
-              <AllDayToggle value={isAllDay} canEdit={isParent} onChange={setIsAllDay} />
+              <AllDayToggle value={isAllDay} canEdit={isParent} onChange={setIsAllDay} isDark={isDark} />
               {/* 시간 입력 (종일 아닌 경우) */}
               {!isAllDay && (
                 <TimeRangeRow
@@ -951,6 +1002,7 @@ function ScheduleSheet({
                   canEdit={isParent}
                   onStartTap={() => setTimePickerTarget("start")}
                   onEndTap={() => setTimePickerTarget("end")}
+                  isDark={isDark}
                 />
               )}
             </div>
@@ -966,7 +1018,7 @@ function ScheduleSheet({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="일정 제목을 입력하세요"
                 maxLength={50}
-                className={`w-full px-3 py-2.5 border rounded-xl text-sm placeholder-gray-400 focus:outline-none ${editableInput}`}
+                className={`w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none ${editableInput}`}
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
               />
               <textarea
@@ -975,12 +1027,12 @@ function ScheduleSheet({
                 placeholder="메모 (선택)"
                 rows={3}
                 maxLength={200}
-                className={`w-full px-3 py-2.5 border rounded-xl text-sm placeholder-gray-400 resize-none focus:outline-none ${editableInput}`}
+                className={`w-full px-3 py-2.5 border rounded-xl text-sm resize-none focus:outline-none ${editableInput}`}
               />
               {/* 장소 검색 + 지도 */}
-              <PlaceSearchField value={place} onChange={setPlace} />
+              <PlaceSearchField value={place} onChange={setPlace} isDark={isDark} />
               {/* 종일 토글 */}
-              <AllDayToggle value={isAllDay} canEdit={true} onChange={setIsAllDay} />
+              <AllDayToggle value={isAllDay} canEdit={true} onChange={setIsAllDay} isDark={isDark} />
               {/* 시간 입력 (종일 아닌 경우) */}
               {!isAllDay && (
                 <TimeRangeRow
@@ -989,6 +1041,7 @@ function ScheduleSheet({
                   canEdit={true}
                   onStartTap={() => setTimePickerTarget("start")}
                   onEndTap={() => setTimePickerTarget("end")}
+                  isDark={isDark}
                 />
               )}
             </div>
@@ -996,7 +1049,7 @@ function ScheduleSheet({
         </div>
 
         {/* 하단 액션 버튼 */}
-        <div className="px-5 py-3 border-t border-gray-100 shrink-0">
+        <div className={`px-5 py-3 border-t shrink-0 ${isDark ? "border-[#262626]" : "border-gray-100"}`}>
           {view === "list" &&
             (isParent ? (
               <button
@@ -1010,7 +1063,9 @@ function ScheduleSheet({
                 일정 추가
               </button>
             ) : (
-              <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 font-medium hover:bg-gray-50">
+              <button onClick={onClose} className={`w-full py-2.5 rounded-xl border text-sm font-medium ${
+                isDark ? "border-[#262626] text-[#A8A8A8] hover:bg-[#2A2A2A]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}>
                 닫기
               </button>
             ))}
@@ -1021,7 +1076,9 @@ function ScheduleSheet({
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="px-4 py-2.5 rounded-xl border border-red-100 text-red-400 text-sm font-medium hover:bg-red-50 disabled:opacity-40 shrink-0"
+                  className={`px-4 py-2.5 rounded-xl border text-sm font-medium disabled:opacity-40 shrink-0 ${
+                    isDark ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-red-100 text-red-400 hover:bg-red-50"
+                  }`}
                 >
                   {deleting ? "삭제 중..." : "삭제"}
                 </button>
@@ -1034,14 +1091,18 @@ function ScheduleSheet({
                 </button>
               </div>
             ) : (
-              <button onClick={backToList} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 font-medium hover:bg-gray-50">
+              <button onClick={backToList} className={`w-full py-2.5 rounded-xl border text-sm font-medium ${
+                isDark ? "border-[#262626] text-[#A8A8A8] hover:bg-[#2A2A2A]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}>
                 닫기
               </button>
             ))}
 
           {view === "form" && (
             <div className="flex gap-2">
-              <button onClick={backToList} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 font-medium hover:bg-gray-50">
+              <button onClick={backToList} className={`flex-1 py-2.5 rounded-xl border text-sm font-medium ${
+                isDark ? "border-[#262626] text-[#A8A8A8] hover:bg-[#2A2A2A]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}>
                 취소
               </button>
               <button
@@ -1067,6 +1128,7 @@ function ScheduleSheet({
           else setEndTime(t);
           setTimePickerTarget(null);
         }}
+        isDark={isDark}
       />
     </>
   );
@@ -1226,20 +1288,20 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={prevMonth}
-          className={`p-2 rounded-full ${isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"}`}
-          style={{ color: isDark ? "#94a3b8" : "#4b5563" }}
+          className={`p-2 rounded-full ${isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100"}`}
+          style={{ color: isDark ? darkPalette.textSecondary : "#4b5563" }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-base font-semibold" style={{ color: isDark ? "#e2e8f0" : "#1f2937" }}>
+        <h1 className="text-base font-semibold" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>
           {year}년 {month}월
         </h1>
         <button
           onClick={nextMonth}
-          className={`p-2 rounded-full ${isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"}`}
-          style={{ color: isDark ? "#94a3b8" : "#4b5563" }}
+          className={`p-2 rounded-full ${isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100"}`}
+          style={{ color: isDark ? darkPalette.textSecondary : "#4b5563" }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1258,7 +1320,7 @@ export default function SchedulePage() {
                 ? (isDark ? "#fca5a5" : "#f87171")   // 일: red-300/400
                 : i === 6
                 ? (isDark ? "#93c5fd" : "#60a5fa")   // 토: blue-300/400
-                : (isDark ? "#94a3b8" : "#6b7280"),  // 평일: slate-400/gray-500
+                : (isDark ? darkPalette.textSecondary : "#6b7280"),  // 평일
             }}
           >{d}</div>
         ))}
@@ -1275,7 +1337,7 @@ export default function SchedulePage() {
         {loading ? (
           <div className="grid grid-cols-7 gap-0.5">
             {Array.from({ length: isCalendarExpanded ? 35 : 7 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
+              <div key={i} className={`aspect-square rounded-xl animate-pulse ${isDark ? "bg-[#262626]" : "bg-gray-100"}`} />
             ))}
           </div>
         ) : isCalendarExpanded ? (
@@ -1299,7 +1361,7 @@ export default function SchedulePage() {
                       !isValid ? "cursor-default"
                       : isSelected ? "bg-primary-500 text-white"
                       : isToday ? "bg-orange-100 text-primary-500 font-semibold"
-                      : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100 text-gray-700"
+                      : isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100 text-gray-700"
                     } ${!isValid ? "" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : ""} ${
                       isSelected ? "!text-white" : ""
                     }`}
@@ -1308,7 +1370,7 @@ export default function SchedulePage() {
                     isDark ? (
                       isToday
                         ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
-                        : { color: dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1" }
+                        : { color: dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : darkPalette.textPrimary }
                     ) : {}
                   }
                 >
@@ -1355,14 +1417,14 @@ export default function SchedulePage() {
                     text-sm transition-colors ${
                       isSelected ? "bg-primary-500 text-white"
                       : isToday ? "bg-orange-100 font-semibold"
-                      : isDark ? "hover:bg-slate-700" : "hover:bg-gray-100"
+                      : isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100"
                     } ${isSelected ? "!text-white" : ""}`}
                   style={
                     isSelected ? {} :
                     isDark ? (
                       isToday
                         ? { backgroundColor: "rgba(249,115,22,0.15)", color: "#fb923c" }
-                        : { color: isSameMonth ? (dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : "#cbd5e1") : "#475569" }
+                        : { color: isSameMonth ? (dow === 0 ? "#fca5a5" : dow === 6 ? "#93c5fd" : darkPalette.textPrimary) : darkPalette.textMuted }
                     ) : {
                       color: isToday ? "#e4701e" : isSameMonth ? (dow === 0 ? "#f87171" : dow === 6 ? "#60a5fa" : "#374151") : "#d1d5db",
                     }
@@ -1417,7 +1479,7 @@ export default function SchedulePage() {
         <div className="mt-5">
           <h2
             className="text-sm font-semibold mb-2"
-            style={{ color: isDark ? "#cbd5e1" : "#374151" }}
+            style={{ color: isDark ? darkPalette.textPrimary : "#374151" }}
           >이번 달 일정</h2>
           <ul className="space-y-2">
             {[...schedules]
@@ -1425,30 +1487,34 @@ export default function SchedulePage() {
               .map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer ${
+                    isDark
+                      ? "bg-[#121212] border-[#262626] hover:bg-[#1A1A1A]"
+                      : "bg-white border-gray-100 shadow-sm hover:bg-gray-50"
+                  }`}
                   onClick={() => setSheet({ isOpen: true, selectedDate: s.eventDate })}
                 >
                   <div className="text-center shrink-0 w-9">
-                    <p className="text-xs text-gray-400">{s.eventDate.split("-")[1]}월</p>
+                    <p className={`text-xs ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{s.eventDate.split("-")[1]}월</p>
                     <p className="text-base font-bold text-primary-500 leading-tight">
                       {parseInt(s.eventDate.split("-")[2])}
                     </p>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
+                    <p className={`text-sm font-medium truncate ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}>{s.title}</p>
                     <p className="text-xs text-primary-500 mt-0.5">
                       {formatTimeInfo(s.isAllDay, s.startTime, s.endTime)}
                     </p>
                     {s.placeName && (
-                      <p className="text-xs text-gray-500 flex items-center gap-0.5 mt-0.5">
+                      <p className={`text-xs flex items-center gap-0.5 mt-0.5 ${isDark ? "text-[#A8A8A8]" : "text-gray-500"}`}>
                         <PinIcon className="w-3 h-3 shrink-0" />
                         <span className="truncate">{s.placeName}</span>
                       </p>
                     )}
-                    {s.memo && <p className="text-xs text-gray-400 truncate">{s.memo}</p>}
-                    <p className="text-xs text-gray-400">{s.userNickname}</p>
+                    {s.memo && <p className={`text-xs truncate ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{s.memo}</p>}
+                    <p className={`text-xs ${isDark ? "text-[#737373]" : "text-gray-400"}`}>{s.userNickname}</p>
                   </div>
-                  <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className={`w-4 h-4 shrink-0 ${isDark ? "text-[#737373]" : "text-gray-300"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </li>
@@ -1460,7 +1526,7 @@ export default function SchedulePage() {
       {!loading && schedules.length === 0 && (
         <p
           className="text-center text-sm mt-10"
-          style={{ color: isDark ? "#94a3b8" : "#9ca3af" }}
+          style={{ color: isDark ? darkPalette.textSecondary : "#9ca3af" }}
         >이번 달 등록된 일정이 없습니다.</p>
       )}
 
@@ -1474,6 +1540,7 @@ export default function SchedulePage() {
       selectedDate={sheet.selectedDate}
       schedulesOnDate={selectedSchedules}
       isParent={isParent}
+      isDark={isDark}
       onClose={() => setSheet((s) => ({ ...s, isOpen: false }))}
       onCreated={handleCreated}
       onUpdated={handleUpdated}

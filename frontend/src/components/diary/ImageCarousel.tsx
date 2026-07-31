@@ -7,6 +7,7 @@ import { Images } from "lucide-react";
 import type { MediaDto } from "@/types";
 import { getMediaUrl } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 interface ImageCarouselProps {
   media: MediaDto[];
@@ -15,6 +16,7 @@ interface ImageCarouselProps {
   onImageClick?: (index: number) => void;
   /** 더블탭 시 호출 — 좋아요 토글 등. */
   onDoubleTap?: () => void;
+  isDark?: boolean;
 }
 
 const slideVariants = {
@@ -40,6 +42,7 @@ export default function ImageCarousel({
   diaryId,
   onImageClick,
   onDoubleTap,
+  isDark = false,
 }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -245,7 +248,7 @@ export default function ImageCarousel({
       {/* ── 이미지 영역 ── */}
       <div
         ref={containerRef}
-        className="relative w-full aspect-square bg-gray-100 overflow-hidden"
+        className={`relative w-full aspect-square overflow-hidden ${isDark ? "bg-[#1A1A1A]" : "bg-gray-100"}`}
         style={{ touchAction: "pan-y" }}
       >
         <AnimatePresence initial={false} custom={direction}>
@@ -260,8 +263,8 @@ export default function ImageCarousel({
             className={`absolute inset-0 w-full h-full ${onImageClick ? "cursor-pointer" : ""}`}
           >
             {imgErrors[activeIndex] ? (
-              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                <Images className="w-8 h-8 text-gray-300" />
+              <div className={`w-full h-full flex items-center justify-center ${isDark ? "bg-[#1A1A1A]" : "bg-gray-100"}`}>
+                <Images className={`w-8 h-8 ${isDark ? "text-[#737373]" : "text-gray-300"}`} />
               </div>
             ) : (() => {
               const src = getMediaUrl(media[activeIndex].thumbnailUrl || media[activeIndex].url);
@@ -319,7 +322,7 @@ export default function ImageCarousel({
               key={i}
               onClick={() => navigate(i)}
               animate={{
-                backgroundColor: i === activeIndex ? "#e4701e" : "#d1d5db",
+                backgroundColor: i === activeIndex ? "#e4701e" : (isDark ? darkPalette.textMuted : "#d1d5db"),
                 width: i === activeIndex ? 8 : 6,
                 height: i === activeIndex ? 8 : 6,
               }}

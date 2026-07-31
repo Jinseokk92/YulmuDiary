@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const NAV_ITEMS = [
   { href: "/",         label: "홈",    icon: HomeIcon     },
@@ -25,8 +26,8 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 inset-x-0 z-30 border-t pb-[env(safe-area-inset-bottom)]"
       style={{
-        backgroundColor: isDark ? "#0f172a" : "#ffffff",
-        borderColor: isDark ? "#1e293b" : "#e5e7eb",
+        backgroundColor: isDark ? darkPalette.navigationBackground : "#ffffff",
+        borderColor: isDark ? darkPalette.border : "#e5e7eb",
       }}
     >
       <div className="max-w-lg mx-auto grid grid-cols-4 h-14">
@@ -41,7 +42,7 @@ export default function BottomNav() {
               style={{
                 color: active
                   ? isDark ? "#fb923c" : "#d55914"
-                  : isDark ? "#64748b" : "#9ca3af",
+                  : isDark ? darkPalette.textMuted : "#9ca3af",
               }}
             >
               <Icon active={active} />

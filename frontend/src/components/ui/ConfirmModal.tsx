@@ -49,23 +49,23 @@ export default function ConfirmModal({
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex }}>
       {/* 백드롭 */}
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 dark:bg-black/65"
         onClick={loading ? undefined : onCancel}
       />
 
       {/* 모달 */}
-      <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-xs p-6 text-center">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-slate-100 mb-1">{title}</h3>
+      <div className="relative bg-white dark:bg-[#121212] dark:border dark:border-[#262626] rounded-2xl shadow-xl dark:shadow-none w-full max-w-xs p-6 text-center">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-[#F5F5F5] mb-1">{title}</h3>
         {description && (
-          <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">{description}</p>
+          <p className="text-sm text-gray-500 dark:text-[#A8A8A8] mb-5">{description}</p>
         )}
         <div className="flex gap-3">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-2.5 text-sm font-medium text-gray-600 dark:text-slate-300
-                       bg-gray-100 dark:bg-slate-800 rounded-xl
-                       hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 text-sm font-medium text-gray-600 dark:text-[#A8A8A8]
+                       bg-gray-100 dark:bg-[#1A1A1A] rounded-xl
+                       hover:bg-gray-200 dark:hover:bg-[#2A2A2A] transition-colors disabled:opacity-50"
           >
             {cancelLabel}
           </button>

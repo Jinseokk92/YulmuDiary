@@ -154,14 +154,18 @@ export default function AlbumGrid({ initialData }: AlbumGridProps) {
 
   // ── 테마 토큰 ────────────────────────────────────────────────────────────────
   const isDark = mounted && resolvedTheme === "dark";
-  const titleColor   = isDark ? "text-slate-100"  : "text-gray-900";
-  const subColor     = isDark ? "text-slate-500"  : "text-gray-400";
-  const loadingTone = isDark ? "bg-slate-950/35" : "bg-slate-50/35";
-  const chipBase     = isDark ? "bg-slate-800 text-slate-300 border border-slate-700"
+  const titleColor   = isDark ? "text-[#F5F5F5]"  : "text-gray-900";
+  const subColor     = isDark ? "text-[#A8A8A8]"  : "text-gray-400";
+  const loadingTone = isDark ? "bg-[#1A1A1A]/35" : "bg-slate-50/35";
+  const chipBase     = isDark ? "bg-[#1A1A1A] text-[#A8A8A8] border border-[#262626]"
                               : "bg-white text-gray-600 border border-gray-200";
-  const chipActive   = "bg-emerald-500 text-white border border-emerald-500";
-  const scrollBg     = isDark ? "bg-slate-950"    : "bg-white";
-  const divider      = isDark ? "border-slate-800" : "border-gray-100";
+  // 활성 칩은 '성공' 의미가 아니라 '선택됨' 상태 — 다크에서는 앱 전반의 선택 상태 컨벤션인
+  // 브랜드 오렌지로 통일한다. 라이트는 기존 emerald 규칙을 그대로 유지한다.
+  const chipActive   = isDark
+    ? "bg-primary-500 text-white border border-primary-500"
+    : "bg-emerald-500 text-white border border-emerald-500";
+  const scrollBg     = isDark ? "bg-[#121212]"    : "bg-white";
+  const divider      = isDark ? "border-[#262626]" : "border-gray-100";
 
   return (
     <div>
@@ -203,7 +207,7 @@ export default function AlbumGrid({ initialData }: AlbumGridProps) {
         /* 빈 상태 */
         <div className="flex flex-col items-center justify-center py-24 gap-3">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center
-                          ${isDark ? "bg-slate-800" : "bg-emerald-50"}`}>
+                          ${isDark ? "bg-[#1A1A1A]" : "bg-emerald-50"}`}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -234,7 +238,9 @@ export default function AlbumGrid({ initialData }: AlbumGridProps) {
               <button
                 key={photo.id}
                 onClick={() => router.push(`/album/${photo.id}`)}
-                className="relative aspect-square overflow-hidden bg-gray-200 active:opacity-75 transition-opacity"
+                className={`relative aspect-square overflow-hidden active:opacity-75 transition-opacity ${
+                  isDark ? "bg-[#1A1A1A]" : "bg-gray-200"
+                }`}
               >
                 {(() => {
                   const src = getMediaUrl(photo.thumbnailUrl ?? photo.url);

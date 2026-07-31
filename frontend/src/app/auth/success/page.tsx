@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 /** 축하 화면 총 노출 시간 (ms) — 애니메이션 종료 시점과 맞춤 */
 const DISPLAY_MS = 2300;
@@ -23,6 +25,10 @@ function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const onboarding = searchParams.get("onboarding");
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   /**
    * requestAnimationFrame 이후 CSS 애니메이션 트리거.
@@ -72,7 +78,14 @@ function SuccessContent() {
         }
       `}</style>
 
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-orange-50 to-white select-none">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center select-none"
+        style={{
+          background: isDark
+            ? `linear-gradient(to bottom, ${darkPalette.background}, ${darkPalette.pageBackground})`
+            : "linear-gradient(to bottom, #fff7ed, #ffffff)",
+        }}
+      >
 
         {/* ── 체크마크 + 스파클 ── */}
         <div className="relative w-28 h-28 mb-8">
@@ -129,28 +142,33 @@ function SuccessContent() {
 
         {/* ── 텍스트 ── */}
         <h1
-          className="text-2xl font-bold text-gray-800 mb-2"
-          style={
-            animStart
+          className="text-2xl font-bold mb-2"
+          style={{
+            color: isDark ? darkPalette.textPrimary : "#1f2937",
+            ...(animStart
               ? { animation: "auth-fade-up 0.5s ease-out 0.55s both" }
-              : { opacity: 0 }
-          }
+              : { opacity: 0 }),
+          }}
         >
           환영합니다! 🎉
         </h1>
         <p
-          className="text-gray-500 text-sm"
-          style={
-            animStart
+          className="text-sm"
+          style={{
+            color: isDark ? darkPalette.textSecondary : "#6b7280",
+            ...(animStart
               ? { animation: "auth-fade-up 0.5s ease-out 0.72s both" }
-              : { opacity: 0 }
-          }
+              : { opacity: 0 }),
+          }}
         >
           율무일기로 이동 중...
         </p>
 
         {/* ── 진행 바: DISPLAY_MS와 동일한 속도로 채워짐 ── */}
-        <div className="mt-10 w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="mt-10 w-48 h-1.5 rounded-full overflow-hidden"
+          style={{ backgroundColor: isDark ? darkPalette.surfaceSecondary : "#f3f4f6" }}
+        >
           {animStart && (
             <div
               className="h-full w-full bg-primary-500 rounded-full origin-left"

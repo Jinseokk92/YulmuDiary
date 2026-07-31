@@ -10,6 +10,7 @@ const EMOJI_LIST = ["❤️", "😍", "👏", "🎉", "😢"] as const;
 interface ReactionBarProps {
   postId: number;
   initialReactions: ReactionResponse[];
+  isDark?: boolean;
 }
 
 /** 이모지별 카운트와 내가 눌렀는지 여부를 계산 */
@@ -31,6 +32,7 @@ function summarize(reactions: ReactionResponse[], userId: number | null) {
 export default function ReactionBar({
   postId,
   initialReactions,
+  isDark = false,
 }: ReactionBarProps) {
   const { currentUser } = useUser();
   const [reactions, setReactions] = useState<ReactionResponse[]>(initialReactions ?? []);
@@ -107,8 +109,8 @@ export default function ReactionBar({
             className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-sm transition-colors
               ${
                 info.mine
-                  ? "bg-primary-50 ring-1 ring-primary-200"
-                  : "bg-gray-50 hover:bg-gray-100"
+                  ? isDark ? "bg-primary-500/10 ring-1 ring-primary-500/30" : "bg-primary-50 ring-1 ring-primary-200"
+                  : isDark ? "bg-[#1A1A1A] hover:bg-[#2A2A2A]" : "bg-gray-50 hover:bg-gray-100"
               }
               ${pending !== null ? "opacity-60 cursor-not-allowed" : "active:scale-95"}`}
           >
@@ -116,7 +118,7 @@ export default function ReactionBar({
             {info.count > 0 && (
               <span
                 className={`text-xs font-medium ${
-                  info.mine ? "text-primary-600" : "text-gray-500"
+                  info.mine ? "text-primary-600" : isDark ? "text-[#A8A8A8]" : "text-gray-500"
                 }`}
               >
                 {info.count}

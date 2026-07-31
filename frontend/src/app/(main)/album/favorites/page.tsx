@@ -74,9 +74,9 @@ export default function AlbumFavoritesPage() {
   }, [cursor, hasNext, fetchFavorites]);
 
   const isDark = mounted && resolvedTheme === "dark";
-  const titleColor = isDark ? "text-slate-100" : "text-gray-900";
-  const subColor = isDark ? "text-slate-500" : "text-gray-400";
-  const loadingTone = isDark ? "bg-slate-950/35" : "bg-slate-50/35";
+  const titleColor = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const subColor = isDark ? "text-[#A8A8A8]" : "text-gray-400";
+  const loadingTone = isDark ? "bg-[#1A1A1A]/35" : "bg-slate-50/35";
 
   return (
     <div>
@@ -93,7 +93,7 @@ export default function AlbumFavoritesPage() {
         </div>
       ) : photos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800" : "bg-emerald-50"}`}>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isDark ? "bg-[#1A1A1A]" : "bg-emerald-50"}`}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -119,7 +119,9 @@ export default function AlbumFavoritesPage() {
               <button
                 key={photo.id}
                 onClick={() => router.push(`/album/${photo.id}`)}
-                className="relative aspect-square overflow-hidden bg-gray-200 active:opacity-75 transition-opacity"
+                className={`relative aspect-square overflow-hidden active:opacity-75 transition-opacity ${
+                  isDark ? "bg-[#1A1A1A]" : "bg-gray-200"
+                }`}
               >
                 <Image
                   src={getMediaUrl(photo.thumbnailUrl ?? photo.url)}

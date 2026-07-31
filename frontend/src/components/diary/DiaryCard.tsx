@@ -430,11 +430,12 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
       <article
         ref={cardRef as RefObject<HTMLElement>}
         className={`border-b pb-8 mb-8 last:border-0 last:mb-0 backdrop-blur-sm
-          ${isDark ? "border-slate-800" : "border-gray-100"}`}
+          ${isDark ? "border-[#262626]" : "border-gray-100"}`}
         style={{
           backgroundColor: isHighlighted
             ? (isDark ? "rgba(120, 53, 15, 0.55)" : "#fff7ed")
-            : (isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)"),
+            // darkPalette.surface(#121212)의 rgb 표현에 카드 투명도(0.9)를 적용 — 홈 카드와 동일한 near-black 유리 느낌
+            : (isDark ? "rgba(18, 18, 18, 0.9)" : "rgba(255, 255, 255, 0.9)"),
           transition: "background-color 1.5s ease",
         }}
       >
@@ -448,10 +449,10 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               size="md"
             />
             <div className="flex flex-col">
-              <span className={`text-sm font-semibold leading-none ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+              <span className={`text-sm font-semibold leading-none ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                 {post.authorNickname}
               </span>
-              <span className={`text-[10px] mt-1 uppercase tracking-wider ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+              <span className={`text-[10px] mt-1 uppercase tracking-wider ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                 Family Member
               </span>
             </div>
@@ -468,7 +469,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   className={`p-2 transition-colors disabled:opacity-40 ${
                     isPinned
                       ? "text-primary-500"
-                      : "text-gray-300 dark:text-slate-600 hover:text-primary-500"
+                      : "text-gray-300 dark:text-[#737373] hover:text-primary-500"
                   }`}
                   aria-label={isPinned ? "고정 해제" : "고정하기"}
                 >
@@ -482,7 +483,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               {isAuthor && (
                 <button
                   onClick={handleEditStart}
-                  className="p-2 text-gray-300 dark:text-slate-600 hover:text-primary-500 transition-colors"
+                  className="p-2 text-gray-300 dark:text-[#737373] hover:text-primary-500 transition-colors"
                   aria-label="수정"
                 >
                   <svg
@@ -504,7 +505,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               {/* 삭제 — 작성자 또는 어드민 */}
               <button
                 onClick={() => setConfirmOpen(true)}
-                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                className="p-2 text-gray-300 dark:text-[#737373] hover:text-red-500 transition-colors"
                 aria-label="삭제"
               >
                 <svg
@@ -534,6 +535,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               diaryId={post.id}
               onImageClick={handleImageClick}
               onDoubleTap={handleCarouselDoubleTap}
+              isDark={isDark}
             />
 
             {/* 더블탭 하트 오버레이 (캐러셀 위) */}
@@ -589,7 +591,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   disableNativeDrag={disableNativeDrag}
                   onPreventDrag={handlePreventDrag}
                   className={`transition-all active:scale-90 ${
-                    isLiked ? "text-red-500" : isDark ? "text-slate-300 hover:text-red-500" : "text-gray-700 hover:text-red-500"
+                    isLiked ? "text-red-500" : isDark ? "text-[#A8A8A8] hover:text-red-500" : "text-gray-700 hover:text-red-500"
                   }`}
                 >
                   {isLiked ? (
@@ -622,7 +624,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   <button
                     onClick={() => setShowReactionUsers(true)}
                     className={`text-sm font-semibold leading-none active:opacity-60 transition-opacity ${
-                      isLiked ? "text-red-500" : isDark ? "text-slate-300" : "text-gray-700"
+                      isLiked ? "text-red-500" : isDark ? "text-[#A8A8A8]" : "text-gray-700"
                     }`}
                   >
                     {likeCount}
@@ -637,7 +639,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   ariaLabel="댓글 열기"
                   disableNativeDrag={disableNativeDrag}
                   onPreventDrag={handlePreventDrag}
-                  className={`hover:text-primary-500 transition-colors ${isDark ? "text-slate-300" : "text-gray-700"}`}
+                  className={`hover:text-primary-500 transition-colors ${isDark ? "text-[#A8A8A8]" : "text-gray-700"}`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -657,7 +659,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                 {localCommentCount > 0 && (
                   <button
                     onClick={handleBubbleClick}
-                    className={`text-sm font-semibold leading-none active:opacity-60 transition-opacity ${isDark ? "text-slate-300" : "text-gray-700"}`}
+                    className={`text-sm font-semibold leading-none active:opacity-60 transition-opacity ${isDark ? "text-[#A8A8A8]" : "text-gray-700"}`}
                   >
                     {localCommentCount}
                   </button>
@@ -678,7 +680,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                       : downloadState === "error"
                       ? "text-red-500"
                       : isDark
-                      ? "text-slate-400 hover:text-emerald-400"
+                      ? "text-[#737373] hover:text-emerald-400"
                       : "text-gray-400 hover:text-emerald-500"
                   }`}
                 >
@@ -723,7 +725,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                     className={`w-20 h-20 shrink-0 rounded-lg border-2 border-dashed
                                flex items-center justify-center text-2xl transition-colors
                                ${isDark
-                                 ? "border-slate-600 text-slate-500 hover:border-primary-500 hover:text-primary-400"
+                                 ? "border-[#262626] text-[#737373] hover:border-primary-500 hover:text-primary-400"
                                  : "border-gray-300 text-gray-400 hover:border-primary-400 hover:text-primary-500"
                                }`}
                     aria-label="이미지 추가"
@@ -749,7 +751,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                 className={`w-full text-sm rounded-xl p-3 resize-none outline-none transition-colors
                            focus:border-primary-400
                            ${isDark
-                             ? "text-slate-200 bg-slate-800 border border-slate-700"
+                             ? "text-[#F5F5F5] bg-[#1A1A1A] border border-[#262626]"
                              : "text-gray-800 bg-white border border-gray-200"
                            }`}
                 placeholder="일기 내용을 입력하세요"
@@ -761,7 +763,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                 className={`w-full text-sm rounded-xl px-3 py-2 outline-none transition-colors
                            focus:border-primary-400
                            ${isDark
-                             ? "border border-slate-700 text-slate-200 bg-slate-800 placeholder:text-slate-600"
+                             ? "border border-[#262626] text-[#F5F5F5] bg-[#1A1A1A] placeholder:text-[#737373]"
                              : "border border-gray-200 text-gray-700 bg-white placeholder:text-gray-300"
                            }`}
               />
@@ -770,7 +772,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   onClick={handleEditCancel}
                   className={`px-4 py-1.5 text-sm rounded-lg transition-colors
                              ${isDark
-                               ? "text-slate-400 border border-slate-700 hover:bg-slate-800"
+                               ? "text-[#A8A8A8] border border-[#262626] hover:bg-[#2A2A2A]"
                                : "text-gray-500 border border-gray-200 hover:bg-gray-50"
                              }`}
                 >
@@ -790,11 +792,11 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
             /* ── 읽기 모드 ── */
             <div className="space-y-1.5">
               {title && (
-                <h3 className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>{title}</h3>
+                <h3 className={`text-sm font-bold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{title}</h3>
               )}
               <p
                 ref={textRef}
-                className={`text-sm leading-relaxed ${isExpanded ? "" : "line-clamp-3"} ${isDark ? "text-slate-200" : "text-gray-800"}`}
+                className={`text-sm leading-relaxed ${isExpanded ? "" : "line-clamp-3"} ${isDark ? "text-[#F5F5F5]" : "text-gray-800"}`}
               >
                 <span className="font-bold mr-2">{post.authorNickname}</span>
                 {body}
@@ -802,7 +804,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               {!isExpanded && isTruncated && (
                 <button
                   onClick={() => setIsExpanded(true)}
-                  className={`text-sm ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-400 hover:text-gray-600"} transition-colors`}
+                  className={`text-sm ${isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5]" : "text-gray-400 hover:text-gray-600"} transition-colors`}
                 >
                   더보기
                 </button>
@@ -810,7 +812,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               {isExpanded && (
                 <button
                   onClick={() => setIsExpanded(false)}
-                  className={`text-sm ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-400 hover:text-gray-600"} transition-colors`}
+                  className={`text-sm ${isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5]" : "text-gray-400 hover:text-gray-600"} transition-colors`}
                 >
                   접기
                 </button>
@@ -828,11 +830,11 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
                   ))}
                 </div>
               )}
-              <p className={`text-[10px] uppercase pt-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+              <p className={`text-[10px] uppercase pt-1 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                 {formatRelativeTime(post.createdAt)}
               </p>
               {post.myLatestComment && (
-                <p className={`text-xs mt-1.5 truncate ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                <p className={`text-xs mt-1.5 truncate ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                   <span className="font-medium">내 댓글:</span> {post.myLatestComment}
                 </p>
               )}
@@ -887,7 +889,7 @@ function DiaryCardInner({ post, onDelete, disableNativeDrag = false, highlight =
               transition={{ duration: 0.2 }}
             >
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg
-                bg-slate-800/95 text-white text-sm font-medium whitespace-nowrap">
+                bg-[#121212]/95 text-white text-sm font-medium whitespace-nowrap">
                 <Pin size={13} fill="currentColor" className="text-primary-400 shrink-0" />
                 {pinToast}
               </div>

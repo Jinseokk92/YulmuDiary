@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SideDrawer from "@/components/layout/SideDrawer";
 import { useUiStore } from "@/stores/uiStore";
 import { api } from "@/lib/api";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const GUIDE_INTERVAL_MS = 3 * 60 * 1000; // 5분마다 반복 표시
 
@@ -132,8 +133,8 @@ export default function Header() {
       <header
         className="sticky top-0 z-30 border-b"
         style={{
-          backgroundColor: isDark ? "#0f172a" : "#ffffff",
-          borderColor: isDark ? "#1e293b" : "#e5e7eb",
+          backgroundColor: isDark ? darkPalette.navigationBackground : "#ffffff",
+          borderColor: isDark ? darkPalette.border : "#e5e7eb",
         }}
       >
         <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
@@ -162,7 +163,7 @@ export default function Header() {
                 style={{
                   color: fontSizeMode === "large"
                     ? "#e4701e"
-                    : isDark ? "#94a3b8" : "#9ca3af",
+                    : isDark ? darkPalette.textSecondary : "#9ca3af",
                 }}
                 aria-label={fontSizeMode === "large" ? "글자 크기 줄이기" : "글자 크기 키우기"}
                 title={fontSizeMode === "large" ? "글자 크기 줄이기" : "글자 크기 키우기"}
@@ -177,7 +178,7 @@ export default function Header() {
                 router.push("/notifications");
               }}
               className="relative p-2 rounded-lg transition-colors active:scale-95"
-              style={{ color: isDark ? "#94a3b8" : "#9ca3af" }}
+              style={{ color: isDark ? darkPalette.textSecondary : "#9ca3af" }}
               aria-label="알림"
             >
               <Bell size={20} />
@@ -198,7 +199,7 @@ export default function Header() {
                 className="relative p-2 rounded-xl active:scale-95 transition-all"
                 style={{ zIndex: demoGuideStep === 1 ? 1 : undefined }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = isDark ? "#1e293b" : "#f3f4f6")
+                  (e.currentTarget.style.backgroundColor = isDark ? darkPalette.hover : "#f3f4f6")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.backgroundColor = "transparent")
@@ -207,7 +208,7 @@ export default function Header() {
               >
                 <Menu
                   size={20}
-                  style={{ color: demoGuideStep === 1 ? "#f97316" : isDark ? "#64748b" : "#9ca3af" }}
+                  style={{ color: demoGuideStep === 1 ? "#f97316" : isDark ? darkPalette.textMuted : "#9ca3af" }}
                 />
               </button>
 
@@ -266,21 +267,24 @@ export default function Header() {
       {/* Step 1 가이드 오버레이: z-[25] → 헤더(z-30) 아래, 본문 위 */}
       {demoGuideStep === 1 && mounted && createPortal(
         <div
-          className="fixed inset-0 bg-black/50"
-          style={{ zIndex: 25 }}
+          className="fixed inset-0"
+          style={{ zIndex: 25, backgroundColor: isDark ? darkPalette.overlay : "rgba(0,0,0,0.5)" }}
           onClick={() => setShowSkip(true)}
         >
           {showSkip && (
             <div className="absolute inset-0 flex items-center justify-center px-8">
               <div
-                className="w-full max-w-xs rounded-2xl bg-white px-6 py-5 text-center shadow-2xl"
+                className={`w-full max-w-xs rounded-2xl px-6 py-5 text-center ${isDark ? "shadow-none" : "shadow-2xl"}`}
+                style={{ backgroundColor: isDark ? darkPalette.surface : "#ffffff" }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="mb-4 text-sm font-medium text-gray-800">가이드를 건너뛸까요?</p>
+                <p className="mb-4 text-sm font-medium" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>가이드를 건너뛸까요?</p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSkip(false)}
-                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors ${
+                      isDark ? "border-[#262626] text-[#A8A8A8] hover:bg-[#2A2A2A]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
                   >
                     취소
                   </button>
@@ -290,7 +294,9 @@ export default function Header() {
                       setDemoGuideStep(0);
                       setShowSkip(false);
                     }}
-                    className="flex-1 rounded-xl bg-gray-700 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-medium text-white transition-colors ${
+                      isDark ? "bg-[#2A2A2A] hover:bg-[#333333]" : "bg-gray-700 hover:bg-gray-800"
+                    }`}
                   >
                     건너뛰기
                   </button>

@@ -11,12 +11,13 @@ import PostDetailModal from "@/components/activity/PostDetailModal";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useUiStore } from "@/stores/uiStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const PAGE_SIZE = 20;
 
 function SkeletonRow({ isDark }: { isDark: boolean }) {
-  const bg = isDark ? "#1e293b" : "#f3f4f6";
-  const bg2 = isDark ? "#0f172a" : "#e5e7eb";
+  const bg = isDark ? darkPalette.border : "#f3f4f6";
+  const bg2 = isDark ? darkPalette.surfaceSecondary : "#e5e7eb";
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
@@ -39,12 +40,12 @@ function CommentRow({
   onClick: () => void;
   isDark: boolean;
 }) {
-  const contentColor = isDark ? "#e2e8f0" : "#111827";
-  const postColor = isDark ? "#64748b" : "#9ca3af";
-  const timeColor = isDark ? "#475569" : "#d1d5db";
-  const iconBg = isDark ? "#1e293b" : "#f3f4f6";
-  const iconColor = isDark ? "#64748b" : "#9ca3af";
-  const hoverBg = isDark ? "hover:bg-slate-800/60" : "hover:bg-gray-50";
+  const contentColor = isDark ? darkPalette.textPrimary : "#111827";
+  const postColor = isDark ? darkPalette.textMuted : "#9ca3af";
+  const timeColor = isDark ? darkPalette.textMuted : "#d1d5db";
+  const iconBg = isDark ? darkPalette.surfaceSecondary : "#f3f4f6";
+  const iconColor = isDark ? darkPalette.textMuted : "#9ca3af";
+  const hoverBg = isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-50";
 
   return (
     <button
@@ -104,7 +105,7 @@ export default function MyCommentsPage() {
 
   useEffect(() => setMounted(true), []);
   const isDark = mounted && resolvedTheme === "dark";
-  const dividerColor = isDark ? "#1e293b" : "#f3f4f6";
+  const dividerColor = isDark ? darkPalette.border : "#f3f4f6";
 
   const fetchComments = useCallback(async (cursor: number | null, force = false) => {
     if (loadingRef.current) return;
@@ -195,11 +196,11 @@ export default function MyCommentsPage() {
       >
         <div className="mx-auto max-w-lg pb-24">
           <div className="flex items-baseline gap-2 px-4 pb-4 pt-6">
-            <h1 className="text-lg font-bold" style={{ color: isDark ? "#e2e8f0" : "#111827" }}>
+            <h1 className="text-lg font-bold" style={{ color: isDark ? darkPalette.textPrimary : "#111827" }}>
               내 댓글
             </h1>
             {initialLoaded && comments.length > 0 && (
-              <span className="text-sm tabular-nums" style={{ color: isDark ? "#64748b" : "#9ca3af" }}>
+              <span className="text-sm tabular-nums" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>
                 {comments.length}
                 {hasNextRef.current ? "+" : ""}개
               </span>

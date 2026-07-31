@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { X, Crown, Trophy } from "lucide-react";
 import { getMediaUrl } from "@/lib/utils";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { BestPhotoStatusResponse } from "@/types";
 
 interface ResultModalProps {
@@ -39,10 +40,10 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
     };
   }, []);
 
-  const bg = isDark ? "bg-slate-900" : "bg-white";
-  const border = isDark ? "border-slate-800" : "border-gray-100";
-  const titleCls = isDark ? "text-slate-100" : "text-gray-900";
-  const subCls = isDark ? "text-slate-400" : "text-gray-500";
+  const bg = isDark ? "bg-[#121212]" : "bg-white";
+  const border = isDark ? "border-[#262626]" : "border-gray-100";
+  const titleCls = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const subCls = isDark ? "text-[#A8A8A8]" : "text-gray-500";
 
   const winnerSrc = getMediaUrl(result.winnerAlbumPhotoThumbnailUrl ?? result.winnerAlbumPhotoUrl);
 
@@ -51,7 +52,7 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
       {/* 백드롭 */}
       <motion.div
         className="fixed inset-0 z-[200]"
-        style={{ background: "rgba(15, 23, 42, 0.60)" }}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(15, 23, 42, 0.60)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -61,7 +62,7 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
 
       {/* 모달 */}
       <motion.div
-        className={`fixed z-[201] rounded-3xl shadow-2xl overflow-hidden ${bg}`}
+        className={`fixed z-[201] rounded-3xl overflow-hidden ${bg} ${isDark ? "shadow-none" : "shadow-2xl"}`}
         style={{
           top: "50%",
           left: "50%",
@@ -84,7 +85,7 @@ export default function ResultModal({ result, isDark, onClose }: ResultModalProp
             onClick={onClose}
             aria-label="닫기"
             className={`p-1.5 rounded-full transition-colors
-              ${isDark ? "text-slate-400 hover:bg-slate-800" : "text-gray-400 hover:bg-gray-100"}`}
+              ${isDark ? "text-[#A8A8A8] hover:bg-[#2A2A2A]" : "text-gray-400 hover:bg-gray-100"}`}
           >
             <X size={18} />
           </button>

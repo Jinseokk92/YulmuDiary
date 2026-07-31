@@ -7,14 +7,14 @@ export default function EmptyState({ title, description }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       {/* 빈 상태 일러스트 */}
-      <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+      <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-[#1A1A1A] flex items-center justify-center mb-4">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1}
           stroke="currentColor"
-          className="w-10 h-10 text-gray-300 dark:text-slate-600"
+          className="w-10 h-10 text-gray-300 dark:text-[#737373]"
         >
           <path
             strokeLinecap="round"
@@ -23,9 +23,9 @@ export default function EmptyState({ title, description }: EmptyStateProps) {
           />
         </svg>
       </div>
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-200 mb-1">{title}</h3>
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F5] mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs">{description}</p>
+        <p className="text-sm text-gray-500 dark:text-[#A8A8A8] max-w-xs">{description}</p>
       )}
     </div>
   );

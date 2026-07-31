@@ -15,6 +15,7 @@ import { api } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/utils";
 import type { NotificationPageResponse, NotificationResponse } from "@/types";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import { Bell, MessageCircle, Heart } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -156,18 +157,44 @@ const NotificationRow = memo(function NotificationRow({
 }) {
   const [thumbError, setThumbError] = useState(false);
 
-  const textPrimary   = isDark ? "#e2e8f0" : "#111827";
-  const textSecondary = isDark ? "#94a3b8" : "#9ca3af";
-  const textTertiary  = isDark ? "#64748b" : "#b0b7c3"; // 댓글 미리보기용 더 연한 색
-  const unreadBg      = isDark ? "#1e1409" : "#fff8f2";
+  const textPrimary   = isDark ? darkPalette.textPrimary : "#111827";
+  const textSecondary = isDark ? darkPalette.textSecondary : "#9ca3af";
+  const textTertiary  = isDark ? darkPalette.textMuted : "#b0b7c3"; // 댓글 미리보기용 더 연한 색
+  // 라이트 미읽 배경 (기존 그대로 유지)
+  const unreadBg      = "#fff8f2";
+
+  // 다크모드: 페이지 배경(near-black)과 행이 구분되지 않던 문제 → 카드로 분리.
+  // 읽음 카드는 surface + border, 미읽 카드는 surface 위 은은한 오렌지 틴트 +
+  // 좌측 강조선(3px)으로 "새 알림"을 표시한다. near-black 톤 자체는 유지한다.
+  const cardBg = isDark
+    ? (item.isRead ? darkPalette.surface : "rgba(228, 112, 30, 0.08)")
+    : (item.isRead ? "transparent" : unreadBg);
+  const cardBorder = isDark
+    ? (item.isRead ? darkPalette.border : "rgba(228, 112, 30, 0.35)")
+    : "transparent";
+  const cardBorderLeft = isDark
+    ? (item.isRead ? darkPalette.border : "#e4701e")
+    : "transparent";
 
   const hasThumbnail = !!item.diaryThumbnailUrl && !thumbError;
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-center gap-3 px-4 py-3 transition-colors active:opacity-70"
-      style={{ backgroundColor: item.isRead ? "transparent" : unreadBg }}
+      className={`w-full text-left flex items-center gap-3 transition-colors active:opacity-70 ${
+        isDark ? "rounded-2xl px-4 py-3.5" : "px-4 py-3"
+      }`}
+      style={
+        isDark
+          ? {
+              backgroundColor: cardBg,
+              border: `1px solid ${cardBorder}`,
+              borderLeft: `3px solid ${cardBorderLeft}`,
+            }
+          : { backgroundColor: cardBg }
+      }
+      onMouseEnter={isDark ? (e) => { e.currentTarget.style.backgroundColor = darkPalette.hover; } : undefined}
+      onMouseLeave={isDark ? (e) => { e.currentTarget.style.backgroundColor = cardBg; } : undefined}
     >
       {/* 아바타 + 타입 뱃지 */}
       <AvatarWithBadge
@@ -279,10 +306,10 @@ export default function NotificationsPage() {
   }, [fetchMore]);
 
   const isDark = mounted && resolvedTheme === "dark";
-  const bg          = isDark ? "#0f172a" : "#ffffff";
-  const textPrimary = isDark ? "#e2e8f0" : "#111827";
-  const textMuted   = isDark ? "#94a3b8" : "#6b7280";
-  const divider     = isDark ? "#1e293b" : "#f3f4f6";
+  const bg          = isDark ? darkPalette.background : "#ffffff";
+  const textPrimary = isDark ? darkPalette.textPrimary : "#111827";
+  const textMuted   = isDark ? darkPalette.textSecondary : "#6b7280";
+  const divider     = isDark ? darkPalette.border : "#f3f4f6";
 
   const grouped = useMemo(() => groupNotifications(items), [items]);
 
@@ -316,15 +343,15 @@ export default function NotificationsPage() {
         if (!group || group.length === 0) return null;
         return (
           <section key={label}>
-            <div className="px-4 pt-5 pb-1">
+            <div className={`px-4 pt-5 ${isDark ? "pb-2" : "pb-1"}`}>
               <h2
                 className="text-[13px] font-bold"
-                style={{ color: isDark ? "#94a3b8" : "#374151" }}
+                style={{ color: isDark ? darkPalette.textSecondary : "#374151" }}
               >
                 {label}
               </h2>
             </div>
-            <div>
+            <div className={isDark ? "px-4 space-y-2" : ""}>
               {group.map((item, idx) => (
                 <div key={item.id}>
                   <NotificationRow
@@ -332,7 +359,7 @@ export default function NotificationsPage() {
                     isDark={isDark}
                     onClick={() => router.push(`/diary?highlightId=${item.diaryPostId}`)}
                   />
-                  {idx < group.length - 1 && (
+                  {!isDark && idx < group.length - 1 && (
                     <div className="h-px mx-4" style={{ backgroundColor: divider }} />
                   )}
                 </div>

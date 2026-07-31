@@ -15,6 +15,7 @@
 ## 설계 원칙
 
 - **다크모드**: `darkMode: "class"` + next-themes. `dark:` prefix 대신 `isDark = mounted && resolvedTheme === "dark"` 분기 사용 (Tailwind dark: prefix는 dev 재시작 전 미반영)
+- **다크모드 팔레트**: 새 UI는 `src/lib/theme/darkPalette.ts`의 near-black 토큰(`background`, `pageBackground`, `surface`, `surfaceSecondary`, `border`, `hover`, `textPrimary`, `textSecondary`, `textMuted`, `overlay`)을 사용하고, `isDark` 분기로 라이트 모드 값은 유지한다. 체험판 UI를 포함해 흰색·slate·네이비 고정 배경을 만들지 않으며, 브랜드 오렌지와 성공·경고·삭제 등 의미색은 유지한다.
 - **이미지**: `next/image` + `remotePatterns`(GCS + localhost:8080). `getMediaUrl()`로 상대→절대 변환
 - **Optimistic UI**: 리액션 토글, 댓글 작성/삭제 (실패 시 롤백)
 - **카카오맵**: `useEffect`에서 `window.kakao?.maps` 존재 확인 (SPA 재방문 시 onLoad 미재실행 대응)

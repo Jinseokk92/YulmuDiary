@@ -8,6 +8,7 @@ import Image from "next/image";
 import { X, Pin } from "lucide-react";
 import type { DiaryPostResponse } from "@/types";
 import { formatRelativeTime, getMediaUrl } from "@/lib/utils";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 interface PinnedPostsModalProps {
   posts: DiaryPostResponse[];
@@ -52,7 +53,7 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
       {/* 백드롭 */}
       <motion.div
         className="fixed inset-0 z-[200]"
-        style={{ background: "rgba(15, 23, 42, 0.52)" }}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(15, 23, 42, 0.52)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -62,8 +63,8 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
 
       {/* 모달 */}
       <motion.div
-        className={`fixed z-[201] rounded-3xl shadow-2xl overflow-hidden
-          ${isDark ? "bg-slate-900 border border-slate-800" : "bg-white border border-white/60"}`}
+        className={`fixed z-[201] rounded-3xl overflow-hidden
+          ${isDark ? "bg-[#121212] border border-[#262626] shadow-none" : "bg-white border border-white/60 shadow-2xl"}`}
         style={{
           top: "50%",
           left: "50%",
@@ -79,13 +80,13 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
       >
         {/* 헤더 */}
         <div className={`flex items-center justify-between px-5 pt-5 pb-3
-          ${isDark ? "border-b border-slate-800" : "border-b border-gray-100"}`}>
+          ${isDark ? "border-b border-[#262626]" : "border-b border-gray-100"}`}>
           <div className="flex items-center gap-2">
             <Pin size={17} className="text-primary-500" fill="currentColor" />
-            <span className={`text-base font-bold ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+            <span className={`text-base font-bold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
               고정된 일기
             </span>
-            <span className={`text-sm font-semibold ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+            <span className={`text-sm font-semibold ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
               {posts.length}/3
             </span>
           </div>
@@ -93,7 +94,7 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
             onClick={onClose}
             aria-label="닫기"
             className={`p-1.5 rounded-full transition-colors
-              ${isDark ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
+              ${isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5] hover:bg-[#2A2A2A]" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
           >
             <X size={18} />
           </button>
@@ -117,13 +118,13 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
               <div
                 key={post.id}
                 className={`px-5 py-4 ${idx < posts.length - 1
-                  ? isDark ? "border-b border-slate-800" : "border-b border-gray-100"
+                  ? isDark ? "border-b border-[#262626]" : "border-b border-gray-100"
                   : ""}`}
               >
                 <div className="flex gap-3">
                   {/* 썸네일 */}
                   {thumbnail ? (
-                    <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700">
+                    <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-200 dark:bg-[#1A1A1A]">
                       <Image
                         src={thumbnail}
                         alt=""
@@ -135,7 +136,7 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
                     </div>
                   ) : (
                     <div className={`w-16 h-16 shrink-0 rounded-xl flex items-center justify-center text-2xl
-                      ${isDark ? "bg-slate-800" : "bg-primary-50"}`}>
+                      ${isDark ? "bg-[#1A1A1A]" : "bg-primary-50"}`}>
                       📖
                     </div>
                   )}
@@ -143,14 +144,14 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
                   {/* 본문 */}
                   <div className="flex-1 min-w-0">
                     {title && (
-                      <p className={`text-sm font-bold truncate ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+                      <p className={`text-sm font-bold truncate ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                         {title}
                       </p>
                     )}
-                    <p className={`text-sm line-clamp-2 leading-relaxed ${isDark ? "text-slate-300" : "text-gray-700"}`}>
+                    <p className={`text-sm line-clamp-2 leading-relaxed ${isDark ? "text-[#A8A8A8]" : "text-gray-700"}`}>
                       {body}
                     </p>
-                    <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                    <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                       <span className="font-medium">{post.authorNickname}</span>
                       <span>·</span>
                       <span>{formatRelativeTime(post.createdAt)}</span>
@@ -171,7 +172,7 @@ export default function PinnedPostsModal({ posts, onClose, isDark }: PinnedPosts
                   onClick={() => handleGoToPost(post.id)}
                   className={`mt-3 w-full py-2 rounded-xl text-sm font-semibold transition-colors
                     ${isDark
-                      ? "bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-700"
+                      ? "bg-[#1A1A1A] text-[#F5F5F5] hover:bg-[#2A2A2A] active:bg-[#2A2A2A]"
                       : "bg-primary-50 text-primary-600 hover:bg-primary-100 active:bg-primary-100"}`}
                 >
                   자세히 보기

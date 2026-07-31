@@ -376,7 +376,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/40"
+          className="fixed inset-0 bg-black/40 dark:bg-black/65"
           style={{ zIndex: 100 }}
           onClick={onClose}
         />
@@ -392,9 +392,9 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           animate={{ y: 0, transition: { type: "spring", stiffness: 400, damping: 40 } }}
           exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
           className="fixed left-0 right-0 mx-auto w-full max-w-lg
-                      bg-white dark:bg-slate-900 rounded-t-3xl
-                      border-t border-gray-100 dark:border-slate-800
-                      shadow-[0_-4px_24px_rgba(0,0,0,0.08)]
+                      bg-white dark:bg-[#121212] rounded-t-3xl
+                      border-t border-gray-100 dark:border-[#262626]
+                      shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-none
                       flex flex-col box-border"
           style={{
             y: dismissY,
@@ -408,15 +408,15 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           <div ref={handleAreaRef} style={{ touchAction: "none" }} className="shrink-0">
           {/* ── 핸들 바 ── */}
           <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700" />
+            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-[#2A2A2A]" />
           </div>
 
           {/* ── Header (고정) ── */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-slate-800">
-            <span className="text-sm font-semibold text-gray-800 dark:text-slate-200">댓글</span>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-[#262626]">
+            <span className="text-sm font-semibold text-gray-800 dark:text-[#F5F5F5]">댓글</span>
             <button
               onClick={onClose}
-              className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+              className="p-1 text-gray-400 dark:text-[#737373] hover:text-gray-600 dark:hover:text-[#A8A8A8] transition-colors"
               aria-label="닫기"
             >
               <svg
@@ -452,7 +452,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
           {/* ── Fixed Footer: 이모지 퀵 바 + 입력폼 ── */}
           {currentUser && (
-            <div className="shrink-0 border-t border-gray-100 dark:border-slate-800">
+            <div className="shrink-0 border-t border-gray-100 dark:border-[#262626]">
               {/* 이모지 퀵 바 */}
               <div className="flex items-center gap-0.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-none">
                 {QUICK_EMOJIS.map((emoji) => (
@@ -461,7 +461,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
                     type="button"
                     onClick={() => setInput((prev) => prev + emoji)}
                     className="text-xl shrink-0 w-9 h-9 flex items-center justify-center
-                               rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 active:scale-110
+                               rounded-full hover:bg-gray-100 dark:hover:bg-[#2A2A2A] active:scale-110
                                transition-transform"
                   >
                     {emoji}
@@ -484,14 +484,14 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
                   placeholder="댓글 달기..."
                   disabled={isSubmitting}
                   className="flex-1 text-sm bg-transparent border-none outline-none
-                             placeholder:text-gray-300 dark:placeholder:text-slate-600
-                             text-gray-700 dark:text-slate-200 py-1"
+                             placeholder:text-gray-300 dark:placeholder:text-[#737373]
+                             text-gray-700 dark:text-[#F5F5F5] py-1"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isSubmitting}
                   className="text-sm font-semibold text-primary-500 disabled:text-gray-300
-                             dark:disabled:text-slate-600 hover:text-primary-600 transition-colors shrink-0"
+                             dark:disabled:text-[#737373] hover:text-primary-600 transition-colors shrink-0"
                 >
                   게시
                 </button>

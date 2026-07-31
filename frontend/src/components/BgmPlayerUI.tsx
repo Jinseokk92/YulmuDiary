@@ -10,10 +10,10 @@ export const HOME_BGM_ANCHOR_ID = "home-bgm-anchor";
 export function getExpandedPlayerGlassStyle(isDark: boolean): CSSProperties {
   return isDark
     ? {
-        background: "rgba(15, 23, 42, 0.45)",
+        background: "rgba(0, 0, 0, 0.45)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
-        border: "1px solid rgba(148, 163, 184, 0.15)",
+        border: "1px solid rgba(168, 168, 168, 0.15)",
         boxShadow: "0 4px 32px rgba(0, 0, 0, 0.5)",
       }
     : {
@@ -28,13 +28,13 @@ export function getExpandedPlayerGlassStyle(isDark: boolean): CSSProperties {
 function getCollapsedTokenGlassStyle(isDark: boolean, isPlaying: boolean): CSSProperties {
   return isDark
     ? {
-        background: "rgba(15, 23, 42, 0.34)",
+        background: "rgba(0, 0, 0, 0.34)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
-        border: "1px solid rgba(148, 163, 184, 0.18)",
+        border: "1px solid rgba(168, 168, 168, 0.18)",
         boxShadow: isPlaying
           ? "0 10px 22px rgba(251, 146, 60, 0.22), 0 0 16px rgba(228, 112, 30, 0.18)"
-          : "0 8px 18px rgba(15, 23, 42, 0.18)",
+          : "0 8px 18px rgba(0, 0, 0, 0.18)",
       }
     : {
         background: "rgba(255, 255, 255, 0.72)",

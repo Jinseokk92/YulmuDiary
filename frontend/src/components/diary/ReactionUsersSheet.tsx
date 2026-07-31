@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { ReactionUserResponse } from "@/types";
 
 interface ReactionUsersSheetProps {
@@ -58,13 +59,13 @@ export default function ReactionUsersSheet({
 
   if (!mounted) return null;
 
-  const sheetBg   = isDark ? "#1e293b" : "#ffffff";
-  const border    = isDark ? "#334155" : "#f3f4f6";
-  const handleBg  = isDark ? "#475569" : "#e5e7eb";
-  const headerText = isDark ? "#f1f5f9" : "#111827";
-  const subText   = isDark ? "#94a3b8" : "#9ca3af";
-  const itemBg    = isDark ? "rgba(255,255,255,0.04)" : "#f9fafb";
-  const nickColor = isDark ? "#f1f5f9" : "#111827";
+  const sheetBg   = isDark ? darkPalette.surface : "#ffffff";
+  const border    = isDark ? darkPalette.border : "#f3f4f6";
+  const handleBg  = isDark ? darkPalette.hover : "#e5e7eb";
+  const headerText = isDark ? darkPalette.textPrimary : "#111827";
+  const subText   = isDark ? darkPalette.textSecondary : "#9ca3af";
+  const itemBg    = isDark ? darkPalette.surfaceSecondary : "#f9fafb";
+  const nickColor = isDark ? darkPalette.textPrimary : "#111827";
 
   return createPortal(
     <div className="fixed inset-0 z-[500] flex flex-col justify-end">
@@ -75,7 +76,7 @@ export default function ReactionUsersSheet({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="absolute inset-0"
-        style={{ background: isDark ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.35)" }}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.35)" }}
         onClick={onClose}
       />
 
@@ -89,7 +90,7 @@ export default function ReactionUsersSheet({
         style={{
           background: sheetBg,
           borderTop: `1px solid ${border}`,
-          boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
+          boxShadow: isDark ? "none" : "0 -8px 32px rgba(0,0,0,0.12)",
           maxWidth: 480,
           width: "100%",
           marginLeft: "auto",

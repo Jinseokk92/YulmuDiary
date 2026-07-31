@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { getMediaUrl } from "@/lib/utils";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/ui/Toast";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { BestPhotoNominationResponse } from "@/types";
 
 interface VotingModalProps {
@@ -79,10 +80,10 @@ export default function VotingModal({
     }
   };
 
-  const bg = isDark ? "bg-slate-900" : "bg-white";
-  const border = isDark ? "border-slate-800" : "border-gray-100";
-  const titleCls = isDark ? "text-slate-100" : "text-gray-900";
-  const subCls = isDark ? "text-slate-400" : "text-gray-500";
+  const bg = isDark ? "bg-[#121212]" : "bg-white";
+  const border = isDark ? "border-[#262626]" : "border-gray-100";
+  const titleCls = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const subCls = isDark ? "text-[#A8A8A8]" : "text-gray-500";
 
   // roundId는 현재 사용되지 않지만 향후 확장을 위해 props로 유지
   void roundId;
@@ -92,7 +93,7 @@ export default function VotingModal({
       {/* 백드롭 */}
       <motion.div
         className="fixed inset-0 z-[200]"
-        style={{ background: "rgba(15, 23, 42, 0.52)" }}
+        style={{ background: isDark ? darkPalette.overlay : "rgba(15, 23, 42, 0.52)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -102,7 +103,7 @@ export default function VotingModal({
 
       {/* 바텀시트 */}
       <motion.div
-        className={`fixed z-[201] left-0 right-0 bottom-0 rounded-t-3xl shadow-2xl overflow-hidden ${bg}`}
+        className={`fixed z-[201] left-0 right-0 bottom-0 rounded-t-3xl overflow-hidden ${bg} ${isDark ? "shadow-none" : "shadow-2xl"}`}
         style={{ maxHeight: "90vh" }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
@@ -111,7 +112,7 @@ export default function VotingModal({
       >
         {/* 드래그 핸들 */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className={`w-10 h-1 rounded-full ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
+          <div className={`w-10 h-1 rounded-full ${isDark ? "bg-[#2A2A2A]" : "bg-gray-200"}`} />
         </div>
 
         {/* 헤더 */}
@@ -124,7 +125,7 @@ export default function VotingModal({
             onClick={onClose}
             aria-label="닫기"
             className={`p-1.5 rounded-full transition-colors
-              ${isDark ? "text-slate-400 hover:bg-slate-800" : "text-gray-400 hover:bg-gray-100"}`}
+              ${isDark ? "text-[#A8A8A8] hover:bg-[#2A2A2A]" : "text-gray-400 hover:bg-gray-100"}`}
           >
             <X size={18} />
           </button>
@@ -164,7 +165,7 @@ export default function VotingModal({
                     className={`relative rounded-2xl overflow-hidden aspect-square transition-all active:scale-[0.97]
                       ${isVotedThis
                         ? "ring-[3px] ring-amber-400 ring-offset-2"
-                        : isDark ? "bg-slate-800" : "bg-gray-100"}`}
+                        : isDark ? "bg-[#1A1A1A]" : "bg-gray-100"}`}
                     aria-label={`${nom.nominatorName}의 사진에 투표`}
                   >
                     <Image

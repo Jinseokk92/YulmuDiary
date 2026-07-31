@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FloatingYulmu from "@/components/FloatingYulmu";
 import LoginBackground from "@/components/LoginBackground";
 import { useAuthStore } from "@/stores/authStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -138,7 +139,7 @@ export default function LoginPage() {
           </h1>
           <p
             className="text-sm"
-            style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+            style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}
           >
             우리 아이의 소중한 순간을 가족과 함께
           </p>
@@ -161,9 +162,9 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
                        font-medium text-sm transition-all active:scale-[0.98]"
             style={isDark ? {
-              backgroundColor: "#1e293b",
-              color: "#e2e8f0",
-              border: "1px solid #334155",
+              backgroundColor: darkPalette.surfaceSecondary,
+              color: darkPalette.textPrimary,
+              border: `1px solid ${darkPalette.border}`,
             } : {
               backgroundColor: "#ffffff",
               color: "#374151",
@@ -179,8 +180,8 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
                        font-medium text-sm transition-all active:scale-[0.98]"
             style={isDark ? {
-              backgroundColor: "#1c1208",
-              border: "1px dashed #92400e",
+              backgroundColor: darkPalette.surfaceSecondary,
+              border: "1px dashed rgba(234,88,12,0.35)",
               color: "#fb923c",
             } : {
               backgroundColor: "#FFF3E8",
@@ -194,7 +195,7 @@ export default function LoginPage() {
 
         <p
           className="mt-8 text-xs"
-          style={{ color: isDark ? "#475569" : "#9ca3af" }}
+          style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}
         >
           로그인 시 서비스 이용약관에 동의하게 됩니다.
         </p>

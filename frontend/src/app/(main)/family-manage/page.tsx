@@ -1,19 +1,27 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays, Trophy, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Copy, Check, RefreshCw, Shield, CalendarDays, Trophy, Loader2, Camera } from "lucide-react";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
 import { useAuthStore } from "@/stores/authStore";
 import { useRequireAdmin } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { getMediaUrl } from "@/lib/utils";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { AdminInviteCodesResponse, AdminMemberResponse, AdminAppSettingsResponse, BestPhotoStatusResponse } from "@/types";
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
 const maskCode = (code: string) => code.slice(0, 3) + "***";
+const MAX_BABY_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB — 백엔드 AdminService.validateImageFile과 동일
+
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
@@ -26,8 +34,8 @@ function Card({ children, isDark }: { children: React.ReactNode; isDark: boolean
     <div
       className="rounded-2xl p-5 mb-4"
       style={{
-        background: isDark ? "rgba(30,41,59,0.7)" : "rgba(255,255,255,0.95)",
-        border: `1px solid ${isDark ? "#334155" : "#f3f4f6"}`,
+        background: isDark ? "rgba(18,18,18,0.85)" : "rgba(255,255,255,0.95)",
+        border: `1px solid ${isDark ? darkPalette.border : "#f3f4f6"}`,
         boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,0.06)",
       }}
     >
@@ -39,7 +47,7 @@ function Card({ children, isDark }: { children: React.ReactNode; isDark: boolean
 function SectionTitle({ title, isDark }: { title: string; isDark: boolean }) {
   return (
     <p className="text-xs font-bold uppercase tracking-wider mb-4"
-      style={{ color: isDark ? "#94a3b8" : "#9ca3af" }}>
+      style={{ color: isDark ? darkPalette.textSecondary : "#9ca3af" }}>
       {title}
     </p>
   );
@@ -75,11 +83,37 @@ export default function FamilyManagePage() {
   const [bestPhotoActing, setBestPhotoActing] = useState(false);
 
   // ── D. 앱 설정 ──────────────────────────────────────────────────────
-  const [settings, setSettings] = useState<{ babyName: string; dueDate: string } | null>(null);
+  const [settings, setSettings] = useState<{
+    babyName: string;
+    dueDate: string;
+    bornAt: string | null;
+    profileImageUrl: string | null;
+  } | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // 출생일시 (날짜 + 시간 분리 입력)
+  const [bornAtDate, setBornAtDate] = useState("");
+  const [bornAtTime, setBornAtTime] = useState("");
+  const [bornAtError, setBornAtError] = useState<string | null>(null);
+
+  // 출생일시 초기화
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  // 아기 대표 사진
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // 대표 사진 초기화
+  const [resetPhotoConfirmOpen, setResetPhotoConfirmOpen] = useState(false);
+  const [resettingPhoto, setResettingPhoto] = useState(false);
 
   // ── 초기 데이터 로드 ────────────────────────────────────────────────
   useEffect(() => {
@@ -95,7 +129,13 @@ export default function FamilyManagePage() {
       .finally(() => setMembersLoading(false));
 
     api.get<AdminAppSettingsResponse>("/api/admin/app-settings")
-      .then((s) => setSettings({ babyName: s.babyName, dueDate: s.dueDate }))
+      .then((s) => {
+        setSettings({ babyName: s.babyName, dueDate: s.dueDate, bornAt: s.bornAt, profileImageUrl: s.profileImageUrl });
+        if (s.bornAt) {
+          setBornAtDate(s.bornAt.slice(0, 10));
+          setBornAtTime(s.bornAt.slice(11, 16));
+        }
+      })
       .catch(() => {})
       .finally(() => setSettingsLoading(false));
 
@@ -183,13 +223,47 @@ export default function FamilyManagePage() {
   // ── 앱 설정 저장 ───────────────────────────────────────────────────
   const handleSaveSettings = useCallback(async () => {
     if (!settings) return;
+
+    const hasDate = bornAtDate.trim().length > 0;
+    const hasTime = bornAtTime.trim().length > 0;
+
+    // 출생일시: 날짜/시간 중 하나만 입력된 경우, 또는 미래 시각인 경우 저장을 막는다.
+    // 둘 다 비어 있으면 요청 바디에 bornAt 키 자체를 넣지 않는다 — settings.bornAt(이전 값)을
+    // fallback으로 채워 넣지 않으므로, 백엔드 PATCH 의미론(bornAt 없음 = 변경 없음)에 따라
+    // 서버에 이미 반영된 현재 상태(예: 초기화된 null)가 그대로 유지된다.
+    let bornAtPayload: string | undefined;
+    if (hasDate || hasTime) {
+      if (!hasDate || !hasTime) {
+        setBornAtError("출생일시는 날짜와 시간을 모두 입력해주세요.");
+        return;
+      }
+      const candidate = new Date(`${bornAtDate}T${bornAtTime}:00`);
+      if (Number.isNaN(candidate.getTime()) || candidate.getTime() > Date.now()) {
+        setBornAtError("출생일시는 미래로 설정할 수 없습니다.");
+        return;
+      }
+      bornAtPayload = `${bornAtDate}T${bornAtTime}:00`;
+    }
+    setBornAtError(null);
+
     setSavingSettings(true);
     try {
-      const updated = await api.patch<AdminAppSettingsResponse>("/api/admin/app-settings", {
+      const body: { babyName: string; dueDate: string; bornAt?: string } = {
         babyName: settings.babyName,
         dueDate: settings.dueDate,
-      });
-      setSettings({ babyName: updated.babyName, dueDate: updated.dueDate });
+      };
+      if (bornAtPayload) {
+        body.bornAt = bornAtPayload;
+      }
+      const updated = await api.patch<AdminAppSettingsResponse>("/api/admin/app-settings", body);
+      setSettings({ babyName: updated.babyName, dueDate: updated.dueDate, bornAt: updated.bornAt, profileImageUrl: updated.profileImageUrl });
+      if (updated.bornAt) {
+        setBornAtDate(updated.bornAt.slice(0, 10));
+        setBornAtTime(updated.bornAt.slice(11, 16));
+      } else {
+        setBornAtDate("");
+        setBornAtTime("");
+      }
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 2000);
     } catch {
@@ -197,15 +271,109 @@ export default function FamilyManagePage() {
     } finally {
       setSavingSettings(false);
     }
+  }, [settings, bornAtDate, bornAtTime]);
+
+  // ── 출생일시 초기화 ────────────────────────────────────────────────
+  const handleResetBornAt = useCallback(async () => {
+    if (!settings) return;
+    setResetting(true);
+    setResetError(null);
+    try {
+      const updated = await api.patch<AdminAppSettingsResponse>("/api/admin/app-settings", {
+        babyName: settings.babyName,
+        dueDate: settings.dueDate,
+        clearBornAt: true,
+      });
+
+      if (updated.bornAt !== null) {
+        // 서버가 null을 돌려주지 않았다면 초기화가 실제로 반영되지 않은 것이다.
+        // 성공으로 표시하지 않고 기존 입력값·상태는 그대로 유지한다.
+        setResetError("출생일시 초기화에 실패했습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      // 원자적 갱신: settings.bornAt / bornAtDate / bornAtTime을 한 번에 정리한다.
+      setSettings((prev) => (prev ? { ...prev, bornAt: null } : prev));
+      setBornAtDate("");
+      setBornAtTime("");
+      setBornAtError(null);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2500);
+    } catch (err) {
+      // 실패 시 기존 입력값·설정 상태는 그대로 두고 오류만 표시한다.
+      setResetError(err instanceof Error ? err.message : "출생일시 초기화에 실패했습니다.");
+    } finally {
+      setResetting(false);
+      setResetConfirmOpen(false);
+    }
   }, [settings]);
+
+  // ── 아기 대표 사진 업로드 ────────────────────────────────────────────
+  const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("이미지 파일만 업로드할 수 있습니다. (jpg, png, webp 등)");
+      return;
+    }
+    if (file.size > MAX_BABY_PHOTO_SIZE) {
+      setPhotoError("파일 크기는 5MB 이하여야 합니다.");
+      return;
+    }
+
+    const localUrl = URL.createObjectURL(file);
+    setPhotoPreview(localUrl); // 낙관적 프리뷰
+    setPhotoUploading(true);
+    setPhotoError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const updated = await api.putForm<AdminAppSettingsResponse>("/api/admin/app-settings/baby-photo", formData);
+      setSettings((prev) => (prev ? { ...prev, profileImageUrl: updated.profileImageUrl } : prev));
+      setPhotoPreview(updated.profileImageUrl ?? null);
+    } catch (err) {
+      setPhotoPreview(null); // 실패 시 기존 사진으로 복귀
+      setPhotoError(err instanceof Error ? err.message : "사진 업로드에 실패했습니다.");
+    } finally {
+      setPhotoUploading(false);
+      URL.revokeObjectURL(localUrl);
+    }
+  }, []);
+
+  // ── 아기 대표 사진 초기화 ────────────────────────────────────────────
+  const handleResetPhoto = useCallback(async () => {
+    setResettingPhoto(true);
+    setPhotoError(null);
+    try {
+      const updated = await api.delete<AdminAppSettingsResponse>("/api/admin/app-settings/baby-photo");
+
+      if (updated.profileImageUrl !== null) {
+        // 서버가 null을 돌려주지 않았다면 초기화가 실제로 반영되지 않은 것이다.
+        // 기존 사진·미리보기는 그대로 유지하고 오류만 표시한다.
+        setPhotoError("대표 사진 초기화에 실패했습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      setSettings((prev) => (prev ? { ...prev, profileImageUrl: null } : prev));
+      setPhotoPreview(null);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : "대표 사진 초기화에 실패했습니다.");
+    } finally {
+      setResettingPhoto(false);
+      setResetPhotoConfirmOpen(false);
+    }
+  }, []);
 
   if (!mounted || isLoading || !isAdmin) return null;
 
   // ── 색상 토큰 ────────────────────────────────────────────────────
-  const text      = isDark ? "#f1f5f9" : "#111827";
-  const subText   = isDark ? "#94a3b8" : "#6b7280";
-  const inputBg   = isDark ? "#1e293b" : "#f9fafb";
-  const inputBorder = isDark ? "#334155" : "#e5e7eb";
+  const text      = isDark ? darkPalette.textPrimary : "#111827";
+  const subText   = isDark ? darkPalette.textSecondary : "#6b7280";
+  const inputBg   = isDark ? darkPalette.surfaceSecondary : "#f9fafb";
+  const inputBorder = isDark ? darkPalette.border : "#e5e7eb";
 
   return (
     <div className="px-4 pt-3 pb-20">
@@ -271,7 +439,7 @@ export default function FamilyManagePage() {
                       disabled={!code}
                       className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors disabled:opacity-40"
                       style={{
-                        background: isCopied ? "#22c55e22" : (isDark ? "#1e293b" : "#f3f4f6"),
+                        background: isCopied ? "#22c55e22" : (isDark ? darkPalette.surfaceSecondary : "#f3f4f6"),
                         color: isCopied ? "#22c55e" : subText,
                         border: `1px solid ${inputBorder}`,
                       }}
@@ -286,9 +454,9 @@ export default function FamilyManagePage() {
                       disabled={!code}
                       className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors disabled:opacity-40"
                       style={{
-                        background: isDark ? "#1e293b" : "#fff1f2",
+                        background: isDark ? darkPalette.surfaceSecondary : "#fff1f2",
                         color: "#ef4444",
-                        border: `1px solid ${isDark ? "#334155" : "#fecaca"}`,
+                        border: `1px solid ${isDark ? darkPalette.border : "#fecaca"}`,
                       }}
                       aria-label="새 코드 발급"
                     >
@@ -396,15 +564,15 @@ export default function FamilyManagePage() {
                   <span className="text-sm font-bold" style={{ color: text }}>가족</span>
                   <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: isDark ? "rgba(100,116,139,0.2)" : "#f1f5f9",
-                      color: isDark ? "#94a3b8" : "#64748b",
+                      background: isDark ? darkPalette.surfaceSecondary : "#f1f5f9",
+                      color: isDark ? darkPalette.textSecondary : "#64748b",
                     }}>
                     {relatives.length}명
                   </span>
                 </div>
                 <div
                   className="rounded-xl overflow-hidden"
-                  style={{ border: `1px solid ${isDark ? "#334155" : "#e5e7eb"}` }}
+                  style={{ border: `1px solid ${isDark ? darkPalette.border : "#e5e7eb"}` }}
                 >
                   {relatives.length === 0
                     ? <p className="text-xs text-center py-3" style={{ color: subText }}>가족 멤버 없음</p>
@@ -422,7 +590,10 @@ export default function FamilyManagePage() {
         <SectionTitle title="전체 게시글 관리" isDark={isDark} />
         <div
           className="flex items-start gap-2.5 rounded-xl px-4 py-3"
-          style={{ background: isDark ? "rgba(234,88,12,0.08)" : "#fff7ed", border: "1px solid #fed7aa" }}
+          style={{
+            background: isDark ? "rgba(234,88,12,0.08)" : "#fff7ed",
+            border: `1px solid ${isDark ? "rgba(234,88,12,0.25)" : "#fed7aa"}`,
+          }}
         >
           <Shield size={14} className="text-primary-500 shrink-0 mt-0.5" />
           <p className="text-xs leading-relaxed" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
@@ -450,14 +621,14 @@ export default function FamilyManagePage() {
               <span className="text-sm px-2 py-0.5 rounded-full font-medium"
                 style={{
                   background: bestPhotoStatus?.status === "NONE" || !bestPhotoStatus
-                    ? (isDark ? "rgba(100,116,139,0.2)" : "#f1f5f9")
+                    ? (isDark ? darkPalette.surfaceSecondary : "#f1f5f9")
                     : bestPhotoStatus.status === "NOMINATING"
                     ? (isDark ? "rgba(245,158,11,0.15)" : "#fef3c7")
                     : bestPhotoStatus.status === "VOTING"
                     ? (isDark ? "rgba(59,130,246,0.15)" : "#eff6ff")
                     : (isDark ? "rgba(34,197,94,0.15)" : "#f0fdf4"),
                   color: bestPhotoStatus?.status === "NONE" || !bestPhotoStatus
-                    ? (isDark ? "#94a3b8" : "#64748b")
+                    ? (isDark ? darkPalette.textSecondary : "#64748b")
                     : bestPhotoStatus.status === "NOMINATING"
                     ? (isDark ? "#fbbf24" : "#d97706")
                     : bestPhotoStatus.status === "VOTING"
@@ -542,6 +713,77 @@ export default function FamilyManagePage() {
           </div>
         ) : settings && (
           <div className="space-y-4">
+            {/* 아기 대표 사진 */}
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: subText }}>
+                아기 대표 사진
+              </label>
+              <div className="flex items-center gap-3">
+                <div
+                  className="relative w-16 h-16 rounded-full overflow-hidden shrink-0"
+                  style={{ border: `1px solid ${inputBorder}` }}
+                >
+                  {(() => {
+                    const photoSrc = photoPreview ?? settings.profileImageUrl;
+                    return photoSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={getMediaUrl(photoSrc)} alt="아기 대표 사진" className="w-full h-full object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src="/icons/Smiling_Yulmu.png" alt="기본 아기 이미지" className="w-full h-full object-cover" />
+                    );
+                  })()}
+                  {photoUploading && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: "rgba(0,0,0,0.35)" }}
+                    >
+                      <Loader2 size={18} className="text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={photoUploading || resettingPhoto}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
+                      style={{
+                        background: isDark ? darkPalette.surfaceSecondary : "#f3f4f6",
+                        color: text,
+                        border: `1px solid ${inputBorder}`,
+                      }}
+                    >
+                      <Camera size={13} />
+                      {photoUploading ? "업로드 중..." : "사진 변경"}
+                    </button>
+                    {settings.profileImageUrl !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setResetPhotoConfirmOpen(true)}
+                        disabled={photoUploading || resettingPhoto}
+                        className="text-xs font-semibold underline decoration-dotted underline-offset-2 disabled:opacity-50"
+                        style={{ color: "#ef4444" }}
+                      >
+                        대표 사진 초기화
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoChange}
+                  />
+                  {photoError && (
+                    <p className="mt-1.5 text-xs" style={{ color: "#ef4444" }}>{photoError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* 아기 이름 */}
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: subText }}>
@@ -581,6 +823,67 @@ export default function FamilyManagePage() {
               </button>
             </div>
 
+            {/* 실제 출생일시 */}
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: subText }}>
+                실제 출생일시
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={bornAtDate}
+                  max={getTodayStr()}
+                  onChange={(e) => { setBornAtDate(e.target.value); setBornAtError(null); }}
+                  className="flex-[3] min-w-[9rem] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 transition-colors"
+                  style={{
+                    background: inputBg,
+                    border: `1px solid ${inputBorder}`,
+                    color: text,
+                    colorScheme: isDark ? "dark" : "light",
+                  }}
+                />
+                <input
+                  type="time"
+                  value={bornAtTime}
+                  onChange={(e) => { setBornAtTime(e.target.value); setBornAtError(null); }}
+                  className="flex-[2] min-w-[8.5rem] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 transition-colors"
+                  style={{
+                    background: inputBg,
+                    border: `1px solid ${inputBorder}`,
+                    color: text,
+                    colorScheme: isDark ? "dark" : "light",
+                  }}
+                />
+              </div>
+              {bornAtError ? (
+                <p className="mt-1.5 text-xs" style={{ color: "#ef4444" }}>{bornAtError}</p>
+              ) : (
+                <p className="mt-1.5 text-xs" style={{ color: subText }}>
+                  아직 출생하지 않았다면 비워두세요.
+                </p>
+              )}
+
+              {/* 출생일시 초기화 — 이미 저장된 출생일시가 있을 때만 노출 */}
+              {settings.bornAt !== null && (
+                <button
+                  type="button"
+                  onClick={() => { setResetError(null); setResetConfirmOpen(true); }}
+                  className="mt-2 text-xs font-semibold underline decoration-dotted underline-offset-2"
+                  style={{ color: "#ef4444" }}
+                >
+                  출생일시 초기화
+                </button>
+              )}
+              {resetError && (
+                <p className="mt-1.5 text-xs" style={{ color: "#ef4444" }}>{resetError}</p>
+              )}
+              {resetSuccess && (
+                <p className="mt-1.5 text-xs" style={{ color: "#22c55e" }}>
+                  출생일시가 초기화됐어요. 홈 화면이 다시 임신 상태로 표시돼요.
+                </p>
+              )}
+            </div>
+
             {/* 저장 버튼 */}
             <button
               onClick={handleSaveSettings}
@@ -606,6 +909,28 @@ export default function FamilyManagePage() {
         onConfirm={handleRegenerate}
         onCancel={() => setRegenConfirm(null)}
         loading={regenerating}
+      />
+
+      {/* ── 출생일시 초기화 확인 ── */}
+      <ConfirmModal
+        open={resetConfirmOpen}
+        title="출생일시를 초기화할까요?"
+        description="출생일시가 삭제되고 홈 화면은 다시 임신 상태로 표시돼요. 대표 사진은 유지됩니다."
+        confirmLabel="초기화"
+        onConfirm={handleResetBornAt}
+        onCancel={() => setResetConfirmOpen(false)}
+        loading={resetting}
+      />
+
+      {/* ── 대표 사진 초기화 확인 ── */}
+      <ConfirmModal
+        open={resetPhotoConfirmOpen}
+        title="대표 사진을 초기화할까요?"
+        description="업로드한 대표 사진이 삭제되고 기본 아기 일러스트로 돌아갑니다."
+        confirmLabel="초기화"
+        onConfirm={handleResetPhoto}
+        onCancel={() => setResetPhotoConfirmOpen(false)}
+        loading={resettingPhoto}
       />
 
       {/* ── 날짜 피커 ── */}

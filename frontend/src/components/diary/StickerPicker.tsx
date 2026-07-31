@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 interface StickerPickerProps {
   onSelect: (emoji: string) => void;
+  isDark?: boolean;
 }
 
 const CATEGORIES = [
@@ -29,7 +30,7 @@ const CATEGORIES = [
   },
 ] as const;
 
-export default function StickerPicker({ onSelect }: StickerPickerProps) {
+export default function StickerPicker({ onSelect, isDark = false }: StickerPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -53,7 +54,9 @@ export default function StickerPicker({ onSelect }: StickerPickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+        className={`flex items-center gap-1.5 text-sm transition-colors ${
+          isDark ? "text-[#737373] hover:text-[#A8A8A8]" : "text-gray-400 hover:text-gray-600"
+        }`}
         aria-label="이모지 삽입"
       >
         <svg
@@ -75,9 +78,13 @@ export default function StickerPicker({ onSelect }: StickerPickerProps) {
 
       {/* 피커 패널 */}
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg z-20">
+        <div className={`absolute bottom-full left-0 mb-2 w-72 rounded-xl z-20 border ${
+          isDark ? "bg-[#121212] border-[#262626]" : "bg-white border-gray-200 shadow-lg"
+        }`}>
           {/* 카테고리 탭 */}
-          <div className="flex border-b border-gray-100 px-1 pt-1 gap-0.5 overflow-x-auto scrollbar-hide">
+          <div className={`flex border-b px-1 pt-1 gap-0.5 overflow-x-auto scrollbar-hide ${
+            isDark ? "border-[#262626]" : "border-gray-100"
+          }`}>
             {CATEGORIES.map((cat, idx) => (
               <button
                 key={cat.label}
@@ -85,8 +92,8 @@ export default function StickerPicker({ onSelect }: StickerPickerProps) {
                 onClick={() => setActiveTab(idx)}
                 className={`shrink-0 px-2.5 py-1.5 text-xs rounded-t-lg transition-colors ${
                   activeTab === idx
-                    ? "bg-primary-50 text-primary-600 font-semibold"
-                    : "text-gray-400 hover:text-gray-600"
+                    ? isDark ? "bg-primary-500/15 text-primary-400 font-semibold" : "bg-primary-50 text-primary-600 font-semibold"
+                    : isDark ? "text-[#737373] hover:text-[#A8A8A8]" : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 {cat.label}
@@ -104,8 +111,10 @@ export default function StickerPicker({ onSelect }: StickerPickerProps) {
                   onSelect(emoji);
                   setIsOpen(false);
                 }}
-                className="flex items-center justify-center w-full aspect-square text-2xl
-                           rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                className={`flex items-center justify-center w-full aspect-square text-2xl
+                           rounded-lg transition-colors ${
+                             isDark ? "hover:bg-[#2A2A2A] active:bg-[#2A2A2A]" : "hover:bg-gray-100 active:bg-gray-200"
+                           }`}
               >
                 {emoji}
               </button>

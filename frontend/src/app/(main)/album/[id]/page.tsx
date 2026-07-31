@@ -222,10 +222,10 @@ export default function AlbumDetailPage() {
   const isDemoMode = mounted && sessionStorage.getItem("demoMode") === "true";
   const canDelete = !authLoading && isParent && !!photo;
 
-  const bg = isDark ? "bg-slate-950" : "bg-white";
-  const card = isDark ? "bg-slate-900" : "bg-gray-50";
-  const title = isDark ? "text-slate-100" : "text-gray-900";
-  const sub = isDark ? "text-slate-400" : "text-gray-500";
+  const bg = isDark ? "bg-black" : "bg-white";
+  const card = isDark ? "bg-[#121212]" : "bg-gray-50";
+  const title = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const sub = isDark ? "text-[#A8A8A8]" : "text-gray-500";
   const badge = isDark
     ? "bg-emerald-900/50 text-emerald-300"
     : "bg-emerald-50 text-emerald-600";
@@ -275,7 +275,7 @@ export default function AlbumDetailPage() {
                 className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors
                             disabled:opacity-40 active:scale-[0.98]
                             ${isDark
-                              ? "text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                              ? "text-[#A8A8A8] hover:bg-[#2A2A2A] hover:text-red-400"
                               : "text-gray-400 hover:bg-gray-100 hover:text-red-500"}`}
               >
                 <TrashIcon />
@@ -286,11 +286,11 @@ export default function AlbumDetailPage() {
 
         {!photo ? (
           <div className="animate-pulse">
-            <div className="aspect-square w-full bg-gray-200" />
+            <div className={`aspect-square w-full ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
             <div className="px-4 py-5 space-y-3">
-              <div className="h-5 w-20 bg-gray-200 rounded-full" />
-              <div className="h-4 w-28 bg-gray-200 rounded" />
-              <div className="h-4 w-48 bg-gray-200 rounded" />
+              <div className={`h-5 w-20 rounded-full ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
+              <div className={`h-4 w-28 rounded ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
+              <div className={`h-4 w-48 rounded ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
             </div>
           </div>
         ) : (
@@ -364,7 +364,7 @@ export default function AlbumDetailPage() {
 
               <div
                 className={`flex items-center gap-1.5 pt-1 border-t ${
-                  isDark ? "border-slate-800" : "border-gray-100"
+                  isDark ? "border-[#262626]" : "border-gray-100"
                 }`}
               >
                 <svg
@@ -398,7 +398,7 @@ export default function AlbumDetailPage() {
                               ? isDark ? "bg-blue-900/40 text-blue-300" : "bg-blue-50 text-blue-600"
                               : downloadState === "error"
                               ? isDark ? "bg-red-900/40 text-red-300" : "bg-red-50 text-red-500"
-                              : isDark ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                              : isDark ? "bg-[#1A1A1A] text-[#F5F5F5] hover:bg-[#2A2A2A]"
                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
               >
                 {downloadState === "loading"  && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -427,7 +427,7 @@ export default function AlbumDetailPage() {
                               ${nominationId !== null
                                 ? isDark ? "bg-amber-900/30 text-amber-300 ring-1 ring-amber-700/50"
                                          : "bg-amber-50 text-amber-600 ring-1 ring-amber-200"
-                                : isDark ? "bg-slate-800 text-slate-200"
+                                : isDark ? "bg-[#1A1A1A] text-[#F5F5F5]"
                                          : "bg-gray-100 text-gray-700"}`}
                 >
                   {nominateState === "loading"

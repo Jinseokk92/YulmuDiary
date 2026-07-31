@@ -36,14 +36,14 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
   const activeStyle = "bg-primary-500 text-white shadow-md";
 
   const inactiveStyle = isDark
-    ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
+    ? "bg-[#1A1A1A] text-[#F5F5F5] hover:bg-[#2A2A2A] border border-[#262626]"
     : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-sm";
 
   const disabledStyle = isDark
-    ? "bg-slate-800/40 text-slate-600 border border-slate-800 cursor-not-allowed"
+    ? "bg-[#1A1A1A]/40 text-[#737373] border border-[#262626] cursor-not-allowed"
     : "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed";
 
-  const ellipsisStyle = isDark ? "text-slate-500" : "text-gray-400";
+  const ellipsisStyle = isDark ? "text-[#737373]" : "text-gray-400";
 
   return (
     <div className="flex items-center justify-center gap-2 py-6 flex-wrap">

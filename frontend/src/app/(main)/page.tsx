@@ -13,11 +13,24 @@ import PinnedPostsModal from "@/components/diary/PinnedPostsModal";
 import VotingModal from "@/components/bestphoto/VotingModal";
 import ResultModal from "@/components/bestphoto/ResultModal";
 import { getMediaUrl } from "@/lib/utils";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { BabyResponse, DiaryPostResponse, BestPhotoStatusResponse } from "@/types";
 
 const BABY_ID = 1;
-const LS_DDAY = "home_dday";
-const LS_PREGNANCY = "home_pregnancy";
+// v2: 출산 후 상태를 함께 캐싱한다. 캐시 스키마가 바뀌었으므로 키를 버전업해
+// 예전 임신 캐시(home_dday/home_pregnancy)가 출산 후 화면에 섞여 들어오지 않게 한다.
+const LS_HOME_CACHE = "home_baby_cache_v2";
+
+interface HomeBabyCache {
+  born: boolean;
+  dday?: string;
+  pregnancyDisplay?: string;
+  babyName?: string;
+  ageWeeks?: number;
+  ageRemainDays?: number;
+  ageDays?: number;
+  profileImageUrl?: string | null;
+}
 
 export default function Home() {
   const HERO_FRAME_WIDTH = 184;
@@ -30,6 +43,12 @@ export default function Home() {
   const [dday, setDday]                         = useState<string | null>(null);
   const [pregnancyDisplay, setPregnancyDisplay] = useState<string | null>(null);
   const [pregnancyProgress, setPregnancyProgress] = useState<number | null>(null);
+  const [born, setBorn] = useState(false);
+  const [babyName, setBabyName] = useState<string | null>(null);
+  const [ageWeeks, setAgeWeeks] = useState<number | null>(null);
+  const [ageRemainDays, setAgeRemainDays] = useState<number | null>(null);
+  const [ageDays, setAgeDays] = useState<number | null>(null);
+  const [babyProfileImageUrl, setBabyProfileImageUrl] = useState<string | null>(null);
   const [pinnedPosts, setPinnedPosts] = useState<DiaryPostResponse[]>([]);
   const [pinnedModalOpen, setPinnedModalOpen] = useState(false);
   const [bestPhotoStatus, setBestPhotoStatus] = useState<BestPhotoStatusResponse | null>(null);
@@ -39,14 +58,47 @@ export default function Home() {
     setMounted(true);
 
     // 캐시된 값을 즉시 표시
-    const cachedDday = localStorage.getItem(LS_DDAY);
-    const cachedPregnancy = localStorage.getItem(LS_PREGNANCY);
-    if (cachedDday) setDday(cachedDday);
-    if (cachedPregnancy) setPregnancyDisplay(cachedPregnancy);
+    try {
+      const cachedRaw = localStorage.getItem(LS_HOME_CACHE);
+      if (cachedRaw) {
+        const cached: HomeBabyCache = JSON.parse(cachedRaw);
+        if (cached.born) {
+          setBorn(true);
+          setBabyName(cached.babyName ?? null);
+          setAgeWeeks(cached.ageWeeks ?? null);
+          setAgeRemainDays(cached.ageRemainDays ?? null);
+          setAgeDays(cached.ageDays ?? null);
+          setBabyProfileImageUrl(cached.profileImageUrl ?? null);
+        } else {
+          if (cached.dday) setDday(cached.dday);
+          if (cached.pregnancyDisplay) setPregnancyDisplay(cached.pregnancyDisplay);
+        }
+      }
+    } catch {}
 
     // 아기 정보 + 고정 글 동시 요청
     api.get<BabyResponse>(`/api/babies/${BABY_ID}`)
       .then((baby) => {
+        if (baby.born) {
+          setBorn(true);
+          setBabyName(baby.name);
+          setAgeWeeks(baby.ageWeeks);
+          setAgeRemainDays(baby.ageRemainDays);
+          setAgeDays(baby.ageDays);
+          setBabyProfileImageUrl(baby.profileImageUrl);
+          const cache: HomeBabyCache = {
+            born: true,
+            babyName: baby.name,
+            ageWeeks: baby.ageWeeks,
+            ageRemainDays: baby.ageRemainDays,
+            ageDays: baby.ageDays,
+            profileImageUrl: baby.profileImageUrl,
+          };
+          localStorage.setItem(LS_HOME_CACHE, JSON.stringify(cache));
+          return;
+        }
+
+        setBorn(false);
         const { dDayCount, pregnancyWeeks, pregnancyDays } = baby;
         const ddayStr = dDayCount === 0 ? "D-Day"
           : dDayCount > 0 ? `D-${dDayCount}`
@@ -59,8 +111,8 @@ export default function Home() {
         setDday(ddayStr);
         setPregnancyDisplay(pregnancyStr);
         setPregnancyProgress(progressPct);
-        localStorage.setItem(LS_DDAY, ddayStr);
-        localStorage.setItem(LS_PREGNANCY, pregnancyStr);
+        const cache: HomeBabyCache = { born: false, dday: ddayStr, pregnancyDisplay: pregnancyStr };
+        localStorage.setItem(LS_HOME_CACHE, JSON.stringify(cache));
       })
       .catch(() => {});
 
@@ -75,35 +127,57 @@ export default function Home() {
 
   const isDark = mounted && resolvedTheme === "dark";
 
-  const card     = isDark ? "bg-slate-900/80 border border-slate-800" : "bg-white/90 border border-white/60";
-  const sub      = isDark ? "text-slate-400" : "text-gray-400";
-  const title    = isDark ? "text-slate-100" : "text-gray-900";
-  const desc     = isDark ? "text-slate-500" : "text-gray-400";
-  const label    = isDark ? "text-slate-200" : "text-gray-800";
-  const skelCls  = `inline-block rounded align-middle animate-pulse ${isDark ? "bg-slate-700" : "bg-gray-200"}`;
+  const card     = isDark ? "bg-[#121212]/90 border border-[#262626]" : "bg-white/90 border border-white/60";
+  const sub      = isDark ? "text-[#A8A8A8]" : "text-gray-400";
+  const title    = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const desc     = isDark ? "text-[#737373]" : "text-gray-400";
+  const label    = isDark ? "text-[#F5F5F5]" : "text-gray-800";
+  const skelCls  = `inline-block rounded align-middle animate-pulse ${isDark ? "bg-[#262626]" : "bg-gray-200"}`;
 
   return (
     <div className="px-4 py-6 space-y-4">
       {/* 상단: D-day 카드 */}
       <section className={`${card} rounded-2xl p-6 shadow-sm text-center backdrop-blur-sm`}>
-        <p className={`text-sm ${sub} mb-1`}>율무와 만날 때까지</p>
-        <h2 className={`text-2xl font-bold ${title}`}>
-          임신{" "}
-          <span className="text-primary-500">
-            {pregnancyDisplay != null
-              ? pregnancyDisplay
-              : <span className={`${skelCls} w-14 h-5`} />}
-          </span>
-          차
-        </h2>
-        <p className="mt-2 text-xl font-bold text-primary-500">
-          {dday != null
-            ? dday
-            : <span className={`${skelCls} w-12 h-5`} />}
-        </p>
+        {born ? (
+          <>
+            <p className={`text-sm ${sub} mb-1`}>{babyName ?? "율무"}와 만난 지</p>
+            <h2 className={`text-2xl font-bold ${title}`}>
+              생후{" "}
+              <span className="text-primary-500">
+                {ageWeeks != null && ageRemainDays != null
+                  ? `${ageWeeks}주 ${ageRemainDays}일`
+                  : <span className={`${skelCls} w-14 h-5`} />}
+              </span>
+              차
+            </h2>
+            <p className="mt-2 text-xl font-bold text-primary-500">
+              {ageDays != null
+                ? `D+${ageDays}`
+                : <span className={`${skelCls} w-12 h-5`} />}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className={`text-sm ${sub} mb-1`}>율무와 만날 때까지</p>
+            <h2 className={`text-2xl font-bold ${title}`}>
+              임신{" "}
+              <span className="text-primary-500">
+                {pregnancyDisplay != null
+                  ? pregnancyDisplay
+                  : <span className={`${skelCls} w-14 h-5`} />}
+              </span>
+              차
+            </h2>
+            <p className="mt-2 text-xl font-bold text-primary-500">
+              {dday != null
+                ? dday
+                : <span className={`${skelCls} w-12 h-5`} />}
+            </p>
+          </>
+        )}
 
-        {/* 임신 진행률 프로그레스바 */}
-        {pregnancyProgress !== null && (() => {
+        {/* 임신 진행률 프로그레스바 (출산 전에만 노출) */}
+        {!born && pregnancyProgress !== null && (() => {
           const clampedPct = Math.max(3, Math.min(97, pregnancyProgress));
           return (
             <div className="mt-5">
@@ -136,7 +210,7 @@ export default function Home() {
                 <div
                   className="relative h-4 rounded-full overflow-hidden"
                   style={{
-                    background: isDark ? "rgba(15,23,42,0.75)" : "#ffedd5",
+                    background: isDark ? darkPalette.surfaceSecondary : "#ffedd5",
                     boxShadow: isDark
                       ? "inset 0 2px 4px rgba(0,0,0,0.55), inset 0 1px 2px rgba(0,0,0,0.35)"
                       : "inset 0 2px 3px rgba(0,0,0,0.1), inset 0 1px 2px rgba(0,0,0,0.06)",
@@ -191,7 +265,7 @@ export default function Home() {
               >
                 <div className={`relative flex items-center justify-center w-9 h-9 rounded-full shadow-md
                   ${isDark
-                    ? "bg-slate-800 border border-slate-700"
+                    ? "bg-[#1A1A1A] border border-[#262626]"
                     : "bg-white border border-primary-100"}`}
                 >
                   <Pin size={17} className="text-primary-500" fill="currentColor" />
@@ -205,21 +279,40 @@ export default function Home() {
             )}
           </AnimatePresence>
 
-          {/* 살구색 원형 발판 배경 */}
-          <div
-            className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full border-4 shadow-lg
-                        ${isDark
-                          ? "bg-gradient-to-br from-slate-800 to-slate-700 border-slate-900"
-                          : "bg-gradient-to-br from-primary-100 to-primary-50 border-white"
-                        }`}
-          />
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-            <FloatingYulmu
-              src="/icons/Yulmu_Logo.png"
-              width={120}
-              height={180}
-            />
-          </div>
+          {born && babyProfileImageUrl ? (
+            /* 실제 아기 대표 사진 — 애니메이션 없이 원형 프레임에 정적으로 고정 */
+            <div
+              className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full overflow-hidden border-4 shadow-lg
+                          ${isDark ? "border-black" : "border-white"}`}
+            >
+              <Image
+                src={getMediaUrl(babyProfileImageUrl)}
+                alt={babyName ? `${babyName} 사진` : "아기 사진"}
+                fill
+                sizes="144px"
+                className="object-cover object-center"
+                priority
+              />
+            </div>
+          ) : (
+            <>
+              {/* 살구색 원형 발판 배경 */}
+              <div
+                className={`absolute bottom-0 left-1/2 w-36 h-36 -translate-x-1/2 rounded-full border-4 shadow-lg
+                            ${isDark
+                              ? "bg-gradient-to-br from-[#1A1A1A] to-[#121212] border-black"
+                              : "bg-gradient-to-br from-primary-100 to-primary-50 border-white"
+                            }`}
+              />
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                <FloatingYulmu
+                  src="/icons/Yulmu_Logo.png"
+                  width={120}
+                  height={180}
+                />
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -231,7 +324,7 @@ export default function Home() {
                      hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm`}
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center
-                          ${isDark ? "bg-slate-800" : "bg-primary-50"}`}>
+                          ${isDark ? "bg-primary-500/10" : "bg-primary-50"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
               strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-primary-500">
               <path strokeLinecap="round" strokeLinejoin="round"
@@ -250,7 +343,7 @@ export default function Home() {
                      hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm`}
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center
-                          ${isDark ? "bg-slate-800" : "bg-blue-50"}`}>
+                          ${isDark ? "bg-blue-500/10" : "bg-blue-50"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
               strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-500">
               <path strokeLinecap="round" strokeLinejoin="round"
@@ -269,7 +362,7 @@ export default function Home() {
                      hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm`}
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0
-                          ${isDark ? "bg-slate-800" : "bg-emerald-50"}`}>
+                          ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
               strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-emerald-500">
               <path strokeLinecap="round" strokeLinejoin="round"
@@ -339,7 +432,7 @@ export default function Home() {
                      hover:shadow-md active:scale-[0.98] transition-all backdrop-blur-sm`}
         >
           <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0
-                          ${isDark ? "bg-slate-800" : "bg-violet-50"}`}>
+                          ${isDark ? "bg-violet-500/10" : "bg-violet-50"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
               strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-violet-500">
               <path strokeLinecap="round" strokeLinejoin="round"

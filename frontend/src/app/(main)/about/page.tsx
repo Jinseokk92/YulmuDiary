@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 // ── 스크롤 fade-in 훅 ─────────────────────────────────────────────────────────
 
@@ -101,26 +102,27 @@ export default function AboutPage() {
 
   const isDark = mounted && resolvedTheme === "dark";
 
-  // 다크모드 대응 색상
-  const headerBg     = isDark ? "#0f172a"   : "transparent";
-  const headerBorder = isDark ? "#1e293b"   : "#f3f4f6";
-  const backColor    = isDark ? "#e2e8f0"   : "#4A3728";
+  // 다크모드 대응 색상 — 라이트의 편지지/세피아 콘셉트는 그대로 두고,
+  // 다크는 밝은 세피아 대신 near-black 표면 + 중성 텍스트로 재설계한다.
+  const headerBg     = isDark ? darkPalette.background : "transparent";
+  const headerBorder = isDark ? darkPalette.border : "#f3f4f6";
+  const backColor    = isDark ? darkPalette.textPrimary : "#4A3728";
   const heroBg       = isDark
-    ? "linear-gradient(180deg, #0f172a 0%, #1a1008 100%)"
+    ? `linear-gradient(180deg, ${darkPalette.background} 0%, ${darkPalette.pageBackground} 100%)`
     : "linear-gradient(180deg, #fffbf5 0%, #fdf4e7 100%)";
   const letterBg     = isDark
-    ? "linear-gradient(180deg, #1a1008 0%, #0f172a 60%, #1a1008 100%)"
+    ? `linear-gradient(180deg, ${darkPalette.background} 0%, ${darkPalette.surface} 60%, ${darkPalette.background} 100%)`
     : "linear-gradient(180deg, #fdf4e7 0%, #fff9f2 50%, #fdf4e7 100%)";
-  const creditsBg    = isDark ? "#0f172a"   : "#faf7f2";
-  const letterColor  = isDark ? "#d4b896"   : "#4A3728";
+  const creditsBg    = isDark ? darkPalette.background : "#faf7f2";
+  const letterColor  = isDark ? darkPalette.textPrimary : "#4A3728";
   const lastLineColor= isDark ? "#e4701e"   : "#e4701e";
-  const heroName     = isDark ? "#f5dcc0"   : "#3d2310";
-  const heroVersion  = isDark ? "#94a3b8"   : "#a18070";
-  const heroTagline  = isDark ? "#b08060"   : "#7a5c4a";
-  const creditsLabel = isDark ? "#64748b"   : "#9ca3af";
-  const creditsValue = isDark ? "#94a3b8"   : "#6b7280";
-  const dividerColor = isDark ? "#2d1e0f"   : "#e8d9c8";
-  const footerColor  = isDark ? "#475569"   : "#b0a090";
+  const heroName     = isDark ? darkPalette.textPrimary : "#3d2310";
+  const heroVersion  = isDark ? darkPalette.textSecondary : "#a18070";
+  const heroTagline  = isDark ? darkPalette.textSecondary : "#7a5c4a";
+  const creditsLabel = isDark ? darkPalette.textMuted : "#9ca3af";
+  const creditsValue = isDark ? darkPalette.textSecondary : "#6b7280";
+  const dividerColor = isDark ? darkPalette.border : "#e8d9c8";
+  const footerColor  = isDark ? darkPalette.textMuted : "#b0a090";
 
   const letterLines = [
     { text: "율무야,", delay: 0 },
@@ -138,7 +140,7 @@ export default function AboutPage() {
   return (
     <div
       className="min-h-screen pb-32 overflow-x-hidden"
-      style={{ background: isDark ? "#0f172a" : "#fffbf5" }}
+      style={{ background: isDark ? darkPalette.background : "#fffbf5" }}
     >
       {/* 헤더 */}
       <div
@@ -259,7 +261,7 @@ export default function AboutPage() {
         <FadeBlock delay={0} className="text-center">
           <p
             className="text-xl font-semibold mb-1"
-            style={{ color: isDark ? "#d4b896" : "#4A3728" }}
+            style={{ color: isDark ? darkPalette.textPrimary : "#4A3728" }}
           >
             Made with ❤️
           </p>
@@ -317,7 +319,7 @@ export default function AboutPage() {
         <a
           href="mailto:wjdwlstjrz@naver.com"
           className="text-xs underline underline-offset-2 transition-opacity active:opacity-60"
-          style={{ color: isDark ? "#94a3b8" : "#a18070" }}
+          style={{ color: isDark ? darkPalette.textSecondary : "#a18070" }}
         >
           문의: wjdwlstjrz@naver.com
         </a>

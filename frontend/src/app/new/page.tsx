@@ -2,11 +2,13 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
 import ImagePreview from "@/components/diary/ImagePreview";
 import type { ImageFile } from "@/components/diary/ImagePreview";
 import StickerPicker from "@/components/diary/StickerPicker";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { MediaUploadResponse, DiaryPostResponse, AlbumPhotoResponse } from "@/types";
 import { calcLmpFromDueDate, calcPregnancyWeek } from "@/lib/utils";
 
@@ -23,6 +25,10 @@ export default function NewPostPage() {
   const { currentUser } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -231,23 +237,35 @@ export default function NewPostPage() {
   const canSubmit = !isSubmitting && (content.trim() || images.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: isDark ? darkPalette.pageBackground : "#f9fafb" }}
+    >
       {/* 상단 헤더 */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+      <header
+        className="sticky top-0 z-30 border-b"
+        style={{
+          backgroundColor: isDark ? darkPalette.navigationBackground : "#ffffff",
+          borderColor: isDark ? darkPalette.border : "#e5e7eb",
+        }}
+      >
         <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
           <button
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-40"
+            className="text-sm disabled:opacity-40 transition-colors"
+            style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}
           >
             취소
           </button>
-          <h1 className="text-base font-semibold text-gray-900">새 일기</h1>
+          <h1 className="text-base font-semibold" style={{ color: isDark ? darkPalette.textPrimary : "#111827" }}>새 일기</h1>
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="text-sm font-semibold text-primary-500 hover:text-primary-600
-                       disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+            className={`text-sm font-semibold text-primary-500 hover:text-primary-600
+                       disabled:cursor-not-allowed transition-colors ${
+                         isDark ? "disabled:text-[#737373]" : "disabled:text-gray-300"
+                       }`}
           >
             {step === "uploading"
               ? "업로드 중..."
@@ -261,7 +279,13 @@ export default function NewPostPage() {
       {/* 에러 배너 */}
       {error && (
         <div className="max-w-lg mx-auto w-full px-4 pt-3">
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2 border"
+            style={{
+              backgroundColor: isDark ? "rgba(239,68,68,0.12)" : "#fef2f2",
+              borderColor: isDark ? "rgba(239,68,68,0.35)" : "#fecaca",
+            }}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -274,7 +298,7 @@ export default function NewPostPage() {
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm text-red-600 flex-1">{error}</p>
+            <p className="text-sm flex-1" style={{ color: isDark ? "#fca5a5" : "#dc2626" }}>{error}</p>
             <button
               onClick={() => setError(null)}
               className="text-red-400 hover:text-red-600"
@@ -294,10 +318,15 @@ export default function NewPostPage() {
 
       {/* 본문 영역 */}
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col px-4 py-4">
-        <div className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden flex flex-col">
+        <div
+          className={`rounded-xl overflow-hidden flex flex-col border ${
+            isDark ? "border-[#262626]" : "border-gray-200 shadow-sm"
+          }`}
+          style={{ backgroundColor: isDark ? darkPalette.surface : "#ffffff" }}
+        >
           {/* 상단: 사진 영역 */}
           <div className="p-4">
-            <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">사진</h2>
+            <h2 className="text-xs font-medium uppercase tracking-wide mb-3" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>사진</h2>
 
             <input
               ref={fileInputRef}
@@ -313,10 +342,12 @@ export default function NewPostPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isSubmitting}
-                className="w-full py-10 border-2 border-dashed border-gray-200 rounded-lg
-                           flex flex-col items-center gap-2 text-gray-400
+                className={`w-full py-10 border-2 border-dashed rounded-lg
+                           flex flex-col items-center gap-2
                            hover:border-primary-300 hover:text-primary-400
-                           disabled:opacity-40 transition-colors cursor-pointer"
+                           disabled:opacity-40 transition-colors cursor-pointer ${
+                             isDark ? "border-[#262626] text-[#737373]" : "border-gray-200 text-gray-400"
+                           }`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -338,17 +369,19 @@ export default function NewPostPage() {
                   />
                 </svg>
                 <span className="text-sm">사진을 추가해 보세요</span>
-                <span className="text-xs text-gray-300">최대 {MAX_IMAGES}장</span>
+                <span className="text-xs" style={{ color: isDark ? darkPalette.textMuted : "#d1d5db" }}>최대 {MAX_IMAGES}장</span>
               </button>
             ) : (
               <>
-                <ImagePreview images={images} onRemove={handleRemoveImage} />
+                <ImagePreview images={images} onRemove={handleRemoveImage} isDark={isDark} />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSubmitting || images.length >= MAX_IMAGES}
-                  className="mt-3 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700
-                             disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className={`mt-3 flex items-center gap-2 text-sm
+                             disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
+                               isDark ? "text-[#A8A8A8] hover:text-[#F5F5F5]" : "text-gray-500 hover:text-gray-700"
+                             }`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -366,13 +399,13 @@ export default function NewPostPage() {
                   </svg>
                   <span>
                     사진 추가{" "}
-                    <span className="text-gray-300">
+                    <span style={{ color: isDark ? darkPalette.textMuted : "#d1d5db" }}>
                       ({images.length}/{MAX_IMAGES})
                     </span>
                   </span>
                 </button>
                 {isDemoMode && (
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-gray-400">
+                  <p className="mt-2 flex items-center gap-1.5 text-sm" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -395,11 +428,14 @@ export default function NewPostPage() {
                 조건: 사진이 첨부되어 있고 + PARENT 역할인 경우에만 노출
                 RELATIVE 사용자에게는 이 블록 자체가 렌더링되지 않음         */}
             {showAlbumOption && (
-              <div className="mt-4 flex items-center justify-between
-                              bg-emerald-50 border border-emerald-100
-                              rounded-xl px-4 py-3">
+              <div className={`mt-4 flex items-center justify-between
+                              rounded-xl px-4 py-3 border ${
+                                isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-100"
+                              }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    isDark ? "bg-emerald-500/15" : "bg-emerald-100"
+                  }`}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -416,8 +452,8 @@ export default function NewPostPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">율무 앨범에도 저장</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{growthLabel}으로 저장</p>
+                    <p className="text-sm font-medium" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>율무 앨범에도 저장</p>
+                    <p className="text-xs mt-0.5" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>{growthLabel}으로 저장</p>
                   </div>
                 </div>
 
@@ -430,7 +466,7 @@ export default function NewPostPage() {
                   disabled={isSubmitting}
                   className={`relative w-11 h-6 rounded-full transition-colors duration-200
                              disabled:opacity-50 focus:outline-none
-                             ${saveToAlbum ? "bg-emerald-500" : "bg-gray-200"}`}
+                             ${saveToAlbum ? "bg-emerald-500" : isDark ? "bg-[#2A2A2A]" : "bg-gray-200"}`}
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm
@@ -443,12 +479,12 @@ export default function NewPostPage() {
           </div>
 
           {/* 구분선 */}
-          <div className="border-t border-gray-200" />
+          <div className="border-t" style={{ borderColor: isDark ? darkPalette.border : "#e5e7eb" }} />
 
           {/* 하단: 글 작성 영역 */}
           <div className="p-4 flex-1 flex flex-col space-y-4">
             <div>
-              <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">내용</h2>
+              <h2 className="text-xs font-medium uppercase tracking-wide mb-3" style={{ color: isDark ? darkPalette.textMuted : "#9ca3af" }}>내용</h2>
               <textarea
                 ref={textareaRef}
                 value={content}
@@ -461,20 +497,29 @@ export default function NewPostPage() {
                 }}
                 placeholder="오늘 아이의 하루를 기록해 보세요..."
                 disabled={isSubmitting}
-                className="w-full min-h-[200px] p-4 text-sm text-gray-800 placeholder:text-gray-300
-                           bg-gray-50 border border-gray-200 rounded-lg outline-none
+                className={`w-full min-h-[200px] p-4 text-sm border rounded-lg outline-none
                            focus:border-primary-500 focus:ring-1 focus:ring-primary-500
-                           transition-all resize-none disabled:opacity-50"
+                           transition-all resize-none disabled:opacity-50 ${
+                             isDark
+                               ? "text-[#F5F5F5] placeholder:text-[#737373] bg-[#1A1A1A] border-[#262626]"
+                               : "text-gray-800 placeholder:text-gray-300 bg-gray-50 border-gray-200"
+                           }`}
               />
             </div>
 
             {/* 해시태그 */}
-            <div className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className={`flex flex-wrap items-center gap-2 p-3 border rounded-lg ${
+              isDark ? "bg-[#1A1A1A] border-[#262626]" : "bg-gray-50 border-gray-200"
+            }`}>
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 bg-primary-50 text-primary-600
-                             text-xs font-medium px-2.5 py-1 rounded-full border border-primary-100"
+                  className={`inline-flex items-center gap-1
+                             text-xs font-medium px-2.5 py-1 rounded-full border ${
+                               isDark
+                                 ? "bg-primary-500/10 text-primary-400 border-primary-500/20"
+                                 : "bg-primary-50 text-primary-600 border-primary-100"
+                             }`}
                 >
                   #{tag}
                   <button
@@ -498,14 +543,15 @@ export default function NewPostPage() {
                 placeholder={tags.length === 0 ? "태그 입력 (예: 첫걸음마)" : "태그 추가..."}
                 maxLength={30}
                 disabled={isSubmitting}
-                className="flex-1 min-w-[120px] text-sm bg-transparent outline-none
-                           placeholder:text-gray-300 disabled:opacity-50"
+                className={`flex-1 min-w-[120px] text-sm bg-transparent outline-none disabled:opacity-50 ${
+                  isDark ? "text-[#F5F5F5] placeholder:text-[#737373]" : "placeholder:text-gray-300"
+                }`}
               />
             </div>
 
             {/* 이모지 툴바 */}
-            <div className="pt-2 border-t border-gray-100">
-              <StickerPicker onSelect={handleEmojiInsert} />
+            <div className="pt-2 border-t" style={{ borderColor: isDark ? darkPalette.border : "#f3f4f6" }}>
+              <StickerPicker onSelect={handleEmojiInsert} isDark={isDark} />
             </div>
           </div>
         </div>
@@ -513,9 +559,12 @@ export default function NewPostPage() {
 
       {/* 제출 진행 오버레이 */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-50 bg-white/80 flex flex-col items-center justify-center gap-3">
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3"
+          style={{ backgroundColor: isDark ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.8)" }}
+        >
           <div className="w-8 h-8 border-2 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">
+          <p className="text-sm" style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}>
             {step === "uploading"
               ? "사진을 업로드하고 있어요..."
               : step === "albumSaving"

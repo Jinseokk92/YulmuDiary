@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import Cookies from "js-cookie";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { FamilyMembershipResponse } from "@/types";
 
 export default function JoinPage() {
   const router = useRouter();
   const setFamilyGroup = useAuthStore((s) => s.setFamilyGroup);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [inviteCode, setInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +53,8 @@ export default function JoinPage() {
         {/* 안내 문구 */}
         <div className="text-center space-y-2">
           <div className="text-5xl mb-4">👶</div>
-          <h1 className="text-2xl font-bold text-gray-800">가족 그룹 참여</h1>
-          <p className="text-gray-500 text-sm leading-relaxed">
+          <h1 className="text-2xl font-bold" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>가족 그룹 참여</h1>
+          <p className="text-sm leading-relaxed" style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}>
             우리 아이의 초대 코드를 입력해 주세요.
             <br />
             코드는 가족 대표에게 받을 수 있어요.
@@ -62,7 +68,12 @@ export default function JoinPage() {
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
             placeholder="초대 코드 입력"
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-center text-lg tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-3 border rounded-xl text-center text-lg tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            style={{
+              borderColor: isDark ? darkPalette.border : "#d1d5db",
+              backgroundColor: isDark ? darkPalette.surfaceSecondary : "#ffffff",
+              color: isDark ? darkPalette.textPrimary : "#111827",
+            }}
             maxLength={20}
             disabled={isLoading}
             autoFocus

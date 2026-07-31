@@ -2,14 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 export default function DemoBanner() {
   const router = useRouter();
   const { isDemoMode, deactivateDemo } = useAuthStore();
   const [dismissed, setDismissed] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   // sessionStorage에서 배너 닫힘 여부 복원
   useEffect(() => {
@@ -45,9 +51,9 @@ export default function DemoBanner() {
           <div
             className="flex items-center justify-between gap-2 px-4 py-2 text-xs"
             style={{
-              backgroundColor: "#fff7ed",
-              borderBottom: "1px solid #fed7aa",
-              color: "#c2410c",
+              backgroundColor: isDark ? darkPalette.surfaceSecondary : "#fff7ed",
+              borderBottom: `1px solid ${isDark ? "rgba(234,88,12,0.3)" : "#fed7aa"}`,
+              color: isDark ? "#fb923c" : "#c2410c",
             }}
           >
             <span className="flex-1 text-center font-medium">
@@ -66,10 +72,12 @@ export default function DemoBanner() {
               </button>
               <button
                 onClick={handleDismiss}
-                className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-orange-100"
+                className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                  isDark ? "hover:bg-white/10" : "hover:bg-orange-100"
+                }`}
                 aria-label="배너 닫기"
               >
-                <X size={13} style={{ color: "#c2410c" }} />
+                <X size={13} style={{ color: isDark ? "#fb923c" : "#c2410c" }} />
               </button>
             </div>
           </div>

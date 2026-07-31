@@ -46,6 +46,8 @@ export interface AdminAppSettingsResponse {
   babyId: number;
   babyName: string;
   dueDate: string; // "YYYY-MM-DD"
+  bornAt: string | null; // "YYYY-MM-DDTHH:mm:ss"
+  profileImageUrl: string | null;
 }
 
 // --- Baby ---
@@ -54,11 +56,16 @@ export interface BabyResponse {
   id: number;
   name: string;
   dueDate: string;       // "YYYY-MM-DD"
-  dDayCount: number;     // 양수=D-N(미래), 0=D-Day, 음수=D+N(과거)
-  pregnancyWeeks: number;
-  pregnancyDays: number;
+  dDayCount: number;     // 양수=D-N(미래), 0=D-Day, 음수=D+N(과거) — born=true면 무의미
+  pregnancyWeeks: number; // born=true면 무의미
+  pregnancyDays: number;  // born=true면 무의미
   gender: string;
   profileImageUrl: string | null;
+  bornAt: string | null;  // "YYYY-MM-DDTHH:mm:ss" (출산 전이면 null)
+  born: boolean;          // 실제 출생 여부
+  ageDays: number;        // 생후 일수 (출생 당일 = 0) — born=false면 0
+  ageWeeks: number;       // ageDays / 7 — born=false면 0
+  ageRemainDays: number;  // ageDays % 7 — born=false면 0
 }
 
 // --- Media ---

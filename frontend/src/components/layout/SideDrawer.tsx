@@ -17,6 +17,7 @@ import { api } from "@/lib/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { resetDemoData } from "@/lib/demoData";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { UserResponse, UserStatsResponse } from "@/types";
 
 interface SideDrawerProps {
@@ -291,16 +292,22 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   };
 
   // 색상 토큰
-  const bg         = isDark ? "bg-[#0f172a]"      : "bg-white";
-  const text        = isDark ? "text-white"         : "text-gray-900";
-  const subText     = isDark ? "text-slate-400"     : "text-gray-500";
-  const divider     = isDark ? "border-slate-700"   : "border-gray-100";
-  const rowHover    = isDark ? "hover:bg-slate-800" : "hover:bg-gray-50";
-  const labelColor  = isDark ? "text-slate-500"     : "text-gray-400";
-  const itemColor   = isDark ? "text-slate-300"     : "text-gray-600";
-  const iconColor   = isDark ? "#64748b"            : "#9ca3af";
-  const inputBorder = isDark ? "border-slate-700 bg-slate-800/50 text-white placeholder-slate-500"
-                              : "border-gray-200 bg-white text-gray-900 placeholder-gray-400";
+  // 주의: Tailwind JIT는 소스에 리터럴로 존재하는 클래스 문자열만 인식하므로
+  // arbitrary-value 클래스(bg-[...] 등)는 darkPalette 값을 그대로 옮겨 적은
+  // 정적 문자열로 둔다 (템플릿 리터럴로 끼워 넣으면 클래스가 생성되지 않는다).
+  // 팔레트 값 자체의 단일 출처는 darkPalette.ts이며, 여기 리터럴들은 그 값과 동기화되어야 한다.
+  const bg         = isDark ? "bg-[#121212]"        : "bg-white";
+  const text        = isDark ? "text-[#F5F5F5]"       : "text-gray-900";
+  const subText     = isDark ? "text-[#A8A8A8]"       : "text-gray-500";
+  const divider     = isDark ? "border-[#262626]"     : "border-gray-100";
+  const rowHover    = isDark ? "hover:bg-[#2A2A2A]"   : "hover:bg-gray-50";
+  const labelColor  = isDark ? "text-[#737373]"       : "text-gray-400";
+  const itemColor   = isDark ? "text-[#A8A8A8]"       : "text-gray-600";
+  // 인라인 style로 소비되므로 darkPalette 토큰을 직접 참조해도 안전하다.
+  const iconColor   = isDark ? darkPalette.textMuted  : "#9ca3af";
+  const inputBorder = isDark
+    ? "border-[#262626] bg-[#1A1A1A] text-[#F5F5F5] placeholder-[#737373]"
+    : "border-gray-200 bg-white text-gray-900 placeholder-gray-400";
   const roleText    = isParent ? "율무 부모" : "율무 가족";
 
   // 프로필 수정 뷰에서 보여줄 아바타 소스
@@ -381,7 +388,7 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                         )}
                         {currentUser?.bio && (
                           <p
-                            className={`mt-2 text-xs leading-snug ${isDark ? "text-slate-300" : "text-gray-600"}`}
+                            className={`mt-2 text-xs leading-snug ${isDark ? "text-[#A8A8A8]" : "text-gray-600"}`}
                             style={{
                               display: "-webkit-box",
                               WebkitLineClamp: 2,
@@ -489,7 +496,7 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                               demoGuideStep === 2
                                 ? "bg-orange-50 text-orange-600"
                                 : isDark
-                                  ? "text-slate-400 hover:bg-slate-800"
+                                  ? "text-[#737373] hover:bg-[#2A2A2A]"
                                   : "text-gray-400 hover:bg-gray-50"
                             }`}
                           >
@@ -625,7 +632,11 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                     {demoNotice && (
                       <div
                         className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs"
-                        style={{ backgroundColor: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }}
+                        style={
+                          isDark
+                            ? { backgroundColor: darkPalette.surfaceSecondary, border: "1px solid rgba(234,88,12,0.35)", color: "#fb923c" }
+                            : { backgroundColor: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }
+                        }
                       >
                         <span className="flex-1 leading-snug">
                           프로필 수정은 로그인 후 이용할 수 있어요
@@ -647,7 +658,7 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
                         onClick={() => setView("menu")}
                         className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors ${
                           isDark
-                            ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                            ? "border-[#262626] text-[#A8A8A8] hover:bg-[#2A2A2A]"
                             : "border-gray-200 text-gray-600 hover:bg-gray-50"
                         }`}
                       >

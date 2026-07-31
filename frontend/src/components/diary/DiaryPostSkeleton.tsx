@@ -1,8 +1,17 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import Skeleton from "@/components/ui/Skeleton";
 
 export default function DiaryPostSkeleton() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
+
   return (
-    <div className="bg-white border-b border-gray-100">
+    <div className={isDark ? "bg-[#121212] border-b border-[#262626]" : "bg-white border-b border-gray-100"}>
       {/* 헤더: 아바타 + 이름 + 시간 */}
       <div className="flex items-center gap-3 px-4 py-3">
         <Skeleton className="w-9 h-9 rounded-full shrink-0" />

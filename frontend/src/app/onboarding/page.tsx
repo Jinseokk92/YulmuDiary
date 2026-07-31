@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { FamilyMembershipResponse } from "@/types";
 
 export default function OnboardingPage() {
@@ -11,6 +13,10 @@ export default function OnboardingPage() {
   const user = useAuthStore((s) => s.user);
   const familyGroupId = useAuthStore((s) => s.familyGroupId);
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +72,14 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-6"
+      style={{ backgroundColor: isDark ? darkPalette.background : "#f9fafb" }}
+    >
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold text-primary-600 mb-2">율무일기</h1>
-          <p className="text-gray-600 text-sm">
+          <p className="text-sm" style={{ color: isDark ? darkPalette.textSecondary : "#4b5563" }}>
             가족 그룹에 가입하려면
             <br />
             초대 코드를 입력해 주세요.
@@ -80,8 +89,8 @@ export default function OnboardingPage() {
         {isJoined ? (
           <div className="text-center space-y-4 animate-in fade-in duration-500">
             <div className="text-4xl">🎉</div>
-            <p className="text-gray-800 font-medium">가족 연결이 완료되었습니다!</p>
-            <p className="text-gray-500 text-sm">자동으로 이동하지 않는다면 아래 버튼을 눌러주세요.</p>
+            <p className="font-medium" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>가족 연결이 완료되었습니다!</p>
+            <p className="text-sm" style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}>자동으로 이동하지 않는다면 아래 버튼을 눌러주세요.</p>
             <button
               onClick={() => router.replace("/diary")}
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold"
@@ -94,7 +103,8 @@ export default function OnboardingPage() {
             <div>
               <label
                 htmlFor="invite-code"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: isDark ? darkPalette.textSecondary : "#374151" }}
               >
                 초대 코드
               </label>
@@ -105,7 +115,12 @@ export default function OnboardingPage() {
                 placeholder="6자리 코드 입력"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-center text-xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-400"
+                className="w-full px-4 py-3 border rounded-xl text-center text-xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-400"
+                style={{
+                  borderColor: isDark ? darkPalette.border : "#d1d5db",
+                  backgroundColor: isDark ? darkPalette.surfaceSecondary : "#ffffff",
+                  color: isDark ? darkPalette.textPrimary : "#111827",
+                }}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={isSubmitting}

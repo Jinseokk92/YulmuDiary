@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { darkPalette } from "@/lib/theme/darkPalette";
+
 export default function Error({
   error,
   reset,
@@ -7,9 +11,17 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
+
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+        style={{ backgroundColor: isDark ? "rgba(239,68,68,0.15)" : "#fef2f2" }}
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -25,10 +37,10 @@ export default function Error({
           />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">
+      <h2 className="text-lg font-semibold mb-1" style={{ color: isDark ? darkPalette.textPrimary : "#1f2937" }}>
         문제가 발생했습니다
       </h2>
-      <p className="text-sm text-gray-500 mb-6 max-w-xs">{error.message}</p>
+      <p className="text-sm mb-6 max-w-xs" style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}>{error.message}</p>
       <button
         onClick={reset}
         className="px-5 py-2 bg-primary-500 text-white text-sm font-medium rounded-lg

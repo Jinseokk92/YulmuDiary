@@ -1,19 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
-
-// ─── 달 SVG ────────────────────────────────────────────────────────────────
-function Moon() {
-  return (
-    <svg viewBox="0 0 120 120" width="80" height="80" aria-hidden>
-      {/* 초승달: 큰 원에서 오른쪽 원을 잘라냄 */}
-      <circle cx="55" cy="60" r="50" fill="#fef9c3" />
-      <circle cx="80" cy="48" r="44" fill="#1e293b" />
-    </svg>
-  );
-}
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 // ─── 구름 SVG ───────────────────────────────────────────────────────────────
 function CloudShape({ opacity }: { opacity: number }) {
@@ -27,32 +17,8 @@ function CloudShape({ opacity }: { opacity: number }) {
   );
 }
 
-// ─── 별 타입 ────────────────────────────────────────────────────────────────
-interface Star {
-  id: number;
-  top: number;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-}
-
-// ─── 다크 배경 (별 50개 + 달) ────────────────────────────────────────────────
+// ─── 다크 배경 (near-black, 밤하늘 연출 없음) ─────────────────────────────────
 export function DarkBackground() {
-  // Math.random()은 클라이언트에서만 실행됨 (mounted 후 렌더되므로 hydration 안전)
-  const stars: Star[] = useMemo(
-    () =>
-      Array.from({ length: 50 }, (_, i) => ({
-        id: i,
-        top: Math.random() * 100,
-        left: Math.random() * 100,
-        size: Math.random() * 1.5 + 1,     // 1~2.5px
-        duration: Math.random() * 3 + 2,   // 2~5s
-        delay: Math.random() * 5,           // 0~5s
-      })),
-    []
-  );
-
   return (
     <motion.div
       key="dark"
@@ -60,39 +26,9 @@ export function DarkBackground() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="absolute inset-0 z-0 bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#020617] overflow-hidden pointer-events-none"
-    >
-      {/* 별: opacity [0.2 → 1 → 0.2] 무한 반짝임 */}
-      {stars.map((star) => (
-        <motion.div
-          key={star.id}
-          className="absolute rounded-full bg-white"
-          style={{
-            top: `${star.top}%`,
-            left: `${star.left}%`,
-            width: star.size,
-            height: star.size,
-          }}
-          animate={{ opacity: [0.15, 1, 0.15] }}
-          transition={{
-            duration: star.duration,
-            delay: star.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-
-      {/* 달: 아래→위 슬며시 떠오름 (초기 1회 애니메이션) */}
-      <motion.div
-        className="absolute top-10 right-10"
-        initial={{ y: 48, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 2.2, ease: "easeOut" }}
-      >
-        <Moon />
-      </motion.div>
-    </motion.div>
+      className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+      style={{ background: `linear-gradient(to bottom, ${darkPalette.background}, ${darkPalette.pageBackground})` }}
+    />
   );
 }
 

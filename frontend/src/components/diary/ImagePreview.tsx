@@ -11,15 +11,16 @@ interface ImageFile {
 interface ImagePreviewProps {
   images: ImageFile[];
   onRemove: (id: string) => void;
+  isDark?: boolean;
 }
 
-function ImagePreviewInner({ images, onRemove }: ImagePreviewProps) {
+function ImagePreviewInner({ images, onRemove, isDark = false }: ImagePreviewProps) {
   if (images.length === 0) return null;
 
   return (
     <div className="grid grid-cols-4 gap-2">
       {images.map((img) => (
-        <div key={img.id} className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
+        <div key={img.id} className={`relative w-20 h-20 rounded-lg overflow-hidden ${isDark ? "bg-[#1A1A1A]" : "bg-gray-100"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={img.previewUrl}

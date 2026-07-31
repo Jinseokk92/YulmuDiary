@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -82,13 +83,13 @@ export default function DatePickerSheet({
   const canGoNext = !maxMonthKey || viewMonthKey < maxMonthKey;
 
   // ── 색상 ─────────────────────────────────────────────
-  const sheetBg     = isDark ? "#1e293b" : "#ffffff";
-  const borderColor = isDark ? "#334155" : "#f3f4f6";
-  const headerText  = isDark ? "#f1f5f9" : "#111827";
-  const handleBg    = isDark ? "#475569" : "#e5e7eb";
-  const navHover    = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)";
-  const cancelBg    = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
-  const cancelText  = isDark ? "#94a3b8" : "#6b7280";
+  const sheetBg     = isDark ? darkPalette.surface : "#ffffff";
+  const borderColor = isDark ? darkPalette.border : "#f3f4f6";
+  const headerText  = isDark ? darkPalette.textPrimary : "#111827";
+  const handleBg    = isDark ? darkPalette.hover : "#e5e7eb";
+  const navHover    = isDark ? darkPalette.hover : "rgba(0,0,0,0.05)";
+  const cancelBg    = isDark ? darkPalette.surfaceSecondary : "#f9fafb";
+  const cancelText  = isDark ? darkPalette.textSecondary : "#6b7280";
 
   return createPortal(
     <AnimatePresence>
@@ -100,7 +101,7 @@ export default function DatePickerSheet({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="absolute inset-0"
-          style={{ background: isDark ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.35)" }}
+          style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.35)" }}
           onClick={onClose}
         />
 
@@ -114,7 +115,7 @@ export default function DatePickerSheet({
           style={{
             background: sheetBg,
             borderTop: `1px solid ${borderColor}`,
-            boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
+            boxShadow: isDark ? "none" : "0 -8px 32px rgba(0,0,0,0.12)",
             maxWidth: 480,
             width: "100%",
             marginLeft: "auto",
@@ -167,7 +168,7 @@ export default function DatePickerSheet({
                     ? (isDark ? "#fca5a5" : "#f87171")
                     : i === 6
                     ? (isDark ? "#93c5fd" : "#60a5fa")
-                    : (isDark ? "#94a3b8" : "#9ca3af"),
+                    : (isDark ? darkPalette.textSecondary : "#9ca3af"),
                 }}
               >
                 {d}
@@ -190,7 +191,7 @@ export default function DatePickerSheet({
               if (isValid) {
                 if (exceedsMax) {
                   cellStyle = {
-                    color: isDark ? "#64748b" : "#cbd5e1",
+                    color: isDark ? darkPalette.textMuted : "#cbd5e1",
                     opacity: 0.45,
                   };
                 } else if (isSelected) {
@@ -213,7 +214,7 @@ export default function DatePickerSheet({
                       ? (isDark ? "#fca5a5" : "#f87171")
                       : dow === 6
                       ? (isDark ? "#93c5fd" : "#60a5fa")
-                      : (isDark ? "#cbd5e1" : "#374151"),
+                      : (isDark ? darkPalette.textPrimary : "#374151"),
                   };
                 }
               }
@@ -231,7 +232,7 @@ export default function DatePickerSheet({
                   style={cellStyle}
                   onMouseEnter={e => {
                     if (!isValid || exceedsMax || isSelected) return;
-                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "#f5f5f5";
+                    e.currentTarget.style.background = isDark ? darkPalette.hover : "#f5f5f5";
                   }}
                   onMouseLeave={e => {
                     if (!isValid || exceedsMax || isSelected) return;

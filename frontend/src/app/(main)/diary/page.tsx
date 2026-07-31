@@ -132,13 +132,13 @@ export default function DiaryPage() {
         <div
           className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-colors
             ${isDark
-              ? "bg-slate-800 border border-slate-700"
+              ? "bg-[#1A1A1A] border border-[#262626]"
               : "bg-gray-50 border border-gray-200"
             }`}
         >
           <Search
             size={16}
-            className={`shrink-0 ${isDark ? "text-slate-500" : "text-gray-400"}`}
+            className={`shrink-0 ${isDark ? "text-[#737373]" : "text-gray-400"}`}
           />
           <input
             ref={searchInputRef}
@@ -148,7 +148,7 @@ export default function DiaryPage() {
             placeholder="내용, 해시태그, 작성자 검색"
             className={`flex-1 min-w-0 bg-transparent text-sm outline-none
               ${isDark
-                ? "text-slate-200 placeholder:text-slate-600"
+                ? "text-[#F5F5F5] placeholder:text-[#737373]"
                 : "text-gray-800 placeholder:text-gray-400"
               }`}
           />
@@ -159,7 +159,7 @@ export default function DiaryPage() {
               aria-label="검색어 지우기"
               className={`shrink-0 p-0.5 rounded-full transition-colors
                 ${isDark
-                  ? "text-slate-500 hover:text-slate-300"
+                  ? "text-[#737373] hover:text-[#A8A8A8]"
                   : "text-gray-400 hover:text-gray-600"
                 }`}
             >

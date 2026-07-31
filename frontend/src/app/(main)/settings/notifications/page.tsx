@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, MessageCircle, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { NotificationSettingsResponse } from "@/types";
 
 // ── 토글 스위치 ────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ function SettingCard({
   border,
   textPrimary,
   textSecondary,
+  isDark,
 }: {
   emoji: React.ReactNode;
   title: string;
@@ -63,6 +65,7 @@ function SettingCard({
   border: string;
   textPrimary: string;
   textSecondary: string;
+  isDark: boolean;
 }) {
   return (
     <div
@@ -72,7 +75,11 @@ function SettingCard({
       {/* 아이콘 영역 */}
       <div
         className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl"
-        style={{ backgroundColor: checked ? "#fff3ec" : "#f3f4f6" }}
+        style={{
+          backgroundColor: checked
+            ? (isDark ? "rgba(228, 112, 30, 0.15)" : "#fff3ec")
+            : (isDark ? darkPalette.surfaceSecondary : "#f3f4f6"),
+        }}
       >
         {emoji}
       </div>
@@ -141,13 +148,13 @@ export default function NotificationSettingsPage() {
 
   const isDark = mounted && resolvedTheme === "dark";
 
-  const pageBg      = isDark ? "#0f172a" : "#faf9f7";
-  const cardBg      = isDark ? "#1e293b" : "#ffffff";
-  const cardBorder  = isDark ? "#334155" : "#e5e7eb";
-  const textPrimary = isDark ? "#e2e8f0" : "#111827";
-  const textSecond  = isDark ? "#94a3b8" : "#6b7280";
-  const headerBg    = isDark ? "#0f172a" : "#faf9f7";
-  const headerBorder= isDark ? "#1e293b" : "#f3f4f6";
+  const pageBg      = isDark ? darkPalette.background : "#faf9f7";
+  const cardBg      = isDark ? darkPalette.surface : "#ffffff";
+  const cardBorder  = isDark ? darkPalette.border : "#e5e7eb";
+  const textPrimary = isDark ? darkPalette.textPrimary : "#111827";
+  const textSecond  = isDark ? darkPalette.textSecondary : "#6b7280";
+  const headerBg    = isDark ? darkPalette.background : "#faf9f7";
+  const headerBorder= isDark ? darkPalette.border : "#f3f4f6";
 
   return (
     <div className="min-h-screen pb-28" style={{ backgroundColor: pageBg }}>
@@ -202,6 +209,7 @@ export default function NotificationSettingsPage() {
               border={cardBorder}
               textPrimary={textPrimary}
               textSecondary={textSecond}
+              isDark={isDark}
             />
             <SettingCard
               emoji={<Heart size={22} color="#ef4444" />}
@@ -214,6 +222,7 @@ export default function NotificationSettingsPage() {
               border={cardBorder}
               textPrimary={textPrimary}
               textSecondary={textSecond}
+              isDark={isDark}
             />
           </>
         )}

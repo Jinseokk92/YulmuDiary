@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { getMediaUrl } from "@/lib/utils";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import DatePickerSheet from "@/components/ui/DatePickerSheet";
+import { darkPalette } from "@/lib/theme/darkPalette";
 import type { MediaDto, MilestoneResponse } from "@/types";
 
 // ── 상수 ──────────────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ const StationCircle = memo(function StationCircle({
   }
   return (
     <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border-2
-      ${isDark ? "bg-slate-800 border-slate-700 text-slate-400" : "bg-gray-50 border-gray-200 text-gray-400"}`}>
+      ${isDark ? "bg-[#1A1A1A] border-[#262626] text-[#737373]" : "bg-gray-50 border-gray-200 text-gray-400"}`}>
       <span className="text-xs font-bold">{milestone.displayOrder}</span>
     </div>
   );
@@ -92,7 +93,7 @@ const StationLine = memo(function StationLine({
   if (achieved) return <div className="w-0.5 flex-1 min-h-3 shrink-0" style={{ background: LINE_COLOR_ACHIEVED }} />;
   return (
     <div className="w-0 flex-1 min-h-3 shrink-0"
-      style={{ borderLeft: `2px dashed ${isDark ? "#475569" : LINE_COLOR_PENDING}` }} />
+      style={{ borderLeft: `2px dashed ${isDark ? darkPalette.textMuted : LINE_COLOR_PENDING}` }} />
   );
 });
 
@@ -133,9 +134,9 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
     };
   }, []);
 
-  const bg      = isDark ? "bg-slate-900 text-slate-100" : "bg-white text-gray-900";
-  const sub     = isDark ? "text-slate-400" : "text-gray-500";
-  const divider = isDark ? "border-slate-700" : "border-gray-100";
+  const bg      = isDark ? "bg-[#121212] text-[#F5F5F5]" : "bg-white text-gray-900";
+  const sub     = isDark ? "text-[#A8A8A8]" : "text-gray-500";
+  const divider = isDark ? "border-[#262626]" : "border-gray-100";
   const photoUrls = milestone.photoUrls.map(getMediaUrl);
   const hasPhotos = photoUrls.length > 0;
 
@@ -155,8 +156,12 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
   return createPortal(
     <>
       <div className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center">
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-        <div className={`relative ${bg} w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden`}>
+        <div
+          className="absolute inset-0 backdrop-blur-sm"
+          style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.5)" }}
+          onClick={onClose}
+        />
+        <div className={`relative ${bg} w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl overflow-hidden ${isDark ? "shadow-none" : "shadow-2xl"}`}>
 
           {/* 사진 캐러셀 */}
           {hasPhotos && (
@@ -214,7 +219,7 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
             {!hasPhotos && (
               <div className="flex justify-end mb-3">
                 <button onClick={onClose}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"}`}>
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100"}`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -236,7 +241,7 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
             <p className={`text-sm ${sub} mb-3`}>{milestone.description}</p>
 
             {milestone.memo && (
-              <div className={`p-3 rounded-xl text-sm mb-4 ${isDark ? "bg-slate-800" : "bg-gray-50"}`}>
+              <div className={`p-3 rounded-xl text-sm mb-4 ${isDark ? "bg-[#1A1A1A]" : "bg-gray-50"}`}>
                 {milestone.memo}
               </div>
             )}
@@ -245,7 +250,7 @@ function DetailModal({ milestone, isParent, isDark, onClose, onEdit, onDeleted }
               <div className={`flex gap-2 pt-3 border-t ${divider}`}>
                 <button onClick={onEdit}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors
-                    ${isDark ? "bg-slate-800 hover:bg-slate-700 text-slate-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}>
+                    ${isDark ? "bg-[#1A1A1A] hover:bg-[#2A2A2A] text-[#F5F5F5]" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}>
                   수정
                 </button>
                 <button onClick={() => setConfirmOpen(true)}
@@ -330,17 +335,17 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
   const previewUrlsRef = useRef<Set<string>>(new Set());
   const dismissY      = useMotionValue(0);
 
-  const bg       = isDark ? "bg-slate-900 text-slate-100" : "bg-white text-gray-900";
+  const bg       = isDark ? "bg-[#121212] text-[#F5F5F5]" : "bg-white text-gray-900";
   const inputCls = isDark
-    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-primary-500"
+    ? "bg-[#1A1A1A] border-[#262626] text-[#F5F5F5] placeholder-[#737373] focus:border-primary-500"
     : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary-400";
-  const labelCls = isDark ? "text-slate-300" : "text-gray-700";
+  const labelCls = isDark ? "text-[#A8A8A8]" : "text-gray-700";
   const fieldCls = `w-full rounded-2xl border box-border text-[16px] outline-none transition-colors ${inputCls}`;
   const singleLineFieldCls = `${fieldCls} min-h-[54px] px-4 py-[0.9375rem] leading-[1.35]`;
   const textareaFieldCls = `${fieldCls} min-h-[124px] px-4 py-3 leading-[1.5] resize-none`;
   const buttonFieldCls = `${singleLineFieldCls} flex items-center justify-between gap-3 text-left`;
   const footerCls = isDark
-    ? "border-slate-800 bg-slate-900/95 supports-[backdrop-filter]:bg-slate-900/90"
+    ? "border-[#262626] bg-[#121212]/95 supports-[backdrop-filter]:bg-[#121212]/90"
     : "border-gray-100 bg-white/95 supports-[backdrop-filter]:bg-white/90";
   const photoItems: PhotoItem[] = [
     ...existingPhotos.map((photo) => ({ kind: "existing" as const, ...photo })),
@@ -484,8 +489,8 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black/40"
-        style={{ zIndex: 110 }}
+        className="fixed inset-0"
+        style={{ background: isDark ? darkPalette.overlay : "rgba(0,0,0,0.4)", zIndex: 110 }}
         onClick={onClose}
       />
 
@@ -493,10 +498,10 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
         initial={{ y: "100%" }}
         animate={{ y: 0, transition: { type: "spring", stiffness: 400, damping: 40 } }}
         exit={{ y: "100%", transition: { duration: 0.25, ease: "easeIn" } }}
-        className={`fixed left-0 right-0 mx-auto w-full max-w-lg shadow-[0_-4px_24px_rgba(0,0,0,0.12)]
+        className={`fixed left-0 right-0 mx-auto w-full max-w-lg
           flex flex-col overflow-hidden box-border border-t
           ${isMemoFocused && keyboardHeight > 0 ? "" : "rounded-t-3xl"}
-          ${isDark ? "border-slate-800" : "border-gray-100"} ${bg}`}
+          ${isDark ? "border-[#262626] shadow-none" : "border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.12)]"} ${bg}`}
         style={{
           y: isMemoFocused && keyboardHeight > 0 ? 0 : dismissY,
           top: isMemoFocused && keyboardHeight > 0 ? 0 : undefined,
@@ -509,14 +514,14 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
         {/* 드래그 핸들 */}
         <div ref={handleAreaRef} style={{ touchAction: "none" }} className="shrink-0">
           <div className="flex justify-center pt-3 pb-2">
-            <div className={`w-10 h-1 rounded-full ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
+            <div className={`w-10 h-1 rounded-full ${isDark ? "bg-[#2A2A2A]" : "bg-gray-200"}`} />
           </div>
-          <div className={`flex items-center justify-between px-5 pt-1 pb-4 border-b ${isDark ? "border-slate-800" : "border-gray-100"}`}>
+          <div className={`flex items-center justify-between px-5 pt-1 pb-4 border-b ${isDark ? "border-[#262626]" : "border-gray-100"}`}>
             <h3 className="text-[17px] font-bold leading-6">
               {isEdit ? "기록 수정" : `${milestone.title} 기록하기`}
             </h3>
             <button onClick={onClose}
-              className={`w-9 h-9 rounded-full flex items-center justify-center ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"}`}>
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${isDark ? "hover:bg-[#2A2A2A]" : "hover:bg-gray-100"}`}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -545,11 +550,11 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                   <span className="text-[15px] font-medium leading-5">
                     {formatRecordDate(date)}
                   </span>
-                  <span className={`mt-0.5 text-[11px] leading-4 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                  <span className={`mt-0.5 text-[11px] leading-4 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                     달성한 날짜를 선택해주세요
                   </span>
                 </span>
-                <svg className={`h-5 w-5 shrink-0 ${isDark ? "text-slate-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <svg className={`h-5 w-5 shrink-0 ${isDark ? "text-[#A8A8A8]" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3.75v2.25m7.5-2.25v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0120.25 6.75v11.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V6.75a1.5 1.5 0 011.5-1.5z" />
                 </svg>
               </button>
@@ -583,7 +588,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                   사진 ({totalPhotoCount}/{MAX_PHOTOS})
                 </label>
                 {hasPhotos && (
-                  <span className={`text-[11px] leading-4 text-right ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                  <span className={`text-[11px] leading-4 text-right ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                     기존 + 새 사진을 한 화면에서 관리
                   </span>
                 )}
@@ -592,7 +597,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                 {photoItems.map((p, idx) => (
                   <div
                     key={p.id}
-                    className={`relative aspect-square overflow-hidden rounded-2xl border box-border ${isDark ? "border-slate-800 bg-slate-800" : "border-gray-100 bg-gray-100"}`}
+                    className={`relative aspect-square overflow-hidden rounded-2xl border box-border ${isDark ? "border-[#262626] bg-[#1A1A1A]" : "border-gray-100 bg-gray-100"}`}
                   >
                     <Image
                       src={getPhotoSrc(p)}
@@ -619,7 +624,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                     onClick={openFilePicker}
                     className={`rounded-2xl border-2 border-dashed box-border flex flex-col items-center justify-center px-4 transition-colors
                       ${hasPhotos ? "aspect-square gap-1.5" : "col-span-3 min-h-[168px] gap-2.5"}
-                      ${isDark ? "border-slate-700 hover:border-primary-500 text-slate-500" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
+                      ${isDark ? "border-[#262626] hover:border-primary-500 text-[#737373]" : "border-gray-200 hover:border-primary-400 text-gray-400"}`}
                   >
                     {hasPhotos ? (
                       <>
@@ -635,7 +640,7 @@ function RecordBottomSheet({ milestone, isEdit, isDark, onClose, onSaved }: Reco
                           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
                         </svg>
                         <span className="text-sm font-medium">사진을 추가해보세요</span>
-                        <span className={`text-xs ${isDark ? "text-slate-600" : "text-gray-300"}`}>
+                        <span className={`text-xs ${isDark ? "text-[#737373]" : "text-gray-300"}`}>
                           최대 {MAX_PHOTOS}장
                         </span>
                       </>
@@ -706,9 +711,9 @@ export default function MilestonesPage() {
   const isDark   = mounted && resolvedTheme === "dark";
   const isParent = user?.role === "PARENT";
 
-  const card     = isDark ? "bg-slate-900/80 border border-slate-800" : "bg-white/90 border border-white/60";
-  const sub      = isDark ? "text-slate-400" : "text-gray-500";
-  const titleCls = isDark ? "text-slate-100" : "text-gray-900";
+  const card     = isDark ? "bg-[#121212]/90 border border-[#262626]" : "bg-white/90 border border-white/60";
+  const sub      = isDark ? "text-[#A8A8A8]" : "text-gray-500";
+  const titleCls = isDark ? "text-[#F5F5F5]" : "text-gray-900";
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -770,7 +775,7 @@ export default function MilestonesPage() {
         <button
           onClick={() => router.back()}
           className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-gray-100 text-gray-600"}`}
+            ${isDark ? "hover:bg-[#2A2A2A] text-[#A8A8A8]" : "hover:bg-gray-100 text-gray-600"}`}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -789,7 +794,7 @@ export default function MilestonesPage() {
             <span className={`text-sm font-semibold ${titleCls}`}>달성 현황</span>
             <span className="text-sm font-bold text-primary-500">{achievedCount} / {total}</span>
           </div>
-          <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-gray-100"}`}>
+          <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDark ? "bg-[#262626]" : "bg-gray-100"}`}>
             <div
               className="h-full rounded-full bg-primary-500 transition-all duration-700"
               style={{ width: total > 0 ? `${(achievedCount / total) * 100}%` : "0%" }}
@@ -810,10 +815,10 @@ export default function MilestonesPage() {
         <div className="space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex gap-4 items-center">
-              <div className={`w-11 h-11 rounded-full animate-pulse ${isDark ? "bg-slate-800" : "bg-gray-200"}`} />
+              <div className={`w-11 h-11 rounded-full animate-pulse ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
               <div className="flex-1 space-y-1.5">
-                <div className={`h-4 w-24 rounded animate-pulse ${isDark ? "bg-slate-800" : "bg-gray-200"}`} />
-                <div className={`h-3 w-16 rounded animate-pulse ${isDark ? "bg-slate-700" : "bg-gray-100"}`} />
+                <div className={`h-4 w-24 rounded animate-pulse ${isDark ? "bg-[#262626]" : "bg-gray-200"}`} />
+                <div className={`h-3 w-16 rounded animate-pulse ${isDark ? "bg-[#262626]" : "bg-gray-100"}`} />
               </div>
             </div>
           ))}
@@ -848,7 +853,7 @@ export default function MilestonesPage() {
                     </span>
                   ) : (
                     <span className={`inline-block mb-1 px-2 py-0.5 rounded-full text-[10px] font-medium
-                      ${isDark ? "bg-slate-800 text-slate-400" : "bg-gray-100 text-gray-400"}`}>
+                      ${isDark ? "bg-[#1A1A1A] text-[#737373]" : "bg-gray-100 text-gray-400"}`}>
                       {m.expectedMonth}
                     </span>
                   )}
@@ -866,7 +871,7 @@ export default function MilestonesPage() {
                     </span>
                   )}
                   {m.achieved && m.memo && (
-                    <p className={`text-xs mt-0.5 line-clamp-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                    <p className={`text-xs mt-0.5 line-clamp-1 ${isDark ? "text-[#737373]" : "text-gray-400"}`}>
                       {m.memo}
                     </p>
                   )}

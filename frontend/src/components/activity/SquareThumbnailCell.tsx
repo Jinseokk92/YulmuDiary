@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { darkPalette } from "@/lib/theme/darkPalette";
 
 interface SquareThumbnailCellProps {
   onClick: () => void;
@@ -35,12 +36,12 @@ export function SquareThumbnailCell({
       ) : (
         <div
           className="flex h-full w-full items-end p-2.5"
-          style={{ backgroundColor: isDark ? "#1e293b" : "#f3f4f6" }}
+          style={{ backgroundColor: isDark ? darkPalette.surfaceSecondary : "#f3f4f6" }}
         >
           {text ? (
             <p
               className="line-clamp-3 break-words text-left text-[11px] leading-snug"
-              style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+              style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}
             >
               {text}
             </p>
@@ -48,7 +49,7 @@ export function SquareThumbnailCell({
             emptyFallback ?? (
               <p
                 className="line-clamp-3 break-words text-left text-[11px] leading-snug"
-                style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+                style={{ color: isDark ? darkPalette.textSecondary : "#6b7280" }}
               >
                 내용 없음
               </p>
@@ -67,7 +68,7 @@ export function SquareSkeletonCell({ isDark }: { isDark: boolean }) {
   return (
     <div
       className="h-full w-full animate-pulse"
-      style={{ backgroundColor: isDark ? "#1e293b" : "#f3f4f6" }}
+      style={{ backgroundColor: isDark ? darkPalette.surfaceSecondary : "#f3f4f6" }}
     />
   );
 }
