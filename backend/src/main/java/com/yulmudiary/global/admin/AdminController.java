@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -78,18 +79,40 @@ public class AdminController {
 
     // ── D. 앱 설정 관리 ─────────────────────────────────────────────────
 
-    @Operation(summary = "앱 설정 조회 (아기 이름, 출산 예정일)")
+    @Operation(summary = "앱 설정 조회 (아기 이름, 출산 예정일, 출생 일시, 대표 사진)")
     @RequireAdmin
     @GetMapping("/app-settings")
     public ApiResponse<AppSettingsResponse> getAppSettings() {
         return ApiResponse.success(adminService.getAppSettings());
     }
 
-    @Operation(summary = "앱 설정 변경 (아기 이름, 출산 예정일)")
+    @Operation(summary = "앱 설정 변경 (아기 이름, 출산 예정일, 출생 일시)",
+            description = "bornAt은 생략하거나 null이면 기존 값이 유지된다. 미래 시각은 허용하지 않는다. " +
+                    "clearBornAt=true를 보내면 출생일시를 초기화(null)한다. clearBornAt과 bornAt을 동시에 보내면 400.")
     @RequireAdmin
     @PatchMapping("/app-settings")
     public ApiResponse<AppSettingsResponse> updateAppSettings(
             @Valid @RequestBody AppSettingsUpdateRequest request) {
         return ApiResponse.success(adminService.updateAppSettings(request));
+    }
+
+    // ── E. 아기 대표 사진 ───────────────────────────────────────────────
+
+    @Operation(summary = "아기 대표 사진 변경 (관리자)",
+            description = "이미지 Content-Type · 최대 5MB. 교체 성공 후 기존 파일은 삭제된다.")
+    @RequireAdmin
+    @PutMapping(value = "/app-settings/baby-photo", consumes = "multipart/form-data")
+    public ApiResponse<AppSettingsResponse> updateBabyPhoto(
+            @RequestPart("file") MultipartFile file) {
+        return ApiResponse.success(adminService.updateBabyPhoto(file));
+    }
+
+    @Operation(summary = "아기 대표 사진 초기화 (관리자)",
+            description = "profileImageUrl만 null로 초기화한다. 이름·출산예정일·출생일시는 변경하지 않는다. " +
+                    "트랜잭션 커밋 성공 후에만 기존 파일을 삭제한다.")
+    @RequireAdmin
+    @DeleteMapping("/app-settings/baby-photo")
+    public ApiResponse<AppSettingsResponse> resetBabyPhoto() {
+        return ApiResponse.success(adminService.resetBabyPhoto());
     }
 }

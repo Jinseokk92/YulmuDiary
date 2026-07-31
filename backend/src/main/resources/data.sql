@@ -24,3 +24,4 @@ VALUES ('율무', '2024-06-15', 'MALE', NULL, 1, NOW(), NOW());
 UPDATE users
 SET is_admin = true
 WHERE email = 'wlstjra@kakao.com';
+

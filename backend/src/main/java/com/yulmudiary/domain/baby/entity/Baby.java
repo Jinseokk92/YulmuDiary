@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "baby")
@@ -23,8 +24,15 @@ public class Baby extends BaseTimeEntity {
     @Column(nullable = false, length = 30)
     private String name;
 
+    /** 출산 예정일. (필드명은 birthDate지만 의미는 예정일이며 기존 사용처와 호환을 위해 유지) */
     @Column(nullable = false)
     private LocalDate birthDate;
+
+    /**
+     * 실제 출생 일시. 출산 전에는 null이다.
+     * 생후 일수 계산은 시각을 제외한 날짜 차이로 하므로, 시각은 표시 용도로만 사용한다.
+     */
+    private LocalDateTime bornAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
@@ -40,6 +48,16 @@ public class Baby extends BaseTimeEntity {
     public void updateInfo(String name, LocalDate birthDate) {
         this.name = name;
         this.birthDate = birthDate;
+    }
+
+    /** 실제 출생 일시 등록·수정 */
+    public void updateBornAt(LocalDateTime bornAt) {
+        this.bornAt = bornAt;
+    }
+
+    /** 대표 사진 URL 변경 */
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     @Builder
