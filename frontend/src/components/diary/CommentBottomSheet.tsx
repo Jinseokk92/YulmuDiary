@@ -47,6 +47,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     const [input, setInput] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const focusScrollTimerRef = useRef<number | null>(null);
 
     // ─── 스크롤 영역 ref ─────────────────────────────────────────────
     const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -61,7 +62,8 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
     // 문제: height:"75svh"(고정) + bottom:kbh → 합계 > window.innerHeight → 시트 상단 넘침
     // 해결: 시트 높이를 vv.height 기준으로 제한
     const [keyboardHeight, setKeyboardHeight] = useState(0);
-    const [sheetHeight, setSheetHeight] = useState<string | number>("75svh");
+    const [sheetMaxHeight, setSheetMaxHeight] = useState<string | number>("96svh");
+    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
     // 중복 fetch 방지 ref
     const isFetchingRef = useRef(false);
@@ -95,27 +97,62 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
       });
     }, []);
 
+    // 모바일 키보드 애니메이션이 끝난 뒤 입력란을 실제 가시 영역 중앙으로 이동
+    const handleInputFocus = useCallback(() => {
+      if (focusScrollTimerRef.current !== null) {
+        window.clearTimeout(focusScrollTimerRef.current);
+      }
+
+      focusScrollTimerRef.current = window.setTimeout(() => {
+        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        focusScrollTimerRef.current = null;
+      }, 320);
+    }, []);
+
+    useEffect(() => {
+      return () => {
+        if (focusScrollTimerRef.current !== null) {
+          window.clearTimeout(focusScrollTimerRef.current);
+        }
+      };
+    }, []);
+
     // ─── visualViewport 기반 시트 위치·높이 통합 계산 ────────────────
     useEffect(() => {
       const vv = window.visualViewport;
-      if (!vv) return;
+      const initialWindowHeight = window.innerHeight;
 
-      // 마운트 시점의 window.innerHeight를 목표 높이 기준으로 사용
-      // (이후 키보드가 올라와도 initH는 변하지 않음)
-      const initH = window.innerHeight;
+      // visualViewport 미지원 WebView: layout viewport resize를 따라가는 fallback
+      if (!vv) {
+        const handleWindowResize = () => {
+          const viewportHeight = window.innerHeight;
+          const viewportShrankForKeyboard =
+            document.activeElement === inputRef.current &&
+            initialWindowHeight - viewportHeight > 100;
+
+          setKeyboardHeight(0);
+          setSheetMaxHeight(Math.floor(viewportHeight * 0.96));
+          setIsKeyboardOpen(viewportShrankForKeyboard);
+        };
+
+        handleWindowResize();
+        window.addEventListener("resize", handleWindowResize);
+        return () => window.removeEventListener("resize", handleWindowResize);
+      }
+
+      const initialVisibleHeight = vv.height;
 
       const handleViewportChange = () => {
         // 키보드 높이 = 전체 창 높이 - 현재 보이는 영역 높이 - 스크롤 오프셋
         const kbh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        // 일부 Android Chrome/WebView는 innerHeight도 함께 줄어 kbh가 0이 된다.
+        const viewportShrankForKeyboard =
+          document.activeElement === inputRef.current &&
+          initialVisibleHeight - vv.height > 100;
+
         setKeyboardHeight(kbh);
-
-        // 시트 높이: 목표(initH * 0.75 ≈ 75svh)와 가시 영역 96%의 최솟값
-        // 키보드가 열려 vv.height가 줄면 시트도 같이 줄어들어 넘침 방지
-        const targetH = initH * 0.75;
-        const maxH = Math.floor(vv.height * 0.96);
-        setSheetHeight(Math.min(targetH, maxH));
-
-        if (kbh > 0) scrollToBottom();
+        setSheetMaxHeight(Math.floor(vv.height * 0.96));
+        setIsKeyboardOpen(kbh > 0 || viewportShrankForKeyboard);
       };
 
       // 마운트 시 즉시 계산 (resize/scroll 이벤트 전에 초기값 설정)
@@ -128,7 +165,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
         vv.removeEventListener("resize", handleViewportChange);
         vv.removeEventListener("scroll", handleViewportChange);
       };
-    }, [scrollToBottom]);
+    }, []);
 
     // ─── 댓글 fetch (커서 기반 페이징) ─────────────────────────────
     const fetchComments = useCallback(
@@ -395,11 +432,12 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
                       bg-white dark:bg-[#121212] rounded-t-3xl
                       border-t border-gray-100 dark:border-[#262626]
                       shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-none
-                      flex flex-col box-border"
+                      flex flex-col box-border overflow-hidden"
           style={{
             y: dismissY,
             bottom: keyboardHeight,
-            height: sheetHeight,
+            height: "75svh",
+            maxHeight: sheetMaxHeight,
             zIndex: 101,
           }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -436,7 +474,7 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
           {/* ── Scrollable Content (flex-1: 남은 공간 전부 차지) ── */}
           <div
             ref={scrollAreaRef}
-            className="flex-1 overflow-y-auto overscroll-contain"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
             style={{ touchAction: "pan-y" }}
             onTouchMove={(e) => e.stopPropagation()}
           >
@@ -452,14 +490,27 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
 
           {/* ── Fixed Footer: 이모지 퀵 바 + 입력폼 ── */}
           {currentUser && (
-            <div className="shrink-0 border-t border-gray-100 dark:border-[#262626]">
+            <div
+              className="shrink-0 border-t border-gray-100 dark:border-[#262626]"
+              style={{
+                paddingBottom: isKeyboardOpen
+                  ? "0.5rem"
+                  : "max(0.75rem, env(safe-area-inset-bottom, 0px))",
+                transition: "padding-bottom 160ms ease",
+              }}
+            >
               {/* 이모지 퀵 바 */}
-              <div className="flex items-center gap-0.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-none">
+              <div
+                className="flex items-center gap-0.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-none"
+                style={{ touchAction: "pan-x" }}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
                 {QUICK_EMOJIS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
                     onClick={() => setInput((prev) => prev + emoji)}
+                    aria-label={`댓글에 ${emoji} 추가`}
                     className="text-xl shrink-0 w-9 h-9 flex items-center justify-center
                                rounded-full hover:bg-gray-100 dark:hover:bg-[#2A2A2A] active:scale-110
                                transition-transform"
@@ -473,17 +524,16 @@ const CommentBottomSheet = forwardRef<CommentBottomSheetHandle, CommentBottomShe
               <form
                 onSubmit={handleSubmit}
                 className="flex items-center gap-2 px-4 pt-1"
-                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
               >
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onFocus={scrollToBottom}
+                  onFocus={handleInputFocus}
                   placeholder="댓글 달기..."
                   disabled={isSubmitting}
-                  className="flex-1 text-sm bg-transparent border-none outline-none
+                  className="flex-1 min-w-0 text-[16px] sm:text-sm bg-transparent border-none outline-none
                              placeholder:text-gray-300 dark:placeholder:text-[#737373]
                              text-gray-700 dark:text-[#F5F5F5] py-1"
                 />
